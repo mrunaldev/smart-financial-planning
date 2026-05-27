@@ -2,31 +2,84 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SmartFin">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' rx='14' fill='%23000'/%3E%3Crect width='72' height='72' rx='14' fill='none' stroke='%23fff' stroke-width='2.5'/%3E%3Ctext x='36' y='52' text-anchor='middle' font-size='40' fill='%23fff' font-weight='700' font-family='Arial,sans-serif'%3E₹%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' rx='14' fill='%23000'/%3E%3Crect width='72' height='72' rx='14' fill='none' stroke='%23fff' stroke-width='2.5'/%3E%3Ctext x='36' y='52' text-anchor='middle' font-size='40' fill='%23fff' font-weight='700' font-family='Arial,sans-serif'%3E₹%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
-
-<title>Smart Financial Planning</title>
+<title>₹ SmartFin – Financial Planning</title>
 </head>
 <body>
-<main class="app-shell">
-    <header class="app-header">
-        <div class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 100 100" role="img">
-                <rect x="14" y="14" width="72" height="72" rx="12" fill="#000" stroke="#fff" stroke-width="5"/>
-                <path d="M28 68h44M28 52h16M28 36h28" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
-                <path d="M64 35v32M52 47l12-12 12 12" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+<!-- ── AUTH SCREEN ──────────────────────────────────── -->
+<div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+        <div class="auth-brand">
+            <svg class="logo-mark" viewBox="0 0 72 72" aria-hidden="true">
+                <rect width="72" height="72" rx="14" fill="#000"/>
+                <rect width="72" height="72" rx="14" fill="none" stroke="#fff" stroke-width="2.5"/>
+                <text x="36" y="52" text-anchor="middle" font-size="40" fill="#fff"
+                      font-weight="700" font-family="Arial,sans-serif">₹</text>
             </svg>
+            <h1>SmartFin</h1>
+            <p>Smart Financial Planning</p>
         </div>
-        <div>
-            <h1>Smart Financial Planning</h1>
-            <p id="activeSubtitle">Monthly Budget</p>
+        <div id="authError" class="auth-error" hidden></div>
+        <form id="authForm" autocomplete="off" novalidate>
+            <div class="field" id="nameField" hidden>
+                <label for="authName">Your name</label>
+                <input id="authName" type="text" placeholder="e.g. John Doe"
+                       autocomplete="name">
+            </div>
+            <div class="field">
+                <label for="authEmail">Email address</label>
+                <input id="authEmail" type="email" placeholder="you@example.com"
+                       autocomplete="email" required>
+            </div>
+            <div class="field">
+                <label for="authPassword">Password</label>
+                <input id="authPassword" type="password" placeholder="••••••••"
+                       autocomplete="current-password" minlength="6" required>
+            </div>
+            <button type="submit" id="authSubmitBtn" class="btn-primary btn-full">Sign In</button>
+        </form>
+        <div class="auth-switch">
+            <span id="authSwitchText">Don't have an account?</span>
+            <button type="button" id="authToggleBtn" class="btn-link">Register</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── APP SCREEN ───────────────────────────────────── -->
+<div id="appScreen" class="app-screen" hidden>
+<main class="app-shell">
+
+    <header class="app-header">
+        <div class="app-brand">
+            <svg class="logo-mark logo-sm" viewBox="0 0 72 72" aria-hidden="true">
+                <rect width="72" height="72" rx="14" fill="#000"/>
+                <rect width="72" height="72" rx="14" fill="none" stroke="#fff" stroke-width="2.5"/>
+                <text x="36" y="52" text-anchor="middle" font-size="40" fill="#fff"
+                      font-weight="700" font-family="Arial,sans-serif">₹</text>
+            </svg>
+            <div class="brand-text">
+                <h1>SmartFin</h1>
+                <p id="activeSubtitle">Monthly Budget</p>
+            </div>
+        </div>
+        <div class="user-bar">
+            <span id="userEmailDisplay" class="user-email"></span>
+            <button type="button" id="logoutBtn" class="btn-ghost">Sign Out</button>
         </div>
     </header>
 
-    <nav class="tab-bar" id="tabBar" aria-label="Financial planning sections"></nav>
+    <nav class="tab-bar" id="tabBar" aria-label="Financial sections"></nav>
 
     <section class="dashboard-grid" aria-label="Summary">
         <article class="metric">
@@ -48,54 +101,663 @@
     </section>
 
     <section class="work-area">
-        <form class="entry-form" id="entryForm" autocomplete="off">
-            <div class="field">
-                <label for="entryName">Name</label>
-                <input id="entryName" type="text" required>
+        <!-- Monthly Budget Specific UI -->
+        <div id="monthlyBudgetUI" class="monthly-budget-ui" hidden>
+            <div class="month-nav">
+                <button type="button" id="prevMonth" class="btn-nav">← Previous</button>
+                <span id="currentMonthDisplay" class="month-display"></span>
+                <button type="button" id="nextMonth" class="btn-nav">Next →</button>
+                <button type="button" id="toggleBudgetView" class="btn-nav">📊 Annual</button>
+                <button type="button" id="toggleBudgetEdit" class="btn-nav btn-icon">✎ Edit</button>
             </div>
-            <div class="field">
-                <label for="entryPlanned">Planned Amount</label>
-                <input id="entryPlanned" type="number" min="0" step="1" required>
-            </div>
-            <div class="field">
-                <label for="entryActual">Actual Amount</label>
-                <input id="entryActual" type="number" min="0" step="1">
-            </div>
-            <div class="field">
-                <label for="entryDate">Date</label>
-                <input id="entryDate" type="date">
-            </div>
-            <div class="field field-wide">
-                <label for="entryNote">Note</label>
-                <input id="entryNote" type="text">
-            </div>
-            <button type="submit">Add Item</button>
-        </form>
 
-        <div class="toolbar">
-            <input id="searchInput" type="search" placeholder="Search">
-            <button type="button" id="clearTab">Clear Tab</button>
+            <!-- Annual Summary Section (hidden by default) -->
+            <div id="annualSummarySection" class="annual-summary-section" hidden>
+                <div class="annual-summary">
+                    <div class="annual-summary-item">
+                        <span class="annual-summary-label">Total Income</span>
+                        <strong id="annualTotalIncome">₹0</strong>
+                    </div>
+                    <div class="annual-summary-item">
+                        <span class="annual-summary-label">Total Expenses</span>
+                        <strong id="annualTotalExpenses">₹0</strong>
+                    </div>
+                    <div class="annual-summary-item">
+                        <span class="annual-summary-label">Total Savings</span>
+                        <strong id="annualTotalSavings">₹0</strong>
+                    </div>
+                    <div class="annual-summary-item">
+                        <span class="annual-summary-label">Average Monthly Income</span>
+                        <strong id="avgMonthlyIncome">₹0</strong>
+                    </div>
+                    <div class="annual-summary-item">
+                        <span class="annual-summary-label">Average Monthly Expenses</span>
+                        <strong id="avgMonthlyExpenses">₹0</strong>
+                    </div>
+                </div>
+                <div class="annual-months-list">
+                    <h3>Monthly Breakdown</h3>
+                    <div id="annualMonthsList" class="annual-months-list-content"></div>
+                </div>
+            </div>
+
+            <!-- Monthly View Section -->
+            <div id="monthlyViewSection">
+                <!-- Budget Status -->
+                <div id="budgetStatus" class="budget-status"></div>
+
+            <!-- Preview Mode -->
+            <div id="budgetPreview" class="budget-preview">
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Total Income</span>
+                        <strong id="totalIncome">₹0</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Total Expenses</span>
+                        <strong id="totalExpenses">₹0</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Cash Flow</span>
+                        <strong id="cashFlow">₹0</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Initial Balance</span>
+                        <strong id="initialBalance">₹0</strong>
+                    </div>
+                </div>
+
+                <div class="categories-preview">
+                    <div class="category-preview-section">
+                        <h3>Cash Inflow</h3>
+                        <div id="inflowPreview" class="category-preview-list"></div>
+                        <div class="category-total">Total: <strong id="inflowTotal">₹0</strong></div>
+                    </div>
+
+                    <div class="category-preview-section">
+                        <h3>Outflow</h3>
+                        <div id="outflowPreview" class="category-preview-list"></div>
+                        <div class="category-total">Total: <strong id="outflowTotal">₹0</strong></div>
+                    </div>
+
+                    <div class="category-preview-section">
+                        <h3>Investing</h3>
+                        <div id="investingPreview" class="category-preview-list"></div>
+                        <div class="category-total">Total: <strong id="investingTotal">₹0</strong></div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3>Monthly Distribution</h3>
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="budgetEdit" class="budget-edit" hidden>
+                <div class="categories-container">
+                    <div class="category-section">
+                        <h3>Cash Inflow</h3>
+                        <div id="inflowFields"></div>
+                        <div class="category-total">Total: <strong id="inflowTotalEdit">₹0</strong></div>
+                    </div>
+
+                    <div class="category-section">
+                        <h3>Outflow</h3>
+                        <div id="outflowFields"></div>
+                        <div class="category-total">Total: <strong id="outflowTotalEdit">₹0</strong></div>
+                    </div>
+
+                    <div class="category-section">
+                        <h3>Investing</h3>
+                        <div id="investingFields"></div>
+                        <div class="category-total">Total: <strong id="investingTotalEdit">₹0</strong></div>
+                    </div>
+                </div>
+
+                <div class="untracked-section">
+                    <h3>Month-End Balance</h3>
+                    <div class="field">
+                        <label for="monthEndBalance">Balance on last day of month (₹)</label>
+                        <input id="monthEndBalance" type="number" min="0" step="1" placeholder="0">
+                    </div>
+                    <button type="button" id="saveMonthData" class="btn-add">Save</button>
+                </div>
+            </div><!-- end budgetEdit -->
+            </div><!-- end monthlyViewSection -->
+        </div><!-- end monthlyBudgetUI -->
+
+        <!-- Financial Goal Specific UI -->
+        <div id="financialGoalUI" class="financial-goal-ui" hidden>
+            <div class="goal-header">
+                <h2>Financial Goals</h2>
+                <button type="button" id="toggleGoalEdit" class="btn-nav btn-icon">✎ Edit</button>
+            </div>
+
+            <!-- Goal Summary -->
+            <div class="goal-summary">
+                <div class="goal-summary-item">
+                    <span class="goal-summary-label">Total Needed</span>
+                    <strong id="totalGoalNeeded">₹0</strong>
+                </div>
+                <div class="goal-summary-item">
+                    <span class="goal-summary-label">Total Accumulated</span>
+                    <strong id="totalGoalAccumulated">₹0</strong>
+                </div>
+                <div class="goal-summary-item">
+                    <span class="goal-summary-label">Amount Needed</span>
+                    <strong id="amountMoreNeeded">₹0</strong>
+                </div>
+            </div>
+
+            <!-- Preview Mode -->
+            <div id="goalPreview" class="goal-preview">
+                <div id="goalsList" class="goals-list"></div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="goalEdit" class="goal-edit" hidden>
+                <form class="entry-form" id="goalForm" autocomplete="off">
+                    <div id="goalDynamicFields"></div>
+                    <div class="field field-btn">
+                        <button type="submit" class="btn-add">Add Goal</button>
+                    </div>
+                </form>
+                <div class="table-wrap">
+                    <table>
+                        <thead id="goalTableHead"></thead>
+                        <tbody id="goalTableBody"></tbody>
+                    </table>
+                    <p class="empty-state" id="goalEmptyState">No goals yet. Add one above.</p>
+                </div>
+            </div>
         </div>
 
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Planned</th>
-                        <th>Actual</th>
-                        <th>Date</th>
-                        <th>Note</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="entryRows"></tbody>
-            </table>
-            <p class="empty-state" id="emptyState">No items added yet.</p>
+        <!-- Monthly Fixed Expense Specific UI -->
+        <div id="monthlyFixedExpenseUI" class="monthly-fixed-expense-ui" hidden>
+            <div class="goal-header">
+                <h2>Monthly Fixed Expenses</h2>
+                <button type="button" id="toggleExpenseEdit" class="btn-nav btn-icon">✎ Edit</button>
+            </div>
+
+            <!-- Expense Summary -->
+            <div class="expense-summary">
+                <div class="expense-summary-item">
+                    <span class="expense-summary-label">Total Monthly Deductions</span>
+                    <strong id="totalExpenseDeductions">₹0</strong>
+                </div>
+            </div>
+
+            <!-- Preview Mode -->
+            <div id="expensePreview" class="expense-preview">
+                <div class="charts-container">
+                    <div class="chart-section">
+                        <h3>Amount by Bank</h3>
+                        <canvas id="bankBarChart"></canvas>
+                    </div>
+                    <div class="chart-section">
+                        <h3>Amount by Deduction Type</h3>
+                        <canvas id="typeBarChart"></canvas>
+                    </div>
+                </div>
+                <div id="expensesList" class="expenses-list"></div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="expenseEdit" class="expense-edit" hidden>
+                <form class="entry-form" id="expenseForm" autocomplete="off">
+                    <div id="expenseDynamicFields"></div>
+                    <div class="field field-btn">
+                        <button type="submit" class="btn-add">Add Expense</button>
+                    </div>
+                </form>
+                <div class="table-wrap">
+                    <table>
+                        <thead id="expenseTableHead"></thead>
+                        <tbody id="expenseTableBody"></tbody>
+                    </table>
+                    <p class="empty-state" id="expenseEmptyState">No expenses yet. Add one above.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Investments Specific UI -->
+        <div id="investmentsUI" class="investments-ui" hidden>
+            <div class="goal-header">
+                <h2>Investments</h2>
+                <button type="button" id="toggleInvestmentEdit" class="btn-nav btn-icon">✎ Edit</button>
+            </div>
+
+            <!-- Investment Summary -->
+            <div class="investment-summary">
+                <div class="investment-summary-item">
+                    <span class="investment-summary-label">Total Initial Investment</span>
+                    <strong id="totalInitialInvestment">₹0</strong>
+                </div>
+                <div class="investment-summary-item">
+                    <span class="investment-summary-label">Total Current Value</span>
+                    <strong id="totalCurrentInvestment">₹0</strong>
+                </div>
+                <div class="investment-summary-item">
+                    <span class="investment-summary-label">Total Investments</span>
+                    <strong id="totalInvestments">₹0</strong>
+                </div>
+            </div>
+
+            <!-- Preview Mode -->
+            <div id="investmentPreview" class="investment-preview">
+                <div class="chart-section">
+                    <h3>Investment Amounts</h3>
+                    <canvas id="investmentBarChart"></canvas>
+                </div>
+                <div id="investmentsList" class="investments-list"></div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="investmentEdit" class="investment-edit" hidden>
+                <form class="entry-form" id="investmentForm" autocomplete="off">
+                    <div id="investmentDynamicFields"></div>
+                    <div class="field field-btn">
+                        <button type="submit" class="btn-add">Add Investment</button>
+                    </div>
+                </form>
+                <div class="table-wrap">
+                    <table>
+                        <thead id="investmentTableHead"></thead>
+                        <tbody id="investmentTableBody"></tbody>
+                    </table>
+                    <p class="empty-state" id="investmentEmptyState">No investments yet. Add one above.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Insurances Specific UI -->
+        <div id="insurancesUI" class="insurances-ui" hidden>
+            <div class="goal-header">
+                <h2>Insurances</h2>
+                <button type="button" id="toggleInsuranceEdit" class="btn-nav btn-icon">✎ Edit</button>
+            </div>
+
+            <!-- Insurance Summary -->
+            <div class="insurance-summary">
+                <div class="insurance-summary-item">
+                    <span class="insurance-summary-label">Total Premium</span>
+                    <strong id="totalPremium">₹0</strong>
+                </div>
+                <div class="insurance-summary-item">
+                    <span class="insurance-summary-label">Total Sum Assured</span>
+                    <strong id="totalSumAssured">₹0</strong>
+                </div>
+                <div class="insurance-summary-item">
+                    <span class="insurance-summary-label">Total Policies</span>
+                    <strong id="totalPolicies">₹0</strong>
+                </div>
+            </div>
+
+            <!-- Preview Mode -->
+            <div id="insurancePreview" class="insurance-preview">
+                <div id="insurancesList" class="insurances-list"></div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="insuranceEdit" class="insurance-edit" hidden>
+                <form class="entry-form" id="insuranceForm" autocomplete="off">
+                    <div id="insuranceDynamicFields"></div>
+                    <div class="field field-btn">
+                        <button type="submit" class="btn-add">Add Insurance</button>
+                    </div>
+                </form>
+                <div class="table-wrap">
+                    <table>
+                        <thead id="insuranceTableHead"></thead>
+                        <tbody id="insuranceTableBody"></tbody>
+                    </table>
+                    <p class="empty-state" id="insuranceEmptyState">No insurances yet. Add one above.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cards Specific UI -->
+        <div id="cardsUI" class="cards-ui" hidden>
+            <div class="goal-header">
+                <h2>Cards</h2>
+                <button type="button" id="toggleCardEdit" class="btn-nav btn-icon">✎ Edit</button>
+            </div>
+
+            <!-- Card Summary -->
+            <div class="card-summary">
+                <div class="card-summary-item">
+                    <span class="card-summary-label">Total Banks</span>
+                    <strong id="totalBanks">₹0</strong>
+                </div>
+                <div class="card-summary-item">
+                    <span class="card-summary-label">Total Credit Limit</span>
+                    <strong id="totalCreditLimit">₹0</strong>
+                </div>
+                <div class="card-summary-item">
+                    <span class="card-summary-label">Accounts with Credit Cards</span>
+                    <strong id="totalCreditCards">₹0</strong>
+                </div>
+            </div>
+
+            <!-- Preview Mode -->
+            <div id="cardPreview" class="card-preview">
+                <div id="cardsList" class="cards-list"></div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="cardEdit" class="card-edit" hidden>
+                <form class="entry-form" id="cardForm" autocomplete="off">
+                    <div id="cardDynamicFields"></div>
+                    <div class="field field-btn">
+                        <button type="submit" class="btn-add">Add Card</button>
+                    </div>
+                </form>
+                <div class="table-wrap">
+                    <table>
+                        <thead id="cardTableHead"></thead>
+                        <tbody id="cardTableBody"></tbody>
+                    </table>
+                    <p class="empty-state" id="cardEmptyState">No cards yet. Add one above.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Net Worth Specific UI -->
+        <div id="netWorthUI" class="net-worth-ui" hidden>
+            <div class="goal-header">
+                <h2>Net Worth</h2>
+                <button type="button" id="toggleNetWorthEdit" class="btn-nav btn-icon">✎ Edit</button>
+            </div>
+
+            <!-- Current Age Input -->
+            <div class="age-input-section">
+                <div class="field">
+                    <label for="currentAge">Current Age</label>
+                    <input id="currentAge" type="number" min="0" max="100" placeholder="e.g. 30">
+                </div>
+            </div>
+
+            <!-- Net Worth Summary -->
+            <div class="net-worth-summary">
+                <div class="net-worth-summary-item">
+                    <span class="net-worth-summary-label">Total Assets</span>
+                    <strong id="totalAssets">₹0</strong>
+                </div>
+                <div class="net-worth-summary-item">
+                    <span class="net-worth-summary-label">Total Liabilities</span>
+                    <strong id="totalLiabilities">₹0</strong>
+                </div>
+                <div class="net-worth-summary-item">
+                    <span class="net-worth-summary-label">Net Worth Today</span>
+                    <strong id="netWorthToday">₹0</strong>
+                </div>
+            </div>
+
+            <!-- Preview Mode -->
+            <div id="netWorthPreview" class="net-worth-preview">
+                <div class="assets-liabilities-section">
+                    <h3>Assets</h3>
+                    <div id="assetsList" class="assets-liabilities-list"></div>
+                </div>
+                <div class="assets-liabilities-section">
+                    <h3>Liabilities</h3>
+                    <div id="liabilitiesList" class="assets-liabilities-list"></div>
+                </div>
+                <div class="chart-section">
+                    <h3>Net Worth Projection (Till Age 70)</h3>
+                    <canvas id="netWorthProjectionChart"></canvas>
+                </div>
+                <div class="projection-details">
+                    <div class="projection-detail-item">
+                        <span class="projection-detail-label">Projected Net Worth at Age 70</span>
+                        <strong id="projectedNetWorth">₹0</strong>
+                    </div>
+                    <div class="projection-detail-item">
+                        <span class="projection-detail-label">Inflation-Adjusted (6%)</span>
+                        <strong id="inflationAdjustedNetWorth">₹0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="netWorthEdit" class="net-worth-edit" hidden>
+                <form class="entry-form" id="netWorthForm" autocomplete="off">
+                    <div id="netWorthDynamicFields"></div>
+                    <div class="field field-btn">
+                        <button type="submit" class="btn-add">Add Asset/Liability</button>
+                    </div>
+                </form>
+                <div class="table-wrap">
+                    <table>
+                        <thead id="netWorthTableHead"></thead>
+                        <tbody id="netWorthTableBody"></tbody>
+                    </table>
+                    <p class="empty-state" id="netWorthEmptyState">No assets or liabilities yet. Add one above.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tax Plan Specific UI -->
+        <div id="taxPlanUI" class="tax-plan-ui" hidden>
+            <div class="goal-header">
+                <h2>Tax Plan</h2>
+                <button type="button" id="toggleTaxPlanEdit" class="btn-nav btn-icon">✎ Edit</button>
+            </div>
+
+            <!-- Tax Regime Selection -->
+            <div class="tax-regime-section">
+                <div class="field">
+                    <label for="taxRegime">Tax Regime</label>
+                    <select id="taxRegime">
+                        <option value="new">New Tax Regime (FY 2024-25)</option>
+                        <option value="old">Old Tax Regime</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="financialYear">Financial Year</label>
+                    <select id="financialYear">
+                        <option value="2024-25">2024-25</option>
+                        <option value="2025-26">2025-26</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tax Summary -->
+            <div class="tax-summary">
+                <div class="tax-summary-item">
+                    <span class="tax-summary-label">Annual Income (from Budget)</span>
+                    <strong id="annualIncome">₹0</strong>
+                </div>
+                <div class="tax-summary-item">
+                    <span class="tax-summary-label">Total Deductions</span>
+                    <strong id="totalDeductions">₹0</strong>
+                </div>
+                <div class="tax-summary-item">
+                    <span class="tax-summary-label">Taxable Income</span>
+                    <strong id="taxableIncome">₹0</strong>
+                </div>
+                <div class="tax-summary-item">
+                    <span class="tax-summary-label">Annual Tax Liability</span>
+                    <strong id="annualTaxLiability">₹0</strong>
+                </div>
+                <div class="tax-summary-item">
+                    <span class="tax-summary-label">Tax Liability YTD</span>
+                    <strong id="taxLiabilityYTD">₹0</strong>
+                </div>
+            </div>
+
+            <!-- Preview Mode -->
+            <div id="taxPlanPreview" class="tax-plan-preview">
+                <div class="tax-deductions-section">
+                    <h3>Tax Deductions</h3>
+                    <div id="taxDeductionsList" class="tax-deductions-list"></div>
+                </div>
+                <div class="tax-breakdown-section">
+                    <h3>Tax Breakdown</h3>
+                    <div id="taxBreakdown" class="tax-breakdown"></div>
+                </div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="taxPlanEdit" class="tax-plan-edit" hidden>
+                <form class="entry-form" id="taxPlanForm" autocomplete="off">
+                    <div id="taxPlanDynamicFields"></div>
+                    <div class="field field-btn">
+                        <button type="submit" class="btn-add">Add Tax Saving Item</button>
+                    </div>
+                </form>
+                <div class="table-wrap">
+                    <table>
+                        <thead id="taxPlanTableHead"></thead>
+                        <tbody id="taxPlanTableBody"></tbody>
+                    </table>
+                    <p class="empty-state" id="taxPlanEmptyState">No tax saving items yet. Add one above.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gifts Specific UI -->
+        <div id="giftsUI" class="gifts-ui" hidden>
+            <div class="goal-header">
+                <h2>Gifts</h2>
+                <button type="button" id="toggleGiftsEdit" class="btn-nav btn-icon">✎ Edit</button>
+            </div>
+
+            <!-- Gifts Summary -->
+            <div class="gifts-summary">
+                <div class="gifts-summary-item">
+                    <span class="gifts-summary-label">Total Gifts</span>
+                    <strong id="totalGifts">₹0</strong>
+                </div>
+                <div class="gifts-summary-item">
+                    <span class="gifts-summary-label">Total Amount</span>
+                    <strong id="totalGiftAmount">₹0</strong>
+                </div>
+                <div class="gifts-summary-item">
+                    <span class="gifts-summary-label">Fixed Every Year</span>
+                    <strong id="fixedEveryYearCount">₹0</strong>
+                </div>
+            </div>
+
+            <!-- Preview Mode -->
+            <div id="giftsPreview" class="gifts-preview">
+                <div id="giftsList" class="gifts-list"></div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="giftsEdit" class="gifts-edit" hidden>
+                <form class="entry-form" id="giftsForm" autocomplete="off">
+                    <div id="giftsDynamicFields"></div>
+                    <div class="field field-btn">
+                        <button type="submit" class="btn-add">Add Gift</button>
+                    </div>
+                </form>
+                <div class="table-wrap">
+                    <table>
+                        <thead id="giftsTableHead"></thead>
+                        <tbody id="giftsTableBody"></tbody>
+                    </table>
+                    <p class="empty-state" id="giftsEmptyState">No gifts yet. Add one above.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emergency Fund Specific UI -->
+        <div id="emergencyFundUI" class="emergency-fund-ui" hidden>
+            <div class="goal-header">
+                <h2>Emergency Fund</h2>
+                <button type="button" id="toggleEmergencyFundEdit" class="btn-nav btn-icon">✎ Edit</button>
+            </div>
+
+            <!-- Emergency Fund Summary -->
+            <div class="emergency-fund-summary">
+                <div class="emergency-fund-summary-item">
+                    <span class="emergency-fund-summary-label">Average Monthly Expenses</span>
+                    <strong id="averageMonthlyExpenses">₹0</strong>
+                </div>
+                <div class="emergency-fund-summary-item">
+                    <span class="emergency-fund-summary-label">6 Months Needed</span>
+                    <strong id="sixMonthsNeeded">₹0</strong>
+                </div>
+                <div class="emergency-fund-summary-item">
+                    <span class="emergency-fund-summary-label">12 Months Needed</span>
+                    <strong id="twelveMonthsNeeded">₹0</strong>
+                </div>
+            </div>
+
+            <!-- Current Fund Input -->
+            <div class="current-fund-section">
+                <div class="field">
+                    <label for="currentEmergencyFund">Current Emergency Fund (₹)</label>
+                    <input id="currentEmergencyFund" type="number" min="0" placeholder="0">
+                </div>
+            </div>
+
+            <!-- Status Display -->
+            <div class="emergency-fund-status" id="emergencyFundStatus">
+                <div class="status-badge" id="statusBadge">-</div>
+                <div class="status-details">
+                    <div class="status-detail">
+                        <span class="status-detail-label">Amount Needed</span>
+                        <strong id="amountNeeded">₹0</strong>
+                    </div>
+                    <div class="status-detail">
+                        <span class="status-detail-label">Months Covered</span>
+                        <strong id="monthsCovered">0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="emergencyFundEdit" class="emergency-fund-edit" hidden>
+                <form class="entry-form" id="emergencyFundForm" autocomplete="off">
+                    <div id="emergencyFundDynamicFields"></div>
+                    <div class="field field-btn">
+                        <button type="submit" class="btn-add">Update Emergency Fund</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Standard UI for other tabs -->
+        <div id="standardUI">
+            <form class="entry-form" id="entryForm" autocomplete="off">
+                <div id="dynamicFields"></div>
+                <div class="field field-btn">
+                    <button type="submit" class="btn-add">Add</button>
+                </div>
+            </form>
+
+            <div class="toolbar">
+                <input id="searchInput" type="search" placeholder="Search items…" class="search-box">
+                <button type="button" id="exportBtn" class="btn-export">Export Excel</button>
+                <button type="button" id="clearTab" class="btn-danger">Clear Tab</button>
+                <button type="button" id="resetAllData" class="btn-danger">Reset All Data</button>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead id="tableHead"></thead>
+                    <tbody id="entryRows"></tbody>
+                </table>
+                <p class="empty-state" id="emptyState">No items yet. Add one above.</p>
+            </div>
         </div>
     </section>
-</main>
 
+</main>
+</div>
+
+<!-- Firebase SDKs (compat build — no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<!-- SheetJS for Excel export -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+<!-- Chart.js for pie chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="assets/js/firebase-config.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
 </html>

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartFin - Test Suite</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; background: #1a1a1a; color: #e0e0e0; }
+h1 { color: #fff; }
+h2 { color: #fff; margin-top: 0; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+.test-section { margin: 24px 0; padding: 20px; background: #222; border-radius: 8px; border: 1px solid #333; }
+.test-item { margin: 8px 0; padding: 10px 14px; background: #2a2a2a; border-radius: 4px; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+.test-item.pass { border-left: 4px solid #22c55e; }
+.test-item.fail { border-left: 4px solid #ef4444; }
+.test-item .status { font-weight: bold; min-width: 50px; font-size: 0.8rem; }
+.test-item.pass .status { color: #22c55e; }
+.test-item.fail .status { color: #ef4444; }
+.test-item .desc { flex: 1; }
+.test-item .detail { color: #888; font-size: 0.8rem; margin-left: auto; }
+.summary { padding: 12px 16px; border-radius: 6px; margin: 16px 0; font-weight: 600; }
+.summary.all-pass { background: #14532d; color: #86efac; }
+.summary.has-fail { background: #7f1d1d; color: #fca5a5; }
+button { background: #fff; color: #000; border: none; padding: 10px 22px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+button:hover { background: #e0e0e0; }
+.checklist li { line-height: 2; color: #ccc; }
+.checklist strong { color: #fff; }
+</style>
+</head>
+<body>
+<h1>₹ SmartFin – Test Suite</h1>
+
+<div class="test-section">
+  <h2>Automated Unit Tests</h2>
+  <div id="summary"></div>
+  <div id="results"></div>
+  <button onclick="runTests()">▶ Run All Tests</button>
+</div>
+
+<div class="test-section">
+  <h2>Manual Testing Checklist</h2>
+  <ul class="checklist">
+    <li><strong>Auth:</strong> Register new account → verify name in header</li>
+    <li><strong>Auth:</strong> Sign out → verify auth screen appears</li>
+    <li><strong>Auth:</strong> Sign in with wrong password → verify friendly error</li>
+    <li><strong>Tabs:</strong> Click each of the 10 tabs → verify correct UI renders</li>
+    <li><strong>Monthly Budget:</strong> Enter income/expense → verify totals update live</li>
+    <li><strong>Monthly Budget:</strong> Click "📊 Annual" → verify annual summary with month breakdown</li>
+    <li><strong>Monthly Budget:</strong> Navigate months with ← → → verify month display updates</li>
+    <li><strong>Financial Goal:</strong> Add goal → verify in preview cards</li>
+    <li><strong>Monthly Fixed Expense:</strong> Add expense → verify bar graphs update</li>
+    <li><strong>Investments:</strong> Add investment → verify total and bar chart update</li>
+    <li><strong>Net Worth:</strong> Add asset + liability → verify projection chart shows</li>
+    <li><strong>Tax Plan:</strong> Switch regime → verify tax calculation changes</li>
+    <li><strong>Gifts:</strong> Add Fixed Every Year gift → verify summary shows correct count</li>
+    <li><strong>Emergency Fund:</strong> Enter current fund → verify status badge color (red/yellow/green)</li>
+    <li><strong>Export:</strong> Click "Export Excel" on any tab with data → verify .xlsx downloads</li>
+    <li><strong>Reset:</strong> Click "Reset All Data" → cancel → verify data intact</li>
+    <li><strong>Reset:</strong> Click "Reset All Data" → confirm → type DELETE → verify all data cleared</li>
+    <li><strong>Search:</strong> Type in search box on standard tab → verify rows filter</li>
+    <li><strong>Firebase Sync:</strong> Add entry → refresh page → verify data persists</li>
+  </ul>
+</div>
+
+<script>
+// ── Test utilities ─────────────────────────────────────────────────────────────
+const results = [];
+
+function test(desc, fn) {
+    try {
+        const val = fn();
+        const pass = val === true || val === undefined;
+        results.push({ pass, desc, detail: pass ? "" : String(val) });
+    } catch (e) {
+        results.push({ pass: false, desc, detail: e.message });
+    }
+}
+
+function assertEqual(a, b, desc) {
+    const pass = JSON.stringify(a) === JSON.stringify(b);
+    results.push({ pass, desc, detail: pass ? "" : `Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}` });
+}
+
+function assertNotNull(v, desc) {
+    results.push({ pass: v !== null && v !== undefined, desc, detail: v == null ? "Got null/undefined" : "" });
+}
+
+function renderResults() {
+    const container = document.getElementById("results");
+    const summaryEl = document.getElementById("summary");
+    const passed = results.filter(r => r.pass).length;
+    const total = results.length;
+    const allPass = passed === total;
+
+    summaryEl.innerHTML = `<div class="summary ${allPass ? 'all-pass' : 'has-fail'}">${allPass ? '✅' : '❌'} ${passed} / ${total} tests passed</div>`;
+
+    container.innerHTML = results.map(t => `
+        <div class="test-item ${t.pass ? 'pass' : 'fail'}">
+            <span class="status">${t.pass ? 'PASS' : 'FAIL'}</span>
+            <span class="desc">${t.desc}</span>
+            ${t.detail ? `<span class="detail">${t.detail}</span>` : ''}
+        </div>
+    `).join('');
+}
+
+// ── Stub implementations (mirrors app.js logic, no Firebase) ──────────────────
+const DEFAULT_TABS = [
+    { id: "monthlyBudget",       label: "Monthly Budget",        color: "#333", text: "#fff" },
+    { id: "financialGoal",       label: "Financial Goal",        color: "#444", text: "#fff" },
+    { id: "monthlyFixedExpense", label: "Monthly Fixed Expense", color: "#555", text: "#fff" },
+    { id: "investments",         label: "Investments",           color: "#333", text: "#fff" },
+    { id: "insurances",          label: "Insurances",            color: "#444", text: "#fff" },
+    { id: "cards",               label: "Cards",                 color: "#555", text: "#fff" },
+    { id: "netWorth",            label: "Net Worth",             color: "#333", text: "#fff" },
+    { id: "taxPlan",             label: "Tax Plan",              color: "#444", text: "#fff" },
+    { id: "gifts",               label: "Gifts",                 color: "#555", text: "#fff" },
+    { id: "emergencyFund",       label: "Emergency Fund",        color: "#22c55e", text: "#fff" }
+];
+
+const TAB_FIELDS = {
+    monthlyBudget: [
+        { id: "name", label: "Item Name", type: "text", required: true },
+        { id: "planned", label: "Planned Amount (₹)", type: "number", required: true },
+        { id: "actual", label: "Actual Amount (₹)", type: "number" },
+        { id: "date", label: "Date", type: "date" },
+        { id: "note", label: "Note", type: "text" }
+    ],
+    financialGoal: [
+        { id: "name", label: "Goal Name", type: "text", required: true },
+        { id: "amountNeeded", label: "Amount Needed (₹)", type: "number", required: true },
+        { id: "amountAccumulated", label: "Amount Accumulated (₹)", type: "number" },
+        { id: "targetDate", label: "Target Date", type: "date" },
+        { id: "details", label: "Details", type: "text" },
+        { id: "goalType", label: "Goal Type", type: "select", options: ["Short Term", "Mid Term", "Long Term"] },
+        { id: "status", label: "Status", type: "select", options: ["Planned", "Ongoing", "Achieved"] }
+    ],
+    emergencyFund: [
+        { id: "currentFund", label: "Current Emergency Fund (₹)", type: "number", required: true },
+        { id: "details", label: "Details", type: "text" }
+    ]
+};
+
+function formatMoney(v) {
+    try {
+        return new Intl.NumberFormat("en-IN", {
+            style: "currency", currency: "INR", maximumFractionDigits: 0
+        }).format(v || 0);
+    } catch (e) {
+        return "₹0";
+    }
+}
+
+function esc(s) {
+    return String(s)
+        .replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;").replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function getMonthKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function calculateTax(annualIncome, regime, deductions) {
+    const stdDeduction = regime === "new" ? 75000 : 50000;
+    const taxableIncome = Math.max(0, annualIncome - stdDeduction - (regime === "old" ? deductions : 0));
+    let tax = 0;
+    if (regime === "new") {
+        const slabs = [[300000,0],[400000,0.05],[300000,0.10],[300000,0.15],[300000,0.20],[Infinity,0.30]];
+        let remaining = taxableIncome;
+        for (const [limit, rate] of slabs) {
+            if (remaining <= 0) break;
+            const taxable = Math.min(remaining, limit);
+            tax += taxable * rate;
+            remaining -= taxable;
+        }
+    } else {
+        const slabs = [[250000,0],[250000,0.05],[500000,0.20],[Infinity,0.30]];
+        let remaining = taxableIncome;
+        for (const [limit, rate] of slabs) {
+            if (remaining <= 0) break;
+            const taxable = Math.min(remaining, limit);
+            tax += taxable * rate;
+            remaining -= taxable;
+        }
+    }
+    return Math.round(tax * 1.04); // including 4% cess
+}
+
+function calculateEmergencyStatus(currentFund, avgMonthlyExpenses) {
+    if (avgMonthlyExpenses <= 0) return { status: "unknown", monthsCovered: 0 };
+    const monthsCovered = currentFund / avgMonthlyExpenses;
+    let status;
+    if (monthsCovered >= 12) status = "green";
+    else if (monthsCovered >= 6) status = "yellow";
+    else status = "red";
+    return { status, monthsCovered };
+}
+
+function calculateAnnualTotals(monthlyBudgetData) {
+    let totalIncome = 0, totalExpenses = 0, totalInvesting = 0;
+    Object.values(monthlyBudgetData).forEach(monthData => {
+        totalIncome += Object.values(monthData.inflow || {}).reduce((s, v) => s + Number(v || 0), 0);
+        totalExpenses += Object.values(monthData.outflow || {}).reduce((s, v) => s + Number(v || 0), 0);
+        totalInvesting += Object.values(monthData.investing || {}).reduce((s, v) => s + Number(v || 0), 0);
+    });
+    return { totalIncome, totalExpenses, totalInvesting, totalSavings: totalIncome - totalExpenses - totalInvesting };
+}
+
+// ── RUN TESTS ──────────────────────────────────────────────────────────────────
+function runTests() {
+    results.length = 0;
+
+    // ─ DEFAULT_TABS ─────────────────────────────────────────────────────────────
+    assertEqual(DEFAULT_TABS.length, 10, "DEFAULT_TABS: exactly 10 tabs defined");
+
+    test("DEFAULT_TABS: misc tab removed", () =>
+        !DEFAULT_TABS.find(t => t.id === "misc") || "misc tab still present");
+
+    test("DEFAULT_TABS: oneTimeBudget tab removed", () =>
+        !DEFAULT_TABS.find(t => t.id === "oneTimeBudget") || "oneTimeBudget tab still present");
+
+    test("DEFAULT_TABS: emergencyFund tab present", () =>
+        !!DEFAULT_TABS.find(t => t.id === "emergencyFund") || "emergencyFund tab missing");
+
+    test("DEFAULT_TABS: all tabs have required fields", () =>
+        DEFAULT_TABS.every(t => t.id && t.label && t.color && t.text) || "Some tabs missing required fields");
+
+    test("DEFAULT_TABS: all tab IDs are unique", () => {
+        const ids = DEFAULT_TABS.map(t => t.id);
+        return new Set(ids).size === ids.length || "Duplicate tab IDs found";
+    });
+
+    const expectedTabIds = ["monthlyBudget","financialGoal","monthlyFixedExpense","investments",
+                            "insurances","cards","netWorth","taxPlan","gifts","emergencyFund"];
+    assertEqual(DEFAULT_TABS.map(t => t.id), expectedTabIds, "DEFAULT_TABS: correct tab order and IDs");
+
+    // ─ TAB_FIELDS ────────────────────────────────────────────────────────────────
+    test("TAB_FIELDS: emergencyFund fields defined", () =>
+        !!TAB_FIELDS.emergencyFund && TAB_FIELDS.emergencyFund.length === 2);
+
+    test("TAB_FIELDS: emergencyFund has currentFund field", () =>
+        !!TAB_FIELDS.emergencyFund.find(f => f.id === "currentFund"));
+
+    test("TAB_FIELDS: financialGoal has all 7 fields", () =>
+        TAB_FIELDS.financialGoal.length === 7);
+
+    test("TAB_FIELDS: monthlyBudget has all 5 fields", () =>
+        TAB_FIELDS.monthlyBudget.length === 5);
+
+    // ─ formatMoney ───────────────────────────────────────────────────────────────
+    assertEqual(formatMoney(0), "₹0", "formatMoney: 0 → ₹0");
+    assertEqual(formatMoney(1000), "₹1,000", "formatMoney: 1000 → ₹1,000");
+    assertEqual(formatMoney(100000), "₹1,00,000", "formatMoney: 100000 → ₹1,00,000 (Indian format)");
+    assertEqual(formatMoney(1234567), "₹12,34,567", "formatMoney: 1234567 → ₹12,34,567");
+    assertEqual(formatMoney(null), "₹0", "formatMoney: null → ₹0 (safe default)");
+    assertEqual(formatMoney(undefined), "₹0", "formatMoney: undefined → ₹0 (safe default)");
+    assertEqual(formatMoney(-500), "-₹500", "formatMoney: negative value handled");
+
+    // ─ esc (HTML escaping) ──────────────────────────────────────────────────────
+    assertEqual(esc("<b>"), "&lt;b&gt;", "esc: < > escaped");
+    assertEqual(esc('"hello"'), "&quot;hello&quot;", "esc: quotes escaped");
+    assertEqual(esc("it's"), "it&#039;s", "esc: apostrophe escaped");
+    assertEqual(esc("<script>alert('xss')<\/script>"),
+        "&lt;script&gt;alert(&#039;xss&#039;)&lt;\/script&gt;", "esc: full XSS string escaped");
+    assertEqual(esc(123), "123", "esc: number coerced to string");
+
+    // ─ getMonthKey ───────────────────────────────────────────────────────────────
+    assertEqual(getMonthKey(new Date(2026, 0, 1)), "2026-01", "getMonthKey: January 2026 → 2026-01");
+    assertEqual(getMonthKey(new Date(2026, 11, 31)), "2026-12", "getMonthKey: December 2026 → 2026-12");
+    assertEqual(getMonthKey(new Date(2025, 8, 15)), "2025-09", "getMonthKey: September padded to 2-digit");
+
+    // ─ Emergency Fund Status ─────────────────────────────────────────────────────
+    test("Emergency Fund: green when ≥ 12 months covered", () => {
+        const r = calculateEmergencyStatus(120000, 10000);
+        return r.status === "green" || `Expected green, got ${r.status}`;
+    });
+    test("Emergency Fund: green exactly at 12 months", () => {
+        const r = calculateEmergencyStatus(60000, 5000);
+        return r.status === "green" || `Expected green, got ${r.status}`;
+    });
+    test("Emergency Fund: yellow when 6-12 months covered", () => {
+        const r = calculateEmergencyStatus(60000, 8000);
+        return r.status === "yellow" || `Expected yellow, got ${r.status}`;
+    });
+    test("Emergency Fund: yellow exactly at 6 months", () => {
+        const r = calculateEmergencyStatus(30000, 5000);
+        return r.status === "yellow" || `Expected yellow, got ${r.status}`;
+    });
+    test("Emergency Fund: red when < 6 months covered", () => {
+        const r = calculateEmergencyStatus(20000, 5000);
+        return r.status === "red" || `Expected red, got ${r.status}`;
+    });
+    test("Emergency Fund: monthsCovered calculated correctly", () => {
+        const r = calculateEmergencyStatus(50000, 10000);
+        return r.monthsCovered === 5 || `Expected 5, got ${r.monthsCovered}`;
+    });
+    test("Emergency Fund: zero expenses returns unknown", () => {
+        const r = calculateEmergencyStatus(50000, 0);
+        return r.status === "unknown" || `Expected unknown, got ${r.status}`;
+    });
+    test("Emergency Fund: zero fund with expenses is red", () => {
+        const r = calculateEmergencyStatus(0, 10000);
+        return r.status === "red" || `Expected red, got ${r.status}`;
+    });
+
+    // ─ Annual Summary Calculation ────────────────────────────────────────────────
+    const sampleBudgetData = {
+        "2026-01": { inflow: { primaryIncome: 50000 }, outflow: { rent: 15000, food: 5000 }, investing: { sipInvestment: 5000 } },
+        "2026-02": { inflow: { primaryIncome: 50000, secondaryIncome: 10000 }, outflow: { rent: 15000 }, investing: {} },
+        "2026-03": { inflow: { primaryIncome: 50000 }, outflow: {}, investing: { sipInvestment: 5000 } }
+    };
+    const annualTotals = calculateAnnualTotals(sampleBudgetData);
+
+    assertEqual(annualTotals.totalIncome, 160000, "Annual: total income across 3 months = 160000");
+    assertEqual(annualTotals.totalExpenses, 35000, "Annual: total expenses across 3 months = 35000");
+    assertEqual(annualTotals.totalInvesting, 10000, "Annual: total investing across 3 months = 10000");
+    assertEqual(annualTotals.totalSavings, 115000, "Annual: total savings = income - expenses - investing");
+
+    const emptyTotals = calculateAnnualTotals({});
+    assertEqual(emptyTotals.totalIncome, 0, "Annual: empty data returns 0 income");
+    assertEqual(emptyTotals.totalSavings, 0, "Annual: empty data returns 0 savings");
+
+    // ─ Tax Calculation (New Regime) ──────────────────────────────────────────────
+    test("Tax: zero tax on income ≤ 3,00,000 (new regime)", () => {
+        const tax = calculateTax(300000, "new", 0);
+        return tax === 0 || `Expected 0, got ${tax}`;
+    });
+    test("Tax: 5% slab on income 3-7L (new regime)", () => {
+        const tax = calculateTax(700000, "new", 0);
+        return tax > 0 || "Expected positive tax";
+    });
+    test("Tax: higher tax for higher income (new regime)", () => {
+        const low = calculateTax(700000, "new", 0);
+        const high = calculateTax(1200000, "new", 0);
+        return high > low || `Higher income should have higher tax`;
+    });
+    test("Tax: cess (4%) is included", () => {
+        // 4L income, new regime: taxable = 4L - 75k stdDed = 3.25L; tax = (3.25L - 3L)*5% = 1250; with cess = 1300
+        const tax = calculateTax(400000, "new", 0);
+        return tax === 1300 || `Expected 1300, got ${tax}`;
+    });
+
+    // ─ Custom tab ID generation ──────────────────────────────────────────────────
+    test("Custom tab: ID generated from label", () => {
+        const label = "My Wedding 2026";
+        const id = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-test";
+        return id.startsWith("my-wedding-2026") || `Bad ID: ${id}`;
+    });
+    test("Custom tab: special chars stripped from ID", () => {
+        const label = "Test@#$% Tab!";
+        const id = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-test";
+        return !id.match(/[@#$%!]/) || "Special chars not stripped";
+    });
+
+    renderResults();
+}
+</script>
+</body>
+</html>

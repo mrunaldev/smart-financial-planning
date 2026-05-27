@@ -1,181 +1,2747 @@
+'use strict';
+
 const DEFAULT_TABS = [
-    { id: "monthlyBudget", label: "Monthly Budget", color: "#dfeff7", text: "#218250" },
-    { id: "financialGoal", label: "Financial Goal", color: "#ffc107", text: "#000" },
-    { id: "monthlyFixedExpense", label: "Monthly Fixed Expense", color: "#e9162a", text: "#fff" },
-    { id: "investments", label: "Investments", color: "#09a54b", text: "#fff" },
-    { id: "insurances", label: "Insurances", color: "#6a329f", text: "#fff" },
-    { id: "cards", label: "Cards", color: "#073371", text: "#fff" },
-    { id: "netWorth", label: "Net Worth", color: "#8a6800", text: "#fff" },
-    { id: "taxPlan", label: "Tax Plan", color: "#f92a9e", text: "#fff" },
-    { id: "gifts", label: "Gifts", color: "#8a6800", text: "#fff" },
-    { id: "misc", label: "Misc", color: "#3a3a3a", text: "#fff" },
-    { id: "oneTimeBudget", label: "One Time Budget", color: "#104c4b", text: "#fff" }
+    { id: "monthlyBudget",       label: "Monthly Budget",        color: "#333", text: "#fff" },
+    { id: "financialGoal",       label: "Financial Goal",        color: "#444", text: "#fff" },
+    { id: "monthlyFixedExpense", label: "Monthly Fixed Expense", color: "#555", text: "#fff" },
+    { id: "investments",         label: "Investments",           color: "#333", text: "#fff" },
+    { id: "insurances",          label: "Insurances",            color: "#444", text: "#fff" },
+    { id: "cards",               label: "Cards",                 color: "#555", text: "#fff" },
+    { id: "netWorth",            label: "Net Worth",             color: "#333", text: "#fff" },
+    { id: "taxPlan",             label: "Tax Plan",              color: "#444", text: "#fff" },
+    { id: "gifts",               label: "Gifts",                 color: "#555", text: "#fff" },
+    { id: "emergencyFund",       label: "Emergency Fund",        color: "#22c55e", text: "#fff" }
 ];
 
-const STORAGE_KEY = "smartFinancialPlanningData";
-const CUSTOM_TABS_KEY = "smartFinancialPlanningCustomTabs";
-
-let activeTabId = DEFAULT_TABS[0].id;
-
-const tabBar = document.getElementById("tabBar");
-const activeSubtitle = document.getElementById("activeSubtitle");
-const entryForm = document.getElementById("entryForm");
-const entryRows = document.getElementById("entryRows");
-const emptyState = document.getElementById("emptyState");
-const searchInput = document.getElementById("searchInput");
-const clearTabButton = document.getElementById("clearTab");
-
-const fields = {
-    name: document.getElementById("entryName"),
-    planned: document.getElementById("entryPlanned"),
-    actual: document.getElementById("entryActual"),
-    date: document.getElementById("entryDate"),
-    note: document.getElementById("entryNote")
+// ── Tab-specific field configurations ───────────────────────────────────────
+const TAB_FIELDS = {
+    monthlyBudget: [
+        { id: "name",      label: "Item Name",           type: "text",   placeholder: "e.g. Rent, Groceries", required: true },
+        { id: "planned",   label: "Planned Amount (₹)", type: "number", placeholder: "0", required: true },
+        { id: "actual",    label: "Actual Amount (₹)",  type: "number", placeholder: "0" },
+        { id: "date",      label: "Date",               type: "date",   placeholder: "" },
+        { id: "note",      label: "Note",               type: "text",   placeholder: "Optional" }
+    ],
+    financialGoal: [
+        { id: "name",      label: "Goal Name",           type: "text",   placeholder: "e.g. Emergency Fund", required: true },
+        { id: "amountNeeded", label: "Amount Needed (₹)", type: "number", placeholder: "0", required: true },
+        { id: "amountAccumulated", label: "Amount Accumulated (₹)", type: "number", placeholder: "0" },
+        { id: "targetDate", label: "Target Date", type: "date", placeholder: "" },
+        { id: "details", label: "Details", type: "text", placeholder: "Optional" },
+        { id: "goalType", label: "Goal Type", type: "select", options: ["Short Term", "Mid Term", "Long Term"] },
+        { id: "status", label: "Status", type: "select", options: ["Planned", "Ongoing", "Achieved"] }
+    ],
+    monthlyFixedExpense: [
+        { id: "name",      label: "Expense Name",        type: "text",   placeholder: "e.g. Rent, Insurance", required: true },
+        { id: "amount",    label: "Amount (₹)",         type: "number", placeholder: "0", required: true },
+        { id: "type",      label: "Deduction Type",     type: "select", options: ["Insurance Premium", "Liability", "Saving", "Expenditure", "Investment"] },
+        { id: "bankName", label: "Bank Name",          type: "text",   placeholder: "e.g. HDFC, ICICI" },
+        { id: "endDate",   label: "End Date",           type: "date",   placeholder: "" },
+        { id: "duration", label: "Duration (months)",  type: "number", placeholder: "0" }
+    ],
+    investments: [
+        { id: "name",      label: "Investment Name",     type: "text",   placeholder: "e.g. HDFC SIP, Stocks", required: true },
+        { id: "initialInvestment", label: "Initial Investment (₹)", type: "number", placeholder: "0", required: true },
+        { id: "totalAmount", label: "Total Amount So Far (₹)", type: "number", placeholder: "0" },
+        { id: "frequency", label: "Frequency", type: "select", options: ["Monthly", "Annually", "One-Time"] },
+        { id: "startDate", label: "Start Date", type: "date", placeholder: "" },
+        { id: "maturityDate", label: "Maturity Date", type: "date", placeholder: "" },
+        { id: "details", label: "Details/Remark", type: "text", placeholder: "Optional" }
+    ],
+    insurances: [
+        { id: "name",      label: "Policy Name",         type: "text",   placeholder: "e.g. Term Life, Health", required: true },
+        { id: "companyName", label: "Company Name",       type: "text",   placeholder: "e.g. HDFC, ICICI" },
+        { id: "premium",   label: "Premium (₹)",        type: "number", placeholder: "0", required: true },
+        { id: "sumAssured", label: "Sum Assured (₹)",    type: "number", placeholder: "0" },
+        { id: "maturityDate", label: "Maturity Date",      type: "date",   placeholder: "" },
+        { id: "nomineeName", label: "Nominee Name",       type: "text",   placeholder: "e.g. John Doe" },
+        { id: "nirLinked", label: "NIR Linked",          type: "select", options: ["Yes", "No"] }
+    ],
+    cards: [
+        { id: "bankName",      label: "Bank/NBFC Name",      type: "text",   placeholder: "e.g. HDFC, ICICI", required: true },
+        { id: "accountPresent", label: "Account Present",    type: "select", options: ["Yes", "No"] },
+        { id: "creditCardPresent", label: "Credit Card Present", type: "select", options: ["Yes", "No"] },
+        { id: "creditLimit",   label: "Credit Card Limit (₹)", type: "number", placeholder: "0" },
+        { id: "purpose",       label: "Purpose of Use",      type: "text",   placeholder: "e.g. Salary, Savings, Investments" },
+        { id: "kycUpdated",   label: "Address/KYC Updated",  type: "select", options: ["Yes", "No"] },
+        { id: "nomineeAdded",  label: "Nominee Added",       type: "select", options: ["Yes", "No"] }
+    ],
+    netWorth: [
+        { id: "name",      label: "Asset/Liability Name", type: "text",   placeholder: "e.g. House, Car, Loan", required: true },
+        { id: "type",      label: "Type",               type: "select", options: ["Asset", "Liability"] },
+        { id: "value",     label: "Value Today (₹)",    type: "number", placeholder: "0", required: true },
+        { id: "growthRate", label: "Expected Annual Growth (%)", type: "number", placeholder: "0" },
+        { id: "details",   label: "Details",            type: "text",   placeholder: "Optional" }
+    ],
+    taxPlan: [
+        { id: "name",      label: "Tax Saving Item",     type: "text",   placeholder: "e.g. PPF, ELSS, 80C", required: true },
+        { id: "amount",   label: "Amount Invested (₹)", type: "number", placeholder: "0", required: true },
+        { id: "section",  label: "Section",             type: "select", options: ["80C", "80D", "80CCD(1B)", "80CCD(2)", "80E", "80EEA", "80G", "Other"] },
+        { id: "details",   label: "Details",            type: "text",   placeholder: "Optional" }
+    ],
+    gifts: [
+        { id: "name",      label: "Gift Name",           type: "text",   placeholder: "e.g. Birthday gift to friend", required: true },
+        { id: "category",  label: "Category",            type: "select", options: ["Fixed Every Year", "On Demand"] },
+        { id: "relativeName", label: "Relative Name",    type: "text",   placeholder: "e.g. John Doe" },
+        { id: "occasion",  label: "Occasion",             type: "text",   placeholder: "e.g. Birthday, Wedding, Anniversary" },
+        { id: "amount",    label: "Amount (₹)",          type: "number", placeholder: "0" },
+        { id: "details",   label: "Details",              type: "text",   placeholder: "Optional" }
+    ],
+    emergencyFund: [
+        { id: "currentFund", label: "Current Emergency Fund (₹)", type: "number", placeholder: "0", required: true },
+        { id: "details",     label: "Details",               type: "text",   placeholder: "Optional" }
+    ]
 };
+
+// ── Monthly Budget Category Fields ───────────────────────────────────────────
+const MONTHLY_BUDGET_CATEGORIES = {
+    inflow: [
+        { id: "primaryIncome", label: "Primary Income", type: "number" },
+        { id: "secondaryIncome", label: "Secondary Income", type: "number" },
+        { id: "borrowing", label: "Borrowing/Money Back", type: "number" },
+        { id: "interest", label: "Interest", type: "number" },
+        { id: "dividend", label: "Dividend", type: "number" },
+        { id: "othersInflow", label: "Others", type: "number" }
+    ],
+    outflow: [
+        { id: "loanEMI", label: "Loan EMI", type: "number" },
+        { id: "insurance", label: "Insurance", type: "number" },
+        { id: "rent", label: "Rent", type: "number" },
+        { id: "maintenance", label: "Maintenance", type: "number" },
+        { id: "creditCardDue", label: "Unpaid/Pending Credit Card Due", type: "number" },
+        { id: "debtRepayment", label: "Debt Repayment", type: "number" },
+        { id: "lending", label: "Lending", type: "number" },
+        { id: "utilityBills", label: "Utility Bills", type: "number" },
+        { id: "familyExpenditure", label: "Family Expenditure", type: "number" },
+        { id: "miscExpenses", label: "Miscellaneous Expenses", type: "number" }
+    ],
+    investing: [
+        { id: "sipInvestment", label: "SIP Investment", type: "number" },
+        { id: "retirementInvestment", label: "Retirement Plan Investment", type: "number" },
+        { id: "monthlySaving", label: "Monthly Saving", type: "number" },
+        { id: "onetimeSaving", label: "One-Time Saving of the Month", type: "number" },
+        { id: "onetimeInvestment", label: "One-Time Investment of the Month", type: "number" }
+    ]
+};
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const authScreen        = document.getElementById("authScreen");
+const appScreen         = document.getElementById("appScreen");
+const authForm          = document.getElementById("authForm");
+const authNameInput     = document.getElementById("authName");
+const authEmailInput    = document.getElementById("authEmail");
+const authPasswordInput = document.getElementById("authPassword");
+const authSubmitBtn     = document.getElementById("authSubmitBtn");
+const authToggleBtn     = document.getElementById("authToggleBtn");
+const authSwitchText    = document.getElementById("authSwitchText");
+const authError         = document.getElementById("authError");
+const nameField         = document.getElementById("nameField");
+const logoutBtn         = document.getElementById("logoutBtn");
+const userEmailDisplay  = document.getElementById("userEmailDisplay");
+const tabBar            = document.getElementById("tabBar");
+const activeSubtitle    = document.getElementById("activeSubtitle");
+const entryForm         = document.getElementById("entryForm");
+const dynamicFields     = document.getElementById("dynamicFields");
+const tableHead         = document.getElementById("tableHead");
+const entryRows         = document.getElementById("entryRows");
+const emptyState        = document.getElementById("emptyState");
+const searchInput       = document.getElementById("searchInput");
+const exportBtn         = document.getElementById("exportBtn");
+const clearTabButton    = document.getElementById("clearTab");
+const resetAllDataButton = document.getElementById("resetAllData");
+
+// Monthly Budget specific refs
+const monthlyBudgetUI   = document.getElementById("monthlyBudgetUI");
+const standardUI        = document.getElementById("standardUI");
+const prevMonthBtn      = document.getElementById("prevMonth");
+const nextMonthBtn      = document.getElementById("nextMonth");
+const toggleBudgetView  = document.getElementById("toggleBudgetView");
+const currentMonthDisplay = document.getElementById("currentMonthDisplay");
+const budgetStatus      = document.getElementById("budgetStatus");
+const inflowFields      = document.getElementById("inflowFields");
+const outflowFields     = document.getElementById("outflowFields");
+const investingFields   = document.getElementById("investingFields");
+const monthEndBalance   = document.getElementById("monthEndBalance");
+const saveMonthDataBtn  = document.getElementById("saveMonthData");
+
+// Annual summary refs
+const annualSummarySection = document.getElementById("annualSummarySection");
+const monthlyViewSection   = document.getElementById("monthlyViewSection");
+const annualTotalIncome    = document.getElementById("annualTotalIncome");
+const annualTotalExpenses  = document.getElementById("annualTotalExpenses");
+const annualTotalSavings   = document.getElementById("annualTotalSavings");
+const avgMonthlyIncome     = document.getElementById("avgMonthlyIncome");
+const avgMonthlyExpenses   = document.getElementById("avgMonthlyExpenses");
+const annualMonthsList     = document.getElementById("annualMonthsList");
+const pieCanvas        = document.getElementById("pieChart");
+const toggleBudgetEdit  = document.getElementById("toggleBudgetEdit");
+const budgetPreview     = document.getElementById("budgetPreview");
+const budgetEdit        = document.getElementById("budgetEdit");
+const inflowPreview     = document.getElementById("inflowPreview");
+const outflowPreview    = document.getElementById("outflowPreview");
+const investingPreview  = document.getElementById("investingPreview");
+
+// Financial Goal refs
+const financialGoalUI   = document.getElementById("financialGoalUI");
+const toggleGoalEdit    = document.getElementById("toggleGoalEdit");
+const goalPreview       = document.getElementById("goalPreview");
+const goalEdit          = document.getElementById("goalEdit");
+const goalsList         = document.getElementById("goalsList");
+const goalForm          = document.getElementById("goalForm");
+const goalDynamicFields = document.getElementById("goalDynamicFields");
+const goalTableHead     = document.getElementById("goalTableHead");
+const goalTableBody     = document.getElementById("goalTableBody");
+const goalEmptyState    = document.getElementById("goalEmptyState");
+
+// Monthly Fixed Expense refs
+const monthlyFixedExpenseUI = document.getElementById("monthlyFixedExpenseUI");
+const toggleExpenseEdit    = document.getElementById("toggleExpenseEdit");
+const expensePreview       = document.getElementById("expensePreview");
+const expenseEdit          = document.getElementById("expenseEdit");
+const expensesList         = document.getElementById("expensesList");
+const expenseForm          = document.getElementById("expenseForm");
+const expenseDynamicFields = document.getElementById("expenseDynamicFields");
+const expenseTableHead     = document.getElementById("expenseTableHead");
+const expenseTableBody     = document.getElementById("expenseTableBody");
+const expenseEmptyState    = document.getElementById("expenseEmptyState");
+const bankBarChartCanvas  = document.getElementById("bankBarChart");
+const typeBarChartCanvas  = document.getElementById("typeBarChart");
+
+// Investments refs
+const investmentsUI      = document.getElementById("investmentsUI");
+const toggleInvestmentEdit = document.getElementById("toggleInvestmentEdit");
+const investmentPreview  = document.getElementById("investmentPreview");
+const investmentEdit     = document.getElementById("investmentEdit");
+const investmentsList    = document.getElementById("investmentsList");
+const investmentForm     = document.getElementById("investmentForm");
+const investmentDynamicFields = document.getElementById("investmentDynamicFields");
+const investmentTableHead = document.getElementById("investmentTableHead");
+const investmentTableBody = document.getElementById("investmentTableBody");
+const investmentEmptyState = document.getElementById("investmentEmptyState");
+const investmentBarChartCanvas = document.getElementById("investmentBarChart");
+
+// Insurances refs
+const insurancesUI      = document.getElementById("insurancesUI");
+const toggleInsuranceEdit = document.getElementById("toggleInsuranceEdit");
+const insurancePreview   = document.getElementById("insurancePreview");
+const insuranceEdit      = document.getElementById("insuranceEdit");
+const insurancesList     = document.getElementById("insurancesList");
+const insuranceForm      = document.getElementById("insuranceForm");
+const insuranceDynamicFields = document.getElementById("insuranceDynamicFields");
+const insuranceTableHead = document.getElementById("insuranceTableHead");
+const insuranceTableBody = document.getElementById("insuranceTableBody");
+const insuranceEmptyState = document.getElementById("insuranceEmptyState");
+
+// Cards refs
+const cardsUI           = document.getElementById("cardsUI");
+const toggleCardEdit    = document.getElementById("toggleCardEdit");
+const cardPreview       = document.getElementById("cardPreview");
+const cardEdit          = document.getElementById("cardEdit");
+const cardsList         = document.getElementById("cardsList");
+const cardForm          = document.getElementById("cardForm");
+const cardDynamicFields = document.getElementById("cardDynamicFields");
+const cardTableHead     = document.getElementById("cardTableHead");
+const cardTableBody     = document.getElementById("cardTableBody");
+const cardEmptyState    = document.getElementById("cardEmptyState");
+
+// Net Worth refs
+const netWorthUI        = document.getElementById("netWorthUI");
+const toggleNetWorthEdit = document.getElementById("toggleNetWorthEdit");
+const currentAgeInput  = document.getElementById("currentAge");
+const netWorthPreview  = document.getElementById("netWorthPreview");
+const netWorthEdit     = document.getElementById("netWorthEdit");
+const assetsList       = document.getElementById("assetsList");
+const liabilitiesList  = document.getElementById("liabilitiesList");
+const netWorthForm     = document.getElementById("netWorthForm");
+const netWorthDynamicFields = document.getElementById("netWorthDynamicFields");
+const netWorthTableHead = document.getElementById("netWorthTableHead");
+const netWorthTableBody = document.getElementById("netWorthTableBody");
+const netWorthEmptyState = document.getElementById("netWorthEmptyState");
+const netWorthProjectionChartCanvas = document.getElementById("netWorthProjectionChart");
+
+// Tax Plan refs
+const taxPlanUI         = document.getElementById("taxPlanUI");
+const toggleTaxPlanEdit = document.getElementById("toggleTaxPlanEdit");
+const taxRegimeSelect   = document.getElementById("taxRegime");
+const financialYearSelect = document.getElementById("financialYear");
+const taxPlanPreview   = document.getElementById("taxPlanPreview");
+const taxPlanEdit      = document.getElementById("taxPlanEdit");
+const taxDeductionsList = document.getElementById("taxDeductionsList");
+const taxBreakdown     = document.getElementById("taxBreakdown");
+const taxPlanForm      = document.getElementById("taxPlanForm");
+const taxPlanDynamicFields = document.getElementById("taxPlanDynamicFields");
+const taxPlanTableHead = document.getElementById("taxPlanTableHead");
+const taxPlanTableBody = document.getElementById("taxPlanTableBody");
+const taxPlanEmptyState = document.getElementById("taxPlanEmptyState");
+
+// Gifts refs
+const giftsUI          = document.getElementById("giftsUI");
+const toggleGiftsEdit  = document.getElementById("toggleGiftsEdit");
+const giftsPreview     = document.getElementById("giftsPreview");
+const giftsEdit        = document.getElementById("giftsEdit");
+const giftsList        = document.getElementById("giftsList");
+const giftsForm        = document.getElementById("giftsForm");
+const giftsDynamicFields = document.getElementById("giftsDynamicFields");
+const giftsTableHead   = document.getElementById("giftsTableHead");
+const giftsTableBody   = document.getElementById("giftsTableBody");
+const giftsEmptyState  = document.getElementById("giftsEmptyState");
+
+// Emergency Fund refs
+const emergencyFundUI          = document.getElementById("emergencyFundUI");
+const toggleEmergencyFundEdit = document.getElementById("toggleEmergencyFundEdit");
+const currentEmergencyFundInput = document.getElementById("currentEmergencyFund");
+const emergencyFundEdit         = document.getElementById("emergencyFundEdit");
+const emergencyFundForm        = document.getElementById("emergencyFundForm");
+const emergencyFundDynamicFields = document.getElementById("emergencyFundDynamicFields");
+
+const fieldInputs = {};
 
 const totals = {
     planned: document.getElementById("plannedTotal"),
-    actual: document.getElementById("actualTotal"),
+    actual:  document.getElementById("actualTotal"),
     balance: document.getElementById("balanceTotal"),
-    count: document.getElementById("itemCount")
+    count:   document.getElementById("itemCount")
 };
 
-function loadJson(key, fallback) {
+// ── App state ─────────────────────────────────────────────────────────────────
+let isRegisterMode = false;
+let currentUser    = null;
+let activeTabId    = "monthlyBudget";
+let appData        = { tabData: {}, customTabs: [], userName: "", monthlyBudgetData: {} };
+let firestoreUnsub = null;
+let saveTimer      = null;
+let currentMonth    = new Date(); // For monthly budget navigation
+let pieChart       = null; // Chart.js instance
+let isBudgetEditMode = false;
+let isAnnualBudgetView = false;
+let isGoalEditMode  = false;
+let isExpenseEditMode = false;
+let isInvestmentEditMode = false;
+let isInsuranceEditMode = false;
+let isCardEditMode = false;
+let isNetWorthEditMode = false;
+let isTaxPlanEditMode = false;
+let isGiftsEditMode = false;
+let isEmergencyFundEditMode = false;
+let bankBarChart   = null;
+let typeBarChart   = null;
+let investmentBarChart = null;
+let netWorthProjectionChart = null;
+
+// ── Firebase handles ──────────────────────────────────────────────────────────
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ── Auth state listener ───────────────────────────────────────────────────────
+auth.onAuthStateChanged(user => {
+    if (user) {
+        currentUser = user;
+        authScreen.hidden = true;
+        appScreen.hidden  = false;
+        startListening();
+    } else {
+        currentUser = null;
+        appScreen.hidden  = true;
+        authScreen.hidden = false;
+        stopListening();
+    }
+});
+
+// ── Auth form ─────────────────────────────────────────────────────────────────
+authToggleBtn.addEventListener("click", () => {
+    isRegisterMode = !isRegisterMode;
+    nameField.hidden = !isRegisterMode;
+    if (isRegisterMode) authNameInput.required = true;
+    else authNameInput.required = false;
+    authSubmitBtn.textContent  = isRegisterMode ? "Create Account"           : "Sign In";
+    authToggleBtn.textContent  = isRegisterMode ? "Sign In"                  : "Register";
+    authSwitchText.textContent = isRegisterMode ? "Already have an account?" : "Don't have an account?";
+    setAuthError("");
+});
+
+authForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    const email    = authEmailInput.value.trim();
+    const password = authPasswordInput.value;
+    const name     = authNameInput.value.trim();
+    if (!email || !password) return;
+    if (isRegisterMode && !name) return;
+    setAuthError("");
+    authSubmitBtn.disabled    = true;
+    authSubmitBtn.textContent = "Please wait…";
     try {
-        const saved = localStorage.getItem(key);
-        return saved ? JSON.parse(saved) : fallback;
-    } catch {
-        return fallback;
+        if (isRegisterMode) {
+            const cred = await auth.createUserWithEmailAndPassword(email, password);
+            await db.collection("users").doc(cred.user.uid).set({
+                tabData: {},
+                customTabs: [],
+                userName: name,
+                monthlyBudgetData: {},
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } else {
+            await auth.signInWithEmailAndPassword(email, password);
+        }
+    } catch (err) {
+        setAuthError(friendlyError(err.code));
+        authSubmitBtn.disabled    = false;
+        authSubmitBtn.textContent = isRegisterMode ? "Create Account" : "Sign In";
+    }
+});
+
+logoutBtn.addEventListener("click", () => auth.signOut());
+
+function setAuthError(msg) {
+    authError.textContent = msg;
+    authError.hidden = !msg;
+}
+
+function friendlyError(code) {
+    const map = {
+        "auth/user-not-found":         "No account found with this email.",
+        "auth/wrong-password":         "Incorrect password. Please try again.",
+        "auth/invalid-credential":     "Invalid email or password.",
+        "auth/email-already-in-use":   "Email already registered. Please sign in.",
+        "auth/invalid-email":          "Please enter a valid email address.",
+        "auth/weak-password":          "Password must be at least 6 characters.",
+        "auth/too-many-requests":      "Too many attempts. Try again later.",
+        "auth/network-request-failed": "Network error. Check your connection."
+    };
+    return map[code] || "Something went wrong. Please try again.";
+}
+
+// ── Firestore real-time sync ──────────────────────────────────────────────────
+function startListening() {
+    stopListening();
+    firestoreUnsub = db.collection("users").doc(currentUser.uid)
+        .onSnapshot(snap => {
+            if (snap.exists) {
+                const d = snap.data();
+                appData = {
+                    tabData: d.tabData || {},
+                    customTabs: d.customTabs || [],
+                    userName: d.userName || "",
+                    monthlyBudgetData: d.monthlyBudgetData || {}
+                };
+                userEmailDisplay.textContent = appData.userName || currentUser.email;
+            } else {
+                appData = { tabData: {}, customTabs: [], userName: "", monthlyBudgetData: {} };
+                userEmailDisplay.textContent = currentUser.email;
+            }
+            render();
+        }, err => console.error("Firestore listen error:", err));
+}
+
+function stopListening() {
+    if (firestoreUnsub) { firestoreUnsub(); firestoreUnsub = null; }
+}
+
+function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(doSave, 600);
+}
+
+function doSave() {
+    if (!currentUser) return;
+    db.collection("users").doc(currentUser.uid)
+        .set(appData)
+        .catch(err => console.error("Save failed:", err));
+}
+
+// ── Tab helpers ───────────────────────────────────────────────────────────────
+function getTabs() {
+    return DEFAULT_TABS.concat(appData.customTabs || []);
+}
+
+function activeEntries() {
+    try {
+        return (appData.tabData || {})[activeTabId] || [];
+    } catch (e) {
+        console.error("Error getting active entries:", e);
+        return [];
     }
 }
 
-function getTabs() {
-    return DEFAULT_TABS.concat(loadJson(CUSTOM_TABS_KEY, []));
+function setActiveEntries(entries) {
+    try {
+        if (!appData.tabData) appData.tabData = {};
+        appData.tabData[activeTabId] = entries || [];
+        scheduleSave();
+    } catch (e) {
+        console.error("Error setting active entries:", e);
+    }
 }
 
-function loadData() {
-    return loadJson(STORAGE_KEY, {});
+// ── Formatting ────────────────────────────────────────────────────────────────
+function formatMoney(v) {
+    try {
+        return new Intl.NumberFormat("en-IN", {
+            style: "currency",
+            currency: "INR",
+            maximumFractionDigits: 0
+        }).format(v || 0);
+    } catch (e) {
+        console.error("Error formatting money:", e);
+        return "₹0";
+    }
 }
 
-function saveData(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+function esc(s) {
+    return String(s)
+        .replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;").replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 }
 
-function formatMoney(value) {
-    return new Intl.NumberFormat("en-IN", {
-        style: "currency",
-        currency: "INR",
-        maximumFractionDigits: 0
-    }).format(value || 0);
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+    const tab = getTabs().find(t => t.id === activeTabId) || DEFAULT_TABS[0];
+    activeSubtitle.textContent = tab.label;
+    renderTabs();
+    
+    // Show/hide specific UIs vs Standard UI
+    if (activeTabId === "monthlyBudget") {
+        monthlyBudgetUI.hidden = false;
+        standardUI.hidden = true;
+        financialGoalUI.hidden = true;
+        monthlyFixedExpenseUI.hidden = true;
+        investmentsUI.hidden = true;
+        insurancesUI.hidden = true;
+        cardsUI.hidden = true;
+        netWorthUI.hidden = true;
+        taxPlanUI.hidden = true;
+        giftsUI.hidden = true;
+        emergencyFundUI.hidden = true;
+        renderMonthlyBudget();
+    } else if (activeTabId === "financialGoal") {
+        monthlyBudgetUI.hidden = true;
+        standardUI.hidden = true;
+        financialGoalUI.hidden = false;
+        monthlyFixedExpenseUI.hidden = true;
+        investmentsUI.hidden = true;
+        insurancesUI.hidden = true;
+        cardsUI.hidden = true;
+        netWorthUI.hidden = true;
+        taxPlanUI.hidden = true;
+        giftsUI.hidden = true;
+        emergencyFundUI.hidden = true;
+        renderFinancialGoal();
+    } else if (activeTabId === "monthlyFixedExpense") {
+        monthlyBudgetUI.hidden = true;
+        standardUI.hidden = true;
+        financialGoalUI.hidden = true;
+        monthlyFixedExpenseUI.hidden = false;
+        investmentsUI.hidden = true;
+        insurancesUI.hidden = true;
+        cardsUI.hidden = true;
+        netWorthUI.hidden = true;
+        taxPlanUI.hidden = true;
+        giftsUI.hidden = true;
+        emergencyFundUI.hidden = true;
+        renderMonthlyFixedExpense();
+    } else if (activeTabId === "investments") {
+        monthlyBudgetUI.hidden = true;
+        standardUI.hidden = true;
+        financialGoalUI.hidden = true;
+        monthlyFixedExpenseUI.hidden = true;
+        investmentsUI.hidden = false;
+        insurancesUI.hidden = true;
+        cardsUI.hidden = true;
+        netWorthUI.hidden = true;
+        taxPlanUI.hidden = true;
+        giftsUI.hidden = true;
+        emergencyFundUI.hidden = true;
+        renderInvestments();
+    } else if (activeTabId === "insurances") {
+        monthlyBudgetUI.hidden = true;
+        standardUI.hidden = true;
+        financialGoalUI.hidden = true;
+        monthlyFixedExpenseUI.hidden = true;
+        investmentsUI.hidden = true;
+        insurancesUI.hidden = false;
+        cardsUI.hidden = true;
+        netWorthUI.hidden = true;
+        taxPlanUI.hidden = true;
+        giftsUI.hidden = true;
+        emergencyFundUI.hidden = true;
+        renderInsurances();
+    } else if (activeTabId === "cards") {
+        monthlyBudgetUI.hidden = true;
+        standardUI.hidden = true;
+        financialGoalUI.hidden = true;
+        monthlyFixedExpenseUI.hidden = true;
+        investmentsUI.hidden = true;
+        insurancesUI.hidden = true;
+        cardsUI.hidden = false;
+        netWorthUI.hidden = true;
+        taxPlanUI.hidden = true;
+        giftsUI.hidden = true;
+        emergencyFundUI.hidden = true;
+        renderCards();
+    } else if (activeTabId === "netWorth") {
+        monthlyBudgetUI.hidden = true;
+        standardUI.hidden = true;
+        financialGoalUI.hidden = true;
+        monthlyFixedExpenseUI.hidden = true;
+        investmentsUI.hidden = true;
+        insurancesUI.hidden = true;
+        cardsUI.hidden = true;
+        netWorthUI.hidden = false;
+        taxPlanUI.hidden = true;
+        giftsUI.hidden = true;
+        emergencyFundUI.hidden = true;
+        renderNetWorth();
+    } else if (activeTabId === "taxPlan") {
+        monthlyBudgetUI.hidden = true;
+        standardUI.hidden = true;
+        financialGoalUI.hidden = true;
+        monthlyFixedExpenseUI.hidden = true;
+        investmentsUI.hidden = true;
+        insurancesUI.hidden = true;
+        cardsUI.hidden = true;
+        netWorthUI.hidden = true;
+        taxPlanUI.hidden = false;
+        giftsUI.hidden = true;
+        emergencyFundUI.hidden = true;
+        renderTaxPlan();
+    } else if (activeTabId === "gifts") {
+        monthlyBudgetUI.hidden = true;
+        standardUI.hidden = true;
+        financialGoalUI.hidden = true;
+        monthlyFixedExpenseUI.hidden = true;
+        investmentsUI.hidden = true;
+        insurancesUI.hidden = true;
+        cardsUI.hidden = true;
+        netWorthUI.hidden = true;
+        taxPlanUI.hidden = true;
+        giftsUI.hidden = false;
+        emergencyFundUI.hidden = true;
+        renderGifts();
+    } else if (activeTabId === "emergencyFund") {
+        monthlyBudgetUI.hidden = true;
+        standardUI.hidden = true;
+        financialGoalUI.hidden = true;
+        monthlyFixedExpenseUI.hidden = true;
+        investmentsUI.hidden = true;
+        insurancesUI.hidden = true;
+        cardsUI.hidden = true;
+        netWorthUI.hidden = true;
+        taxPlanUI.hidden = true;
+        giftsUI.hidden = true;
+        emergencyFundUI.hidden = false;
+        renderEmergencyFund();
+    } else {
+        monthlyBudgetUI.hidden = true;
+        standardUI.hidden = false;
+        financialGoalUI.hidden = true;
+        monthlyFixedExpenseUI.hidden = true;
+        investmentsUI.hidden = true;
+        insurancesUI.hidden = true;
+        cardsUI.hidden = true;
+        netWorthUI.hidden = true;
+        taxPlanUI.hidden = true;
+        giftsUI.hidden = true;
+        emergencyFundUI.hidden = true;
+        renderDynamicFields();
+        const entries = activeEntries();
+        renderSummary(entries);
+        renderTableHead();
+        renderRows(entries);
+    }
+}
+
+function renderMonthlyBudget() {
+    // Handle annual view toggle
+    if (isAnnualBudgetView) {
+        annualSummarySection.hidden = false;
+        monthlyViewSection.hidden = true;
+        calculateAnnualSummary();
+        return;
+    } else {
+        annualSummarySection.hidden = true;
+        monthlyViewSection.hidden = false;
+    }
+
+    const monthKey = getMonthKey(currentMonth);
+    currentMonthDisplay.textContent = currentMonth.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+    
+    // Get or create month data with safe defaults
+    if (!appData.monthlyBudgetData) appData.monthlyBudgetData = {};
+    const monthData = appData.monthlyBudgetData[monthKey] || {
+        inflow: {},
+        outflow: {},
+        investing: {},
+        monthEndBalance: 0
+    };
+    appData.monthlyBudgetData[monthKey] = monthData;
+    
+    // Update toggle button text
+    toggleBudgetEdit.textContent = isBudgetEditMode ? "✎ Save" : "✎ Edit";
+    
+    // Show/hide preview/edit modes
+    if (isBudgetEditMode) {
+        budgetPreview.hidden = true;
+        budgetEdit.hidden = false;
+        
+        // Render category fields in edit mode
+        renderCategoryFields(inflowFields, MONTHLY_BUDGET_CATEGORIES.inflow, monthData.inflow);
+        renderCategoryFields(outflowFields, MONTHLY_BUDGET_CATEGORIES.outflow, monthData.outflow);
+        renderCategoryFields(investingFields, MONTHLY_BUDGET_CATEGORIES.investing, monthData.investing);
+        monthEndBalance.value = monthData.monthEndBalance || "";
+        
+        // Update edit mode totals
+        const inflowTotal = Object.values(monthData.inflow).reduce((s, v) => s + Number(v || 0), 0);
+        const outflowTotal = Object.values(monthData.outflow).reduce((s, v) => s + Number(v || 0), 0);
+        const investingTotal = Object.values(monthData.investing).reduce((s, v) => s + Number(v || 0), 0);
+        document.getElementById("inflowTotalEdit").textContent = formatMoney(inflowTotal);
+        document.getElementById("outflowTotalEdit").textContent = formatMoney(outflowTotal);
+        document.getElementById("investingTotalEdit").textContent = formatMoney(investingTotal);
+    } else {
+        budgetPreview.hidden = false;
+        budgetEdit.hidden = true;
+        
+        // Render preview mode
+        renderCategoryPreview(inflowPreview, MONTHLY_BUDGET_CATEGORIES.inflow, monthData.inflow);
+        renderCategoryPreview(outflowPreview, MONTHLY_BUDGET_CATEGORIES.outflow, monthData.outflow);
+        renderCategoryPreview(investingPreview, MONTHLY_BUDGET_CATEGORIES.investing, monthData.investing);
+        
+        // Calculate and display totals
+        calculateAndDisplaySummary(monthData);
+        
+        // Render pie chart
+        renderPieChart(monthData);
+    }
+}
+
+function renderCategoryPreview(container, fields, data) {
+    container.innerHTML = "";
+    fields.forEach(field => {
+        const value = Number(data[field.id] || 0);
+        if (value > 0) {
+            const item = document.createElement("div");
+            item.className = "category-preview-item";
+            item.innerHTML = `
+                <span class="label">${field.label}</span>
+                <span class="value">${formatMoney(value)}</span>
+            `;
+            container.appendChild(item);
+        }
+    });
+    
+    if (container.children.length === 0) {
+        container.innerHTML = `<div class="category-preview-item" style="color: var(--dim);">No entries</div>`;
+    }
+}
+
+function getMonthKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function renderFinancialGoal() {
+    const entries = activeEntries();
+    
+    // Update toggle button text
+    toggleGoalEdit.textContent = isGoalEditMode ? "✎ Save" : "✎ Edit";
+    
+    // Show/hide preview/edit modes
+    if (isGoalEditMode) {
+        goalPreview.hidden = true;
+        goalEdit.hidden = false;
+        
+        // Render form fields
+        renderGoalDynamicFields();
+        
+        // Render table
+        renderGoalTable(entries);
+    } else {
+        goalPreview.hidden = false;
+        goalEdit.hidden = true;
+        
+        // Render preview cards
+        renderGoalPreviewCards(entries);
+        
+        // Calculate and display summary
+        calculateGoalSummary(entries);
+    }
+}
+
+function renderGoalDynamicFields() {
+    goalDynamicFields.innerHTML = "";
+    const fields = TAB_FIELDS.financialGoal || TAB_FIELDS.monthlyBudget;
+    
+    fields.forEach(field => {
+        const div = document.createElement("div");
+        div.className = "field";
+        
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        div.appendChild(label);
+        
+        let input;
+        if (field.type === "select") {
+            input = document.createElement("select");
+            field.options.forEach(opt => {
+                const option = document.createElement("option");
+                option.value = opt;
+                option.textContent = opt;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement("input");
+            input.type = field.type;
+            input.placeholder = field.placeholder || "";
+            if (field.type === "number") {
+                input.min = "0";
+                input.step = "1";
+            }
+        }
+        input.id = `goal_${field.id}`;
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        
+        goalDynamicFields.appendChild(div);
+    });
+}
+
+function renderGoalTable(entries) {
+    const fields = TAB_FIELDS.financialGoal || TAB_FIELDS.monthlyBudget;
+    
+    goalTableHead.innerHTML = "";
+    const tr = document.createElement("tr");
+    fields.forEach(f => {
+        const th = document.createElement("th");
+        th.textContent = f.label;
+        tr.appendChild(th);
+    });
+    const actionTh = document.createElement("th");
+    actionTh.textContent = "";
+    tr.appendChild(actionTh);
+    goalTableHead.appendChild(tr);
+    
+    goalTableBody.innerHTML = "";
+    goalEmptyState.classList.toggle("visible", entries.length === 0);
+    
+    entries.forEach(item => {
+        const row = document.createElement("tr");
+        fields.forEach(f => {
+            const td = document.createElement("td");
+            if (f.type === "number") {
+                td.textContent = formatMoney(Number(item[f.id] || 0));
+                td.className = "amount";
+            } else {
+                td.textContent = esc(item[f.id] || "—");
+            }
+            row.appendChild(td);
+        });
+        const actionTd = document.createElement("td");
+        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        row.appendChild(actionTd);
+        goalTableBody.appendChild(row);
+    });
+}
+
+function renderGoalPreviewCards(entries) {
+    goalsList.innerHTML = "";
+    
+    if (entries.length === 0) {
+        goalsList.innerHTML = `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No goals yet. Click Edit to add goals.</div>`;
+        return;
+    }
+    
+    entries.forEach(goal => {
+        const card = document.createElement("div");
+        card.className = "goal-card";
+        
+        const amountNeeded = Number(goal.amountNeeded || 0);
+        const amountAccumulated = Number(goal.amountAccumulated || 0);
+        const progress = amountNeeded > 0 ? (amountAccumulated / amountNeeded) * 100 : 0;
+        const progressClamped = Math.min(progress, 100);
+        
+        card.innerHTML = `
+            <div class="goal-card-header">
+                <span class="goal-card-title">${esc(goal.name)}</span>
+                <div style="display: flex; gap: 8px;">
+                    <span class="goal-card-type">${esc(goal.goalType || "Short Term")}</span>
+                    <span class="goal-card-status ${goal.status?.toLowerCase() || "planned"}">${esc(goal.status || "Planned")}</span>
+                </div>
+            </div>
+            <div class="goal-card-details">
+                ${esc(goal.details || "No details")}<br>
+                Target: ${esc(goal.targetDate || "—")}
+            </div>
+            <div class="goal-card-progress">
+                <div class="goal-progress-bar">
+                    <div class="goal-progress-fill" style="width: ${progressClamped}%"></div>
+                </div>
+                <div class="goal-progress-text">
+                    <span>${formatMoney(amountAccumulated)} / ${formatMoney(amountNeeded)}</span>
+                    <span>${progress.toFixed(1)}%</span>
+                </div>
+            </div>
+        `;
+        
+        goalsList.appendChild(card);
+    });
+}
+
+function calculateGoalSummary(entries) {
+    const totalNeeded = entries.reduce((s, g) => s + Number(g.amountNeeded || 0), 0);
+    const totalAccumulated = entries.reduce((s, g) => s + Number(g.amountAccumulated || 0), 0);
+    const amountMoreNeeded = Math.max(0, totalNeeded - totalAccumulated);
+    
+    document.getElementById("totalGoalNeeded").textContent = formatMoney(totalNeeded);
+    document.getElementById("totalGoalAccumulated").textContent = formatMoney(totalAccumulated);
+    document.getElementById("amountMoreNeeded").textContent = formatMoney(amountMoreNeeded);
+}
+
+function renderMonthlyFixedExpense() {
+    const entries = activeEntries();
+    
+    // Update toggle button text
+    toggleExpenseEdit.textContent = isExpenseEditMode ? "✎ Save" : "✎ Edit";
+    
+    // Show/hide preview/edit modes
+    if (isExpenseEditMode) {
+        expensePreview.hidden = true;
+        expenseEdit.hidden = false;
+        
+        // Render form fields
+        renderExpenseDynamicFields();
+        
+        // Render table
+        renderExpenseTable(entries);
+    } else {
+        expensePreview.hidden = false;
+        expenseEdit.hidden = true;
+        
+        // Render preview cards
+        renderExpensePreviewCards(entries);
+        
+        // Calculate and display summary
+        calculateExpenseSummary(entries);
+        
+        // Render bar charts
+        renderExpenseCharts(entries);
+    }
+}
+
+function renderExpenseDynamicFields() {
+    expenseDynamicFields.innerHTML = "";
+    const fields = TAB_FIELDS.monthlyFixedExpense || TAB_FIELDS.monthlyBudget;
+    
+    fields.forEach(field => {
+        const div = document.createElement("div");
+        div.className = "field";
+        
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        div.appendChild(label);
+        
+        let input;
+        if (field.type === "select") {
+            input = document.createElement("select");
+            field.options.forEach(opt => {
+                const option = document.createElement("option");
+                option.value = opt;
+                option.textContent = opt;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement("input");
+            input.type = field.type;
+            input.placeholder = field.placeholder || "";
+            if (field.type === "number") {
+                input.min = "0";
+                input.step = "1";
+            }
+        }
+        input.id = `expense_${field.id}`;
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        
+        expenseDynamicFields.appendChild(div);
+    });
+}
+
+function renderExpenseTable(entries) {
+    const fields = TAB_FIELDS.monthlyFixedExpense || TAB_FIELDS.monthlyBudget;
+    
+    expenseTableHead.innerHTML = "";
+    const tr = document.createElement("tr");
+    fields.forEach(f => {
+        const th = document.createElement("th");
+        th.textContent = f.label;
+        tr.appendChild(th);
+    });
+    const actionTh = document.createElement("th");
+    actionTh.textContent = "";
+    tr.appendChild(actionTh);
+    expenseTableHead.appendChild(tr);
+    
+    expenseTableBody.innerHTML = "";
+    expenseEmptyState.classList.toggle("visible", entries.length === 0);
+    
+    entries.forEach(item => {
+        const row = document.createElement("tr");
+        fields.forEach(f => {
+            const td = document.createElement("td");
+            if (f.type === "number") {
+                td.textContent = formatMoney(Number(item[f.id] || 0));
+                td.className = "amount";
+            } else {
+                td.textContent = esc(item[f.id] || "—");
+            }
+            row.appendChild(td);
+        });
+        const actionTd = document.createElement("td");
+        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        row.appendChild(actionTd);
+        expenseTableBody.appendChild(row);
+    });
+}
+
+function renderExpensePreviewCards(entries) {
+    expensesList.innerHTML = "";
+    
+    if (entries.length === 0) {
+        expensesList.innerHTML = `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No expenses yet. Click Edit to add expenses.</div>`;
+        return;
+    }
+    
+    entries.forEach(expense => {
+        const card = document.createElement("div");
+        card.className = "expense-card";
+        
+        const typeLower = expense.type?.toLowerCase() || "expenditure";
+        const typeClass = typeLower.replace(/\s+/g, "");
+        
+        card.innerHTML = `
+            <div class="expense-card-info">
+                <div class="expense-card-title">${esc(expense.name)}</div>
+                <div class="expense-card-details">
+                    <span class="expense-card-type ${typeClass}">${esc(expense.type || "Expenditure")}</span>
+                    Bank: ${esc(expense.bankName || "—")}<br>
+                    End Date: ${esc(expense.endDate || "—")}<br>
+                    Duration: ${expense.duration ? `${expense.duration} months` : "—"}
+                </div>
+            </div>
+            <div class="expense-card-amount">${formatMoney(Number(expense.amount || 0))}</div>
+        `;
+        
+        expensesList.appendChild(card);
+    });
+}
+
+function calculateExpenseSummary(entries) {
+    const total = entries.reduce((s, e) => s + Number(e.amount || 0), 0);
+    document.getElementById("totalExpenseDeductions").textContent = formatMoney(total);
+}
+
+function renderExpenseCharts(entries) {
+    // Destroy existing charts
+    if (bankBarChart) bankBarChart.destroy();
+    if (typeBarChart) typeBarChart.destroy();
+    
+    if (entries.length === 0) return;
+    
+    // Prepare data for Bank chart
+    const bankData = {};
+    entries.forEach(e => {
+        const bank = e.bankName || "Unknown";
+        bankData[bank] = (bankData[bank] || 0) + Number(e.amount || 0);
+    });
+    
+    const bankLabels = Object.keys(bankData);
+    const bankValues = Object.values(bankData);
+    
+    // Bank bar chart
+    const bankCtx = bankBarChartCanvas.getContext("2d");
+    bankBarChart = new Chart(bankCtx, {
+        type: "bar",
+        data: {
+            labels: bankLabels,
+            datasets: [{
+                label: "Amount (₹)",
+                data: bankValues,
+                backgroundColor: "#fff",
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    ticks: { color: "#fff" },
+                    grid: { color: "rgba(255,255,255,0.1)" }
+                },
+                y: {
+                    ticks: { color: "#fff" },
+                    grid: { color: "rgba(255,255,255,0.1)" }
+                }
+            }
+        }
+    });
+    
+    // Prepare data for Type chart with color codes
+    const typeData = {
+        "Insurance Premium": { amount: 0, color: "#ef4444" },
+        "Investment": { amount: 0, color: "#3b82f6" },
+        "Saving": { amount: 0, color: "#22c55e" },
+        "Liability": { amount: 0, color: "#f97316" },
+        "Expenditure": { amount: 0, color: "#a855f7" }
+    };
+    
+    entries.forEach(e => {
+        const type = e.type || "Expenditure";
+        if (typeData[type]) {
+            typeData[type].amount += Number(e.amount || 0);
+        }
+    });
+    
+    const typeLabels = Object.keys(typeData);
+    const typeValues = typeLabels.map(t => typeData[t].amount);
+    const typeColors = typeLabels.map(t => typeData[t].color);
+    
+    // Type bar chart
+    const typeCtx = typeBarChartCanvas.getContext("2d");
+    typeBarChart = new Chart(typeCtx, {
+        type: "bar",
+        data: {
+            labels: typeLabels,
+            datasets: [{
+                label: "Amount (₹)",
+                data: typeValues,
+                backgroundColor: typeColors,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    ticks: { color: "#fff" },
+                    grid: { color: "rgba(255,255,255,0.1)" }
+                },
+                y: {
+                    ticks: { color: "#fff" },
+                    grid: { color: "rgba(255,255,255,0.1)" }
+                }
+            }
+        }
+    });
+}
+
+function renderInvestments() {
+    const entries = activeEntries();
+    
+    // Update toggle button text
+    toggleInvestmentEdit.textContent = isInvestmentEditMode ? "✎ Save" : "✎ Edit";
+    
+    // Show/hide preview/edit modes
+    if (isInvestmentEditMode) {
+        investmentPreview.hidden = true;
+        investmentEdit.hidden = false;
+        
+        // Render form fields
+        renderInvestmentDynamicFields();
+        
+        // Render table
+        renderInvestmentTable(entries);
+    } else {
+        investmentPreview.hidden = false;
+        investmentEdit.hidden = true;
+        
+        // Render preview cards
+        renderInvestmentPreviewCards(entries);
+        
+        // Calculate and display summary
+        calculateInvestmentSummary(entries);
+        
+        // Render bar chart
+        renderInvestmentChart(entries);
+    }
+}
+
+function renderInvestmentDynamicFields() {
+    investmentDynamicFields.innerHTML = "";
+    const fields = TAB_FIELDS.investments || TAB_FIELDS.monthlyBudget;
+    
+    fields.forEach(field => {
+        const div = document.createElement("div");
+        div.className = "field";
+        
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        div.appendChild(label);
+        
+        let input;
+        if (field.type === "select") {
+            input = document.createElement("select");
+            field.options.forEach(opt => {
+                const option = document.createElement("option");
+                option.value = opt;
+                option.textContent = opt;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement("input");
+            input.type = field.type;
+            input.placeholder = field.placeholder || "";
+            if (field.type === "number") {
+                input.min = "0";
+                input.step = "1";
+            }
+        }
+        input.id = `investment_${field.id}`;
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        
+        investmentDynamicFields.appendChild(div);
+    });
+}
+
+function renderInvestmentTable(entries) {
+    const fields = TAB_FIELDS.investments || TAB_FIELDS.monthlyBudget;
+    
+    investmentTableHead.innerHTML = "";
+    const tr = document.createElement("tr");
+    fields.forEach(f => {
+        const th = document.createElement("th");
+        th.textContent = f.label;
+        tr.appendChild(th);
+    });
+    const actionTh = document.createElement("th");
+    actionTh.textContent = "";
+    tr.appendChild(actionTh);
+    investmentTableHead.appendChild(tr);
+    
+    investmentTableBody.innerHTML = "";
+    investmentEmptyState.classList.toggle("visible", entries.length === 0);
+    
+    entries.forEach(item => {
+        const row = document.createElement("tr");
+        fields.forEach(f => {
+            const td = document.createElement("td");
+            if (f.type === "number") {
+                td.textContent = formatMoney(Number(item[f.id] || 0));
+                td.className = "amount";
+            } else {
+                td.textContent = esc(item[f.id] || "—");
+            }
+            row.appendChild(td);
+        });
+        const actionTd = document.createElement("td");
+        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        row.appendChild(actionTd);
+        investmentTableBody.appendChild(row);
+    });
+}
+
+function renderInvestmentPreviewCards(entries) {
+    investmentsList.innerHTML = "";
+    
+    if (entries.length === 0) {
+        investmentsList.innerHTML = `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No investments yet. Click Edit to add investments.</div>`;
+        return;
+    }
+    
+    entries.forEach(investment => {
+        const card = document.createElement("div");
+        card.className = "investment-card";
+        
+        card.innerHTML = `
+            <div class="investment-card-info">
+                <div class="investment-card-title">${esc(investment.name)}</div>
+                <div class="investment-card-details">
+                    <span class="investment-card-frequency">${esc(investment.frequency || "One-Time")}</span>
+                    Initial: ${formatMoney(Number(investment.initialInvestment || 0))}<br>
+                    Current: ${formatMoney(Number(investment.totalAmount || 0))}<br>
+                    Start: ${esc(investment.startDate || "—")}<br>
+                    Maturity: ${esc(investment.maturityDate || "—")}<br>
+                    ${esc(investment.details || "")}
+                </div>
+            </div>
+            <div class="investment-card-amount">${formatMoney(Number(investment.totalAmount || 0))}</div>
+        `;
+        
+        investmentsList.appendChild(card);
+    });
+}
+
+function calculateInvestmentSummary(entries) {
+    const totalInitial = entries.reduce((s, i) => s + Number(i.initialInvestment || 0), 0);
+    const totalCurrent = entries.reduce((s, i) => s + Number(i.totalAmount || 0), 0);
+    const totalInvestments = entries.length;
+    
+    document.getElementById("totalInitialInvestment").textContent = formatMoney(totalInitial);
+    document.getElementById("totalCurrentInvestment").textContent = formatMoney(totalCurrent);
+    document.getElementById("totalInvestments").textContent = totalInvestments;
+}
+
+function renderInvestmentChart(entries) {
+    // Destroy existing chart
+    if (investmentBarChart) investmentBarChart.destroy();
+    
+    if (entries.length === 0) return;
+    
+    const labels = entries.map(e => e.name || "Unnamed");
+    const values = entries.map(e => Number(e.totalAmount || 0));
+    
+    const ctx = investmentBarChartCanvas.getContext("2d");
+    investmentBarChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Amount (₹)",
+                data: values,
+                backgroundColor: "#fff",
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    ticks: { color: "#fff" },
+                    grid: { color: "rgba(255,255,255,0.1)" }
+                },
+                y: {
+                    ticks: { color: "#fff" },
+                    grid: { color: "rgba(255,255,255,0.1)" }
+                }
+            }
+        }
+    });
+}
+
+function renderInsurances() {
+    const entries = activeEntries();
+    
+    // Update toggle button text
+    toggleInsuranceEdit.textContent = isInsuranceEditMode ? "✎ Save" : "✎ Edit";
+    
+    // Show/hide preview/edit modes
+    if (isInsuranceEditMode) {
+        insurancePreview.hidden = true;
+        insuranceEdit.hidden = false;
+        
+        // Render form fields
+        renderInsuranceDynamicFields();
+        
+        // Render table
+        renderInsuranceTable(entries);
+    } else {
+        insurancePreview.hidden = false;
+        insuranceEdit.hidden = true;
+        
+        // Render preview cards
+        renderInsurancePreviewCards(entries);
+        
+        // Calculate and display summary
+        calculateInsuranceSummary(entries);
+    }
+}
+
+function renderInsuranceDynamicFields() {
+    insuranceDynamicFields.innerHTML = "";
+    const fields = TAB_FIELDS.insurances || TAB_FIELDS.monthlyBudget;
+    
+    fields.forEach(field => {
+        const div = document.createElement("div");
+        div.className = "field";
+        
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        div.appendChild(label);
+        
+        let input;
+        if (field.type === "select") {
+            input = document.createElement("select");
+            field.options.forEach(opt => {
+                const option = document.createElement("option");
+                option.value = opt;
+                option.textContent = opt;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement("input");
+            input.type = field.type;
+            input.placeholder = field.placeholder || "";
+            if (field.type === "number") {
+                input.min = "0";
+                input.step = "1";
+            }
+        }
+        input.id = `insurance_${field.id}`;
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        
+        insuranceDynamicFields.appendChild(div);
+    });
+}
+
+function renderInsuranceTable(entries) {
+    const fields = TAB_FIELDS.insurances || TAB_FIELDS.monthlyBudget;
+    
+    insuranceTableHead.innerHTML = "";
+    const tr = document.createElement("tr");
+    fields.forEach(f => {
+        const th = document.createElement("th");
+        th.textContent = f.label;
+        tr.appendChild(th);
+    });
+    const actionTh = document.createElement("th");
+    actionTh.textContent = "";
+    tr.appendChild(actionTh);
+    insuranceTableHead.appendChild(tr);
+    
+    insuranceTableBody.innerHTML = "";
+    insuranceEmptyState.classList.toggle("visible", entries.length === 0);
+    
+    entries.forEach(item => {
+        const row = document.createElement("tr");
+        fields.forEach(f => {
+            const td = document.createElement("td");
+            if (f.type === "number") {
+                td.textContent = formatMoney(Number(item[f.id] || 0));
+                td.className = "amount";
+            } else {
+                td.textContent = esc(item[f.id] || "—");
+            }
+            row.appendChild(td);
+        });
+        const actionTd = document.createElement("td");
+        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        row.appendChild(actionTd);
+        insuranceTableBody.appendChild(row);
+    });
+}
+
+function renderInsurancePreviewCards(entries) {
+    insurancesList.innerHTML = "";
+    
+    if (entries.length === 0) {
+        insurancesList.innerHTML = `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No insurances yet. Click Edit to add insurances.</div>`;
+        return;
+    }
+    
+    entries.forEach(insurance => {
+        const card = document.createElement("div");
+        card.className = "insurance-card";
+        
+        const nirClass = insurance.nirLinked?.toLowerCase() === "yes" ? "yes" : "no";
+        
+        card.innerHTML = `
+            <div class="insurance-card-info">
+                <div class="insurance-card-title">${esc(insurance.name)}</div>
+                <div class="insurance-card-details">
+                    <span class="insurance-card-nir ${nirClass}">NIR: ${esc(insurance.nirLinked || "No")}</span>
+                    Company: ${esc(insurance.companyName || "—")}<br>
+                    Premium: ${formatMoney(Number(insurance.premium || 0))}<br>
+                    Sum Assured: ${formatMoney(Number(insurance.sumAssured || 0))}<br>
+                    Maturity: ${esc(insurance.maturityDate || "—")}<br>
+                    Nominee: ${esc(insurance.nomineeName || "—")}
+                </div>
+            </div>
+            <div class="insurance-card-amount">${formatMoney(Number(insurance.premium || 0))}</div>
+        `;
+        
+        insurancesList.appendChild(card);
+    });
+}
+
+function calculateInsuranceSummary(entries) {
+    const totalPremium = entries.reduce((s, i) => s + Number(i.premium || 0), 0);
+    const totalSumAssured = entries.reduce((s, i) => s + Number(i.sumAssured || 0), 0);
+    const totalPolicies = entries.length;
+    
+    document.getElementById("totalPremium").textContent = formatMoney(totalPremium);
+    document.getElementById("totalSumAssured").textContent = formatMoney(totalSumAssured);
+    document.getElementById("totalPolicies").textContent = totalPolicies;
+}
+
+function renderCards() {
+    const entries = activeEntries();
+    
+    // Update toggle button text
+    toggleCardEdit.textContent = isCardEditMode ? "✎ Save" : "✎ Edit";
+    
+    // Show/hide preview/edit modes
+    if (isCardEditMode) {
+        cardPreview.hidden = true;
+        cardEdit.hidden = false;
+        
+        // Render form fields
+        renderCardDynamicFields();
+        
+        // Render table
+        renderCardTable(entries);
+    } else {
+        cardPreview.hidden = false;
+        cardEdit.hidden = true;
+        
+        // Render preview cards
+        renderCardPreviewCards(entries);
+        
+        // Calculate and display summary
+        calculateCardSummary(entries);
+    }
+}
+
+function renderCardDynamicFields() {
+    cardDynamicFields.innerHTML = "";
+    const fields = TAB_FIELDS.cards || TAB_FIELDS.monthlyBudget;
+    
+    fields.forEach(field => {
+        const div = document.createElement("div");
+        div.className = "field";
+        
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        div.appendChild(label);
+        
+        let input;
+        if (field.type === "select") {
+            input = document.createElement("select");
+            field.options.forEach(opt => {
+                const option = document.createElement("option");
+                option.value = opt;
+                option.textContent = opt;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement("input");
+            input.type = field.type;
+            input.placeholder = field.placeholder || "";
+            if (field.type === "number") {
+                input.min = "0";
+                input.step = "1";
+            }
+        }
+        input.id = `card_${field.id}`;
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        
+        cardDynamicFields.appendChild(div);
+    });
+}
+
+function renderCardTable(entries) {
+    const fields = TAB_FIELDS.cards || TAB_FIELDS.monthlyBudget;
+    
+    cardTableHead.innerHTML = "";
+    const tr = document.createElement("tr");
+    fields.forEach(f => {
+        const th = document.createElement("th");
+        th.textContent = f.label;
+        tr.appendChild(th);
+    });
+    const actionTh = document.createElement("th");
+    actionTh.textContent = "";
+    tr.appendChild(actionTh);
+    cardTableHead.appendChild(tr);
+    
+    cardTableBody.innerHTML = "";
+    cardEmptyState.classList.toggle("visible", entries.length === 0);
+    
+    entries.forEach(item => {
+        const row = document.createElement("tr");
+        fields.forEach(f => {
+            const td = document.createElement("td");
+            if (f.type === "number") {
+                td.textContent = formatMoney(Number(item[f.id] || 0));
+                td.className = "amount";
+            } else {
+                td.textContent = esc(item[f.id] || "—");
+            }
+            row.appendChild(td);
+        });
+        const actionTd = document.createElement("td");
+        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        row.appendChild(actionTd);
+        cardTableBody.appendChild(row);
+    });
+}
+
+function renderCardPreviewCards(entries) {
+    cardsList.innerHTML = "";
+    
+    if (entries.length === 0) {
+        cardsList.innerHTML = `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No cards yet. Click Edit to add cards.</div>`;
+        return;
+    }
+    
+    entries.forEach(card => {
+        const item = document.createElement("div");
+        item.className = "card-item";
+        
+        const accountClass = card.accountPresent?.toLowerCase() === "yes" ? "yes" : "no";
+        const creditCardClass = card.creditCardPresent?.toLowerCase() === "yes" ? "yes" : "no";
+        const kycClass = card.kycUpdated?.toLowerCase() === "yes" ? "yes" : "no";
+        const nomineeClass = card.nomineeAdded?.toLowerCase() === "yes" ? "yes" : "no";
+        
+        item.innerHTML = `
+            <div class="card-item-info">
+                <div class="card-item-title">${esc(card.bankName)}</div>
+                <div class="card-item-details">
+                    <span class="card-item-badge ${accountClass}">Account: ${esc(card.accountPresent || "No")}</span>
+                    <span class="card-item-badge ${creditCardClass}">Credit Card: ${esc(card.creditCardPresent || "No")}</span>
+                    <span class="card-item-badge ${kycClass}">KYC: ${esc(card.kycUpdated || "No")}</span>
+                    <span class="card-item-badge ${nomineeClass}">Nominee: ${esc(card.nomineeAdded || "No")}</span><br>
+                    Purpose: ${esc(card.purpose || "—")}
+                </div>
+            </div>
+            <div class="card-item-limit">${formatMoney(Number(card.creditLimit || 0))}</div>
+        `;
+        
+        cardsList.appendChild(item);
+    });
+}
+
+function calculateCardSummary(entries) {
+    const totalBanks = entries.length;
+    const totalCreditLimit = entries.reduce((s, c) => s + Number(c.creditLimit || 0), 0);
+    const totalCreditCards = entries.filter(c => c.creditCardPresent?.toLowerCase() === "yes").length;
+    
+    document.getElementById("totalBanks").textContent = totalBanks;
+    document.getElementById("totalCreditLimit").textContent = formatMoney(totalCreditLimit);
+    document.getElementById("totalCreditCards").textContent = totalCreditCards;
+}
+
+function renderNetWorth() {
+    const entries = activeEntries();
+    
+    // Update toggle button text
+    toggleNetWorthEdit.textContent = isNetWorthEditMode ? "✎ Save" : "✎ Edit";
+    
+    // Show/hide preview/edit modes
+    if (isNetWorthEditMode) {
+        netWorthPreview.hidden = true;
+        netWorthEdit.hidden = false;
+        
+        // Render form fields
+        renderNetWorthDynamicFields();
+        
+        // Render table
+        renderNetWorthTable(entries);
+    } else {
+        netWorthPreview.hidden = false;
+        netWorthEdit.hidden = true;
+        
+        // Calculate and display summary
+        calculateNetWorthSummary(entries);
+        
+        // Render assets and liabilities lists
+        renderAssetsLiabilitiesLists(entries);
+        
+        // Render projection chart
+        renderNetWorthProjectionChart(entries);
+    }
+}
+
+function renderNetWorthDynamicFields() {
+    netWorthDynamicFields.innerHTML = "";
+    const fields = TAB_FIELDS.netWorth || TAB_FIELDS.monthlyBudget;
+    
+    fields.forEach(field => {
+        const div = document.createElement("div");
+        div.className = "field";
+        
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        div.appendChild(label);
+        
+        let input;
+        if (field.type === "select") {
+            input = document.createElement("select");
+            field.options.forEach(opt => {
+                const option = document.createElement("option");
+                option.value = opt;
+                option.textContent = opt;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement("input");
+            input.type = field.type;
+            input.placeholder = field.placeholder || "";
+            if (field.type === "number") {
+                input.min = "0";
+                input.step = "1";
+            }
+        }
+        input.id = `netWorth_${field.id}`;
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        
+        netWorthDynamicFields.appendChild(div);
+    });
+}
+
+function renderNetWorthTable(entries) {
+    const fields = TAB_FIELDS.netWorth || TAB_FIELDS.monthlyBudget;
+    
+    netWorthTableHead.innerHTML = "";
+    const tr = document.createElement("tr");
+    fields.forEach(f => {
+        const th = document.createElement("th");
+        th.textContent = f.label;
+        tr.appendChild(th);
+    });
+    const actionTh = document.createElement("th");
+    actionTh.textContent = "";
+    tr.appendChild(actionTh);
+    netWorthTableHead.appendChild(tr);
+    
+    netWorthTableBody.innerHTML = "";
+    netWorthEmptyState.classList.toggle("visible", entries.length === 0);
+    
+    entries.forEach(item => {
+        const row = document.createElement("tr");
+        fields.forEach(f => {
+            const td = document.createElement("td");
+            if (f.type === "number") {
+                td.textContent = formatMoney(Number(item[f.id] || 0));
+                td.className = "amount";
+            } else {
+                td.textContent = esc(item[f.id] || "—");
+            }
+            row.appendChild(td);
+        });
+        const actionTd = document.createElement("td");
+        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        row.appendChild(actionTd);
+        netWorthTableBody.appendChild(row);
+    });
+}
+
+function calculateNetWorthSummary(entries) {
+    const assets = entries.filter(e => e.type === "Asset");
+    const liabilities = entries.filter(e => e.type === "Liability");
+    
+    const totalAssets = assets.reduce((s, a) => s + Number(a.value || 0), 0);
+    const totalLiabilities = liabilities.reduce((s, l) => s + Number(l.value || 0), 0);
+    const netWorthToday = totalAssets - totalLiabilities;
+    
+    document.getElementById("totalAssets").textContent = formatMoney(totalAssets);
+    document.getElementById("totalLiabilities").textContent = formatMoney(totalLiabilities);
+    document.getElementById("netWorthToday").textContent = formatMoney(netWorthToday);
+}
+
+function renderAssetsLiabilitiesLists(entries) {
+    const assets = entries.filter(e => e.type === "Asset");
+    const liabilities = entries.filter(e => e.type === "Liability");
+    
+    // Render assets list
+    assetsList.innerHTML = "";
+    if (assets.length === 0) {
+        assetsList.innerHTML = `<div class="empty-state visible">No assets yet.</div>`;
+    } else {
+        assets.forEach(asset => {
+            const item = document.createElement("div");
+            item.className = "asset-liability-item";
+            item.innerHTML = `
+                <span class="label">${esc(asset.name)}</span>
+                <div>
+                    <span class="value">${formatMoney(Number(asset.value || 0))}</span>
+                    <span class="growth">${asset.growthRate ? asset.growthRate + "% growth" : ""}</span>
+                </div>
+            `;
+            assetsList.appendChild(item);
+        });
+    }
+    
+    // Render liabilities list
+    liabilitiesList.innerHTML = "";
+    if (liabilities.length === 0) {
+        liabilitiesList.innerHTML = `<div class="empty-state visible">No liabilities yet.</div>`;
+    } else {
+        liabilities.forEach(liability => {
+            const item = document.createElement("div");
+            item.className = "asset-liability-item";
+            item.innerHTML = `
+                <span class="label">${esc(liability.name)}</span>
+                <div>
+                    <span class="value">${formatMoney(Number(liability.value || 0))}</span>
+                    <span class="growth">${liability.growthRate ? liability.growthRate + "% growth" : ""}</span>
+                </div>
+            `;
+            liabilitiesList.appendChild(item);
+        });
+    }
+}
+
+function renderNetWorthProjectionChart(entries) {
+    // Destroy existing chart
+    if (netWorthProjectionChart) netWorthProjectionChart.destroy();
+    
+    const currentAge = Number(currentAgeInput.value) || 30;
+    const targetAge = 70;
+    const years = targetAge - currentAge;
+    
+    if (years <= 0 || entries.length === 0) return;
+    
+    const assets = entries.filter(e => e.type === "Asset");
+    const liabilities = entries.filter(e => e.type === "Liability");
+    
+    // Calculate net worth projection
+    const labels = [];
+    const projectedValues = [];
+    const inflationAdjustedValues = [];
+    
+    const inflationRate = 0.06; // 6% inflation
+    
+    for (let year = 0; year <= years; year++) {
+        labels.push(`Age ${currentAge + year}`);
+        
+        let projectedAssets = 0;
+        let projectedLiabilities = 0;
+        
+        // Calculate asset growth
+        assets.forEach(asset => {
+            const growthRate = (Number(asset.growthRate || 0) / 100);
+            const futureValue = Number(asset.value || 0) * Math.pow(1 + growthRate, year);
+            projectedAssets += futureValue;
+        });
+        
+        // Calculate liability growth
+        liabilities.forEach(liability => {
+            const growthRate = (Number(liability.growthRate || 0) / 100);
+            const futureValue = Number(liability.value || 0) * Math.pow(1 + growthRate, year);
+            projectedLiabilities += futureValue;
+        });
+        
+        const projectedNetWorth = projectedAssets - projectedLiabilities;
+        const inflationAdjustedValue = projectedNetWorth / Math.pow(1 + inflationRate, year);
+        
+        projectedValues.push(projectedNetWorth);
+        inflationAdjustedValues.push(inflationAdjustedValue);
+    }
+    
+    // Update projection details
+    const finalProjectedNetWorth = projectedValues[projectedValues.length - 1];
+    const finalInflationAdjusted = inflationAdjustedValues[inflationAdjustedValues.length - 1];
+    
+    document.getElementById("projectedNetWorth").textContent = formatMoney(finalProjectedNetWorth);
+    document.getElementById("inflationAdjustedNetWorth").textContent = formatMoney(finalInflationAdjusted);
+    
+    // Create chart
+    const ctx = netWorthProjectionChartCanvas.getContext("2d");
+    netWorthProjectionChart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: "Projected Net Worth",
+                    data: projectedValues,
+                    borderColor: "#3b82f6",
+                    backgroundColor: "rgba(59, 130, 246, 0.1)",
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: "Inflation-Adjusted",
+                    data: inflationAdjustedValues,
+                    borderColor: "#ef4444",
+                    backgroundColor: "rgba(239, 68, 68, 0.1)",
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: { color: "#fff" }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: "#fff" },
+                    grid: { color: "rgba(255,255,255,0.1)" }
+                },
+                y: {
+                    ticks: { color: "#fff" },
+                    grid: { color: "rgba(255,255,255,0.1)" }
+                }
+            }
+        }
+    });
+}
+
+function renderTaxPlan() {
+    const entries = activeEntries();
+    const taxRegime = taxRegimeSelect.value;
+    
+    // Update toggle button text
+    toggleTaxPlanEdit.textContent = isTaxPlanEditMode ? "✎ Save" : "✎ Edit";
+    
+    // Show/hide preview/edit modes
+    if (isTaxPlanEditMode) {
+        taxPlanPreview.hidden = true;
+        taxPlanEdit.hidden = false;
+        
+        // Render form fields
+        renderTaxPlanDynamicFields();
+        
+        // Render table
+        renderTaxPlanTable(entries);
+    } else {
+        taxPlanPreview.hidden = false;
+        taxPlanEdit.hidden = true;
+        
+        // Calculate and display tax summary
+        calculateTaxSummary(entries, taxRegime);
+        
+        // Render tax deductions list
+        renderTaxDeductionsList(entries);
+        
+        // Render tax breakdown
+        renderTaxBreakdown(entries, taxRegime);
+    }
+}
+
+function renderTaxPlanDynamicFields() {
+    taxPlanDynamicFields.innerHTML = "";
+    const fields = TAB_FIELDS.taxPlan || TAB_FIELDS.monthlyBudget;
+    
+    fields.forEach(field => {
+        const div = document.createElement("div");
+        div.className = "field";
+        
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        div.appendChild(label);
+        
+        let input;
+        if (field.type === "select") {
+            input = document.createElement("select");
+            field.options.forEach(opt => {
+                const option = document.createElement("option");
+                option.value = opt;
+                option.textContent = opt;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement("input");
+            input.type = field.type;
+            input.placeholder = field.placeholder || "";
+            if (field.type === "number") {
+                input.min = "0";
+                input.step = "1";
+            }
+        }
+        input.id = `taxPlan_${field.id}`;
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        
+        taxPlanDynamicFields.appendChild(div);
+    });
+}
+
+function renderTaxPlanTable(entries) {
+    const fields = TAB_FIELDS.taxPlan || TAB_FIELDS.monthlyBudget;
+    
+    taxPlanTableHead.innerHTML = "";
+    const tr = document.createElement("tr");
+    fields.forEach(f => {
+        const th = document.createElement("th");
+        th.textContent = f.label;
+        tr.appendChild(th);
+    });
+    const actionTh = document.createElement("th");
+    actionTh.textContent = "";
+    tr.appendChild(actionTh);
+    taxPlanTableHead.appendChild(tr);
+    
+    taxPlanTableBody.innerHTML = "";
+    taxPlanEmptyState.classList.toggle("visible", entries.length === 0);
+    
+    entries.forEach(item => {
+        const row = document.createElement("tr");
+        fields.forEach(f => {
+            const td = document.createElement("td");
+            if (f.type === "number") {
+                td.textContent = formatMoney(Number(item[f.id] || 0));
+                td.className = "amount";
+            } else {
+                td.textContent = esc(item[f.id] || "—");
+            }
+            row.appendChild(td);
+        });
+        const actionTd = document.createElement("td");
+        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        row.appendChild(actionTd);
+        taxPlanTableBody.appendChild(row);
+    });
+}
+
+function calculateTaxSummary(entries, taxRegime) {
+    // Get annual income from monthly budget data
+    let annualIncome = 0;
+    const monthlyBudgetData = appData.monthlyBudgetData || {};
+    const currentMonthKey = getMonthKey(currentMonth);
+    
+    // Sum up income from current month's budget (or use last available month)
+    const availableMonths = Object.keys(monthlyBudgetData).sort().reverse();
+    if (availableMonths.length > 0) {
+        const latestMonthData = monthlyBudgetData[availableMonths[0]] || {};
+        const inflowData = latestMonthData.inflow || {};
+        annualIncome = Object.values(inflowData).reduce((sum, val) => sum + (Number(val) || 0), 0) * 12;
+    }
+    
+    // Calculate total deductions
+    const totalDeductions = entries.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    
+    // Calculate taxable income based on regime
+    let taxableIncome = annualIncome;
+    if (taxRegime === "old") {
+        taxableIncome = Math.max(0, annualIncome - totalDeductions - 50000); // Standard deduction + deductions
+    } else {
+        taxableIncome = Math.max(0, annualIncome - 75000); // New regime standard deduction only
+    }
+    
+    // Calculate annual tax liability
+    const annualTaxLiability = calculateTax(taxableIncome, taxRegime);
+    
+    // Calculate YTD tax liability (current month / 12)
+    const currentMonthIndex = currentMonth.getMonth(); // 0-11
+    const taxLiabilityYTD = (annualTaxLiability * (currentMonthIndex + 1)) / 12;
+    
+    document.getElementById("annualIncome").textContent = formatMoney(annualIncome);
+    document.getElementById("totalDeductions").textContent = formatMoney(totalDeductions);
+    document.getElementById("taxableIncome").textContent = formatMoney(taxableIncome);
+    document.getElementById("annualTaxLiability").textContent = formatMoney(annualTaxLiability);
+    document.getElementById("taxLiabilityYTD").textContent = formatMoney(taxLiabilityYTD);
+}
+
+function calculateTax(income, regime) {
+    if (regime === "new") {
+        // New Tax Regime (FY 2024-25)
+        if (income <= 300000) return 0;
+        if (income <= 600000) return (income - 300000) * 0.05;
+        if (income <= 900000) return 15000 + (income - 600000) * 0.10;
+        if (income <= 1200000) return 45000 + (income - 900000) * 0.15;
+        if (income <= 1500000) return 90000 + (income - 1200000) * 0.20;
+        return 150000 + (income - 1500000) * 0.30;
+    } else {
+        // Old Tax Regime
+        if (income <= 250000) return 0;
+        if (income <= 500000) return (income - 250000) * 0.05;
+        if (income <= 1000000) return 12500 + (income - 500000) * 0.20;
+        return 112500 + (income - 1000000) * 0.30;
+    }
+}
+
+function renderTaxDeductionsList(entries) {
+    taxDeductionsList.innerHTML = "";
+    
+    if (entries.length === 0) {
+        taxDeductionsList.innerHTML = `<div class="empty-state visible">No tax saving items yet.</div>`;
+        return;
+    }
+    
+    entries.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "tax-deduction-item";
+        div.innerHTML = `
+            <span class="label">${esc(item.name)}</span>
+            <div>
+                <span class="value">${formatMoney(Number(item.amount || 0))}</span>
+                <span class="section">${esc(item.section || "")}</span>
+            </div>
+        `;
+        taxDeductionsList.appendChild(div);
+    });
+}
+
+function renderTaxBreakdown(entries, taxRegime) {
+    taxBreakdown.innerHTML = "";
+    
+    // Get annual income
+    let annualIncome = 0;
+    const monthlyBudgetData = appData.monthlyBudgetData || {};
+    const availableMonths = Object.keys(monthlyBudgetData).sort().reverse();
+    if (availableMonths.length > 0) {
+        const latestMonthData = monthlyBudgetData[availableMonths[0]] || {};
+        const inflowData = latestMonthData.inflow || {};
+        annualIncome = Object.values(inflowData).reduce((sum, val) => sum + (Number(val) || 0), 0) * 12;
+    }
+    
+    const totalDeductions = entries.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    let taxableIncome = annualIncome;
+    if (taxRegime === "old") {
+        taxableIncome = Math.max(0, annualIncome - totalDeductions - 50000);
+    } else {
+        taxableIncome = Math.max(0, annualIncome - 75000);
+    }
+    
+    const tax = calculateTax(taxableIncome, taxRegime);
+    const cess = tax * 0.04; // 4% health and education cess
+    const totalTax = tax + cess;
+    
+    const breakdown = [
+        { label: "Gross Annual Income", value: formatMoney(annualIncome) },
+        { label: "Standard Deduction", value: formatMoney(taxRegime === "new" ? 75000 : 50000) },
+        { label: "Other Deductions", value: formatMoney(taxRegime === "old" ? totalDeductions : 0) },
+        { label: "Taxable Income", value: formatMoney(taxableIncome) },
+        { label: "Base Tax", value: formatMoney(tax) },
+        { label: "Cess (4%)", value: formatMoney(cess) },
+        { label: "Total Tax Liability", value: formatMoney(totalTax), highlight: true }
+    ];
+    
+    breakdown.forEach(item => {
+        const div = document.createElement("div");
+        div.className = `tax-breakdown-item ${item.highlight ? "highlight" : ""}`;
+        div.innerHTML = `
+            <span class="label">${item.label}</span>
+            <span class="value">${item.value}</span>
+        `;
+        taxBreakdown.appendChild(div);
+    });
+}
+
+function renderGifts() {
+    const entries = activeEntries();
+    
+    // Update toggle button text
+    toggleGiftsEdit.textContent = isGiftsEditMode ? "✎ Save" : "✎ Edit";
+    
+    // Show/hide preview/edit modes
+    if (isGiftsEditMode) {
+        giftsPreview.hidden = true;
+        giftsEdit.hidden = false;
+        
+        // Render form fields
+        renderGiftsDynamicFields();
+        
+        // Render table
+        renderGiftsTable(entries);
+    } else {
+        giftsPreview.hidden = false;
+        giftsEdit.hidden = true;
+        
+        // Calculate and display summary
+        calculateGiftsSummary(entries);
+        
+        // Render preview cards
+        renderGiftsPreviewCards(entries);
+    }
+}
+
+function renderGiftsDynamicFields() {
+    giftsDynamicFields.innerHTML = "";
+    const fields = TAB_FIELDS.gifts || TAB_FIELDS.monthlyBudget;
+    
+    fields.forEach(field => {
+        const div = document.createElement("div");
+        div.className = "field";
+        
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        div.appendChild(label);
+        
+        let input;
+        if (field.type === "select") {
+            input = document.createElement("select");
+            field.options.forEach(opt => {
+                const option = document.createElement("option");
+                option.value = opt;
+                option.textContent = opt;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement("input");
+            input.type = field.type;
+            input.placeholder = field.placeholder || "";
+            if (field.type === "number") {
+                input.min = "0";
+                input.step = "1";
+            }
+        }
+        input.id = `gifts_${field.id}`;
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        
+        giftsDynamicFields.appendChild(div);
+    });
+}
+
+function renderGiftsTable(entries) {
+    const fields = TAB_FIELDS.gifts || TAB_FIELDS.monthlyBudget;
+    
+    giftsTableHead.innerHTML = "";
+    const tr = document.createElement("tr");
+    fields.forEach(f => {
+        const th = document.createElement("th");
+        th.textContent = f.label;
+        tr.appendChild(th);
+    });
+    const actionTh = document.createElement("th");
+    actionTh.textContent = "";
+    tr.appendChild(actionTh);
+    giftsTableHead.appendChild(tr);
+    
+    giftsTableBody.innerHTML = "";
+    giftsEmptyState.classList.toggle("visible", entries.length === 0);
+    
+    entries.forEach(item => {
+        const row = document.createElement("tr");
+        fields.forEach(f => {
+            const td = document.createElement("td");
+            if (f.type === "number") {
+                td.textContent = formatMoney(Number(item[f.id] || 0));
+                td.className = "amount";
+            } else {
+                td.textContent = esc(item[f.id] || "—");
+            }
+            row.appendChild(td);
+        });
+        const actionTd = document.createElement("td");
+        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        row.appendChild(actionTd);
+        giftsTableBody.appendChild(row);
+    });
+}
+
+function calculateGiftsSummary(entries) {
+    const totalGifts = entries.length;
+    const totalGiftAmount = entries.reduce((s, g) => s + Number(g.amount || 0), 0);
+    const fixedEveryYearCount = entries.filter(g => g.category === "Fixed Every Year").length;
+    
+    document.getElementById("totalGifts").textContent = totalGifts;
+    document.getElementById("totalGiftAmount").textContent = formatMoney(totalGiftAmount);
+    document.getElementById("fixedEveryYearCount").textContent = fixedEveryYearCount;
+}
+
+function renderGiftsPreviewCards(entries) {
+    giftsList.innerHTML = "";
+    
+    if (entries.length === 0) {
+        giftsList.innerHTML = `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No gifts yet. Click Edit to add gifts.</div>`;
+        return;
+    }
+    
+    entries.forEach(gift => {
+        const item = document.createElement("div");
+        item.className = "gift-item";
+        
+        const categoryClass = gift.category === "Fixed Every Year" ? "fixed" : "demand";
+        
+        item.innerHTML = `
+            <div class="gift-item-info">
+                <div class="gift-item-title">${esc(gift.name)}</div>
+                <div class="gift-item-details">
+                    <span class="gift-item-category ${categoryClass}">${esc(gift.category || "On Demand")}</span>
+                    ${esc(gift.relativeName || "—")}<br>
+                    Occasion: ${esc(gift.occasion || "—")}<br>
+                    ${gift.details ? `Details: ${esc(gift.details)}` : ""}
+                </div>
+            </div>
+            <div class="gift-item-amount">${formatMoney(Number(gift.amount || 0))}</div>
+        `;
+        
+        giftsList.appendChild(item);
+    });
+}
+
+function renderEmergencyFund() {
+    const entries = activeEntries();
+    
+    // Update toggle button text
+    toggleEmergencyFundEdit.textContent = isEmergencyFundEditMode ? "✎ Save" : "✎ Edit";
+    
+    // Show/hide preview/edit modes
+    if (isEmergencyFundEditMode) {
+        emergencyFundEdit.hidden = false;
+        
+        // Render form fields
+        renderEmergencyFundDynamicFields();
+        
+        // Pre-fill with current fund value if exists
+        if (entries.length > 0) {
+            const currentFundInput = document.getElementById("emergencyFund_currentFund");
+            if (currentFundInput) {
+                currentFundInput.value = entries[0].currentFund || 0;
+            }
+        }
+    } else {
+        emergencyFundEdit.hidden = true;
+        
+        // Calculate and display emergency fund summary
+        calculateEmergencyFundSummary(entries);
+    }
+}
+
+function renderEmergencyFundDynamicFields() {
+    emergencyFundDynamicFields.innerHTML = "";
+    const fields = TAB_FIELDS.emergencyFund || TAB_FIELDS.monthlyBudget;
+    
+    fields.forEach(field => {
+        const div = document.createElement("div");
+        div.className = "field";
+        
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        div.appendChild(label);
+        
+        let input;
+        if (field.type === "select") {
+            input = document.createElement("select");
+            field.options.forEach(opt => {
+                const option = document.createElement("option");
+                option.value = opt;
+                option.textContent = opt;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement("input");
+            input.type = field.type;
+            input.placeholder = field.placeholder || "";
+            if (field.type === "number") {
+                input.min = "0";
+                input.step = "1";
+            }
+        }
+        input.id = `emergencyFund_${field.id}`;
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        
+        emergencyFundDynamicFields.appendChild(div);
+    });
+}
+
+function calculateEmergencyFundSummary(entries) {
+    // Calculate average monthly expenses from monthly budget data
+    let averageMonthlyExpenses = 0;
+    const monthlyBudgetData = appData.monthlyBudgetData || {};
+    const availableMonths = Object.keys(monthlyBudgetData);
+    
+    if (availableMonths.length > 0) {
+        let totalExpenses = 0;
+        let monthCount = 0;
+        
+        availableMonths.forEach(monthKey => {
+            const monthData = monthlyBudgetData[monthKey] || {};
+            const outflowData = monthData.outflow || {};
+            const monthExpenses = Object.values(outflowData).reduce((sum, val) => sum + (Number(val) || 0), 0);
+            totalExpenses += monthExpenses;
+            monthCount++;
+        });
+        
+        averageMonthlyExpenses = monthCount > 0 ? totalExpenses / monthCount : 0;
+    }
+    
+    const sixMonthsNeeded = averageMonthlyExpenses * 6;
+    const twelveMonthsNeeded = averageMonthlyExpenses * 12;
+    
+    // Get current emergency fund from entries or input
+    let currentFund = 0;
+    if (entries.length > 0) {
+        currentFund = Number(entries[0].currentFund || 0);
+    } else if (currentEmergencyFundInput.value) {
+        currentFund = Number(currentEmergencyFundInput.value);
+    }
+    
+    // Update summary display
+    document.getElementById("averageMonthlyExpenses").textContent = formatMoney(averageMonthlyExpenses);
+    document.getElementById("sixMonthsNeeded").textContent = formatMoney(sixMonthsNeeded);
+    document.getElementById("twelveMonthsNeeded").textContent = formatMoney(twelveMonthsNeeded);
+    
+    // Calculate status
+    const monthsCovered = averageMonthlyExpenses > 0 ? currentFund / averageMonthlyExpenses : 0;
+    const amountNeeded = Math.max(0, sixMonthsNeeded - currentFund);
+    
+    // Determine status color
+    const statusBadge = document.getElementById("statusBadge");
+    statusBadge.className = "status-badge";
+    
+    let statusText = "";
+    if (averageMonthlyExpenses === 0) {
+        statusBadge.classList.add("yellow");
+        statusText = "NO DATA";
+        document.getElementById("amountNeeded").textContent = "Add monthly expenses first";
+        document.getElementById("monthsCovered").textContent = "—";
+        statusBadge.textContent = statusText;
+        return;
+    }
+    
+    if (monthsCovered >= 12) {
+        statusBadge.classList.add("green");
+        statusText = "READY";
+    } else if (monthsCovered >= 6) {
+        statusBadge.classList.add("yellow");
+        statusText = "GOOD";
+    } else {
+        statusBadge.classList.add("red");
+        statusText = "LOW";
+    }
+    
+    statusBadge.textContent = statusText;
+    document.getElementById("amountNeeded").textContent = formatMoney(amountNeeded);
+    document.getElementById("monthsCovered").textContent = monthsCovered.toFixed(1);
+}
+
+function calculateAnnualSummary() {
+    try {
+        const monthlyBudgetData = appData.monthlyBudgetData || {};
+        const monthKeys = Object.keys(monthlyBudgetData);
+        
+        if (monthKeys.length === 0) {
+            annualTotalIncome.textContent = "₹0";
+            annualTotalExpenses.textContent = "₹0";
+            annualTotalSavings.textContent = "₹0";
+            avgMonthlyIncome.textContent = "₹0";
+            avgMonthlyExpenses.textContent = "₹0";
+            annualMonthsList.innerHTML = "<p class='empty-state visible'>No monthly data available yet. Add data in Monthly view first.</p>";
+            return;
+        }
+        
+        let totalIncome = 0;
+        let totalExpenses = 0;
+        let totalInvesting = 0;
+        const monthDataList = [];
+        
+        monthKeys.forEach(monthKey => {
+            const monthData = monthlyBudgetData[monthKey] || {};
+            const inflowTotal = Object.values(monthData.inflow || {}).reduce((s, v) => s + Number(v || 0), 0);
+            const outflowTotal = Object.values(monthData.outflow || {}).reduce((s, v) => s + Number(v || 0), 0);
+            const investingTotal = Object.values(monthData.investing || {}).reduce((s, v) => s + Number(v || 0), 0);
+            const savings = inflowTotal - outflowTotal - investingTotal;
+            
+            totalIncome += inflowTotal;
+            totalExpenses += outflowTotal;
+            totalInvesting += investingTotal;
+            
+            monthDataList.push({
+                month: monthKey,
+                income: inflowTotal,
+                expenses: outflowTotal,
+                investing: investingTotal,
+                savings: savings
+            });
+        });
+        
+        const totalSavings = totalIncome - totalExpenses - totalInvesting;
+        const monthCount = monthKeys.length;
+        const avgIncome = monthCount > 0 ? totalIncome / monthCount : 0;
+        const avgExpenses = monthCount > 0 ? totalExpenses / monthCount : 0;
+        
+        annualTotalIncome.textContent = formatMoney(totalIncome);
+        annualTotalExpenses.textContent = formatMoney(totalExpenses);
+        annualTotalSavings.textContent = formatMoney(totalSavings);
+        avgMonthlyIncome.textContent = formatMoney(avgIncome);
+        avgMonthlyExpenses.textContent = formatMoney(avgExpenses);
+        
+        // Render monthly breakdown
+        annualMonthsList.innerHTML = "";
+        monthDataList.sort((a, b) => new Date(a.month + "-01") - new Date(b.month + "-01")).reverse().forEach(month => {
+            const date = new Date(month.month + "-01");
+            const monthName = date.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+            
+            const div = document.createElement("div");
+            div.className = "annual-month-item";
+            div.innerHTML = `
+                <span class="annual-month-name">${monthName}</span>
+                <div class="annual-month-details">
+                    <span class="annual-month-detail">Income: <strong>${formatMoney(month.income)}</strong></span>
+                    <span class="annual-month-detail">Expenses: <strong>${formatMoney(month.expenses)}</strong></span>
+                    <span class="annual-month-detail">Savings: <strong>${formatMoney(month.savings)}</strong></span>
+                </div>
+            `;
+            annualMonthsList.appendChild(div);
+        });
+    } catch (error) {
+        console.error("Error calculating annual summary:", error);
+        annualTotalIncome.textContent = "₹0";
+        annualTotalExpenses.textContent = "₹0";
+        annualTotalSavings.textContent = "₹0";
+        avgMonthlyIncome.textContent = "₹0";
+        avgMonthlyExpenses.textContent = "₹0";
+        annualMonthsList.innerHTML = "<p class='empty-state visible'>Error loading annual data. Please try again.</p>";
+    }
+}
+
+function renderCategoryFields(container, fields, data) {
+    container.innerHTML = "";
+    fields.forEach(field => {
+        const div = document.createElement("div");
+        div.className = "field";
+        
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        div.appendChild(label);
+        
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = "0";
+        input.step = "1";
+        input.placeholder = "0";
+        input.value = data[field.id] || "";
+        input.dataset.fieldId = field.id;
+        input.dataset.category = container.id;
+        
+        div.appendChild(input);
+        container.appendChild(div);
+    });
+}
+
+function calculateAndDisplaySummary(monthData) {
+    // Calculate totals
+    const inflowTotal = Object.values(monthData.inflow).reduce((s, v) => s + Number(v || 0), 0);
+    const outflowTotal = Object.values(monthData.outflow).reduce((s, v) => s + Number(v || 0), 0);
+    const investingTotal = Object.values(monthData.investing).reduce((s, v) => s + Number(v || 0), 0);
+    
+    // Update display
+    document.getElementById("inflowTotal").textContent = formatMoney(inflowTotal);
+    document.getElementById("outflowTotal").textContent = formatMoney(outflowTotal);
+    document.getElementById("investingTotal").textContent = formatMoney(investingTotal);
+    
+    // Summary calculations
+    const totalIncome = inflowTotal;
+    const totalExpenses = outflowTotal;
+    const cashFlow = totalIncome - totalExpenses;
+    
+    document.getElementById("totalIncome").textContent = formatMoney(totalIncome);
+    document.getElementById("totalExpenses").textContent = formatMoney(totalExpenses);
+    document.getElementById("cashFlow").textContent = formatMoney(cashFlow);
+    
+    // Calculate initial balance (from previous month)
+    const prevMonth = new Date(currentMonth);
+    prevMonth.setMonth(prevMonth.getMonth() - 1);
+    const prevMonthKey = getMonthKey(prevMonth);
+    const prevMonthData = appData.monthlyBudgetData[prevMonthKey];
+    const prevBalance = prevMonthData ? prevMonthData.monthEndBalance || 0 : 0;
+    const initialBalance = prevBalance + cashFlow;
+    
+    document.getElementById("initialBalance").textContent = formatMoney(initialBalance);
+    
+    // Budget status
+    budgetStatus.className = "budget-status";
+    if (cashFlow >= 0) {
+        budgetStatus.classList.add("positive");
+        budgetStatus.textContent = `Budget Positive: +${formatMoney(cashFlow)} to spend`;
+    } else {
+        budgetStatus.classList.add("negative");
+        budgetStatus.textContent = `Budget Negative: ${formatMoney(cashFlow)} overspent`;
+    }
+}
+
+function renderPieChart(monthData) {
+    const ctx = pieCanvas.getContext("2d");
+    
+    if (pieChart) {
+        pieChart.destroy();
+    }
+    
+    const investingTotal = Object.values(monthData.investing).reduce((s, v) => s + Number(v || 0), 0);
+    const outflowTotal = Object.values(monthData.outflow).reduce((s, v) => s + Number(v || 0), 0);
+    const monthEndBalance = Number(monthData.monthEndBalance || 0);
+    
+    // Categorize for pie chart
+    const sipInvestment = Number(monthData.investing.sipInvestment || 0);
+    const retirementInvestment = Number(monthData.investing.retirementInvestment || 0);
+    const monthlySaving = Number(monthData.investing.monthlySaving || 0);
+    const onetimeSaving = Number(monthData.investing.onetimeSaving || 0);
+    const onetimeInvestment = Number(monthData.investing.onetimeInvestment || 0);
+    
+    const loanEMI = Number(monthData.outflow.loanEMI || 0);
+    const debtRepayment = Number(monthData.outflow.debtRepayment || 0);
+    const lending = Number(monthData.outflow.lending || 0);
+    
+    const otherExpenses = outflowTotal - loanEMI - debtRepayment - lending;
+    const otherInvestments = investingTotal - sipInvestment - retirementInvestment - monthlySaving - onetimeSaving - onetimeInvestment;
+    
+    const data = {
+        labels: ["Investment", "Liability", "Saving", "Expenditure", "Retirement", "Other"],
+        datasets: [{
+            data: [
+                sipInvestment + otherInvestments,
+                loanEMI + debtRepayment,
+                monthlySaving + onetimeSaving,
+                otherExpenses,
+                retirementInvestment,
+                onetimeInvestment
+            ],
+            backgroundColor: [
+                "#3b82f6", // Investment - blue
+                "#ef4444", // Liability - red
+                "#22c55e", // Saving - green
+                "#f97316", // Expenditure - orange
+                "#eab308", // Retirement - yellow
+                "#a855f7"  // Other - purple
+            ],
+            borderWidth: 0
+        }]
+    };
+    
+    pieChart = new Chart(ctx, {
+        type: "pie",
+        data: data,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: "bottom",
+                    labels: {
+                        color: "#fff",
+                        font: { size: 12 }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderTableHead() {
+    const fields = TAB_FIELDS[activeTabId] || TAB_FIELDS.monthlyBudget;
+    tableHead.innerHTML = "";
+    const tr = document.createElement("tr");
+    fields.forEach(f => {
+        const th = document.createElement("th");
+        th.textContent = f.label;
+        tr.appendChild(th);
+    });
+    const actionTh = document.createElement("th");
+    actionTh.textContent = "";
+    tr.appendChild(actionTh);
+    tableHead.appendChild(tr);
+}
+
+function renderDynamicFields() {
+    dynamicFields.innerHTML = "";
+    const fields = TAB_FIELDS[activeTabId] || TAB_FIELDS.monthlyBudget;
+    
+    fields.forEach(field => {
+        const div = document.createElement("div");
+        div.className = "field";
+        
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        label.htmlFor = `field_${field.id}`;
+        div.appendChild(label);
+        
+        let input;
+        if (field.type === "select") {
+            input = document.createElement("select");
+            field.options.forEach(opt => {
+                const option = document.createElement("option");
+                option.value = opt;
+                option.textContent = opt;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement("input");
+            input.type = field.type;
+            input.placeholder = field.placeholder || "";
+            if (field.type === "number") {
+                input.min = "0";
+                input.step = "1";
+            }
+        }
+        input.id = `field_${field.id}`;
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        
+        dynamicFields.appendChild(div);
+        fieldInputs[field.id] = input;
+    });
 }
 
 function renderTabs() {
     tabBar.innerHTML = "";
-
     getTabs().forEach(tab => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "tab" + (tab.id === activeTabId ? " active" : "");
-        button.textContent = tab.label;
-        button.style.background = tab.color;
-        button.style.color = tab.text;
-        button.addEventListener("click", () => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "tab" + (tab.id === activeTabId ? " active" : "");
+        btn.textContent = tab.label;
+        btn.style.background = tab.color;
+        btn.style.color = tab.text;
+        btn.addEventListener("click", () => {
             activeTabId = tab.id;
             searchInput.value = "";
             render();
         });
-        tabBar.appendChild(button);
+        tabBar.appendChild(btn);
     });
-
-    const addButton = document.createElement("button");
-    addButton.type = "button";
-    addButton.className = "tab add-tab";
-    addButton.textContent = "+";
-    addButton.setAttribute("aria-label", "Add tab");
-    addButton.addEventListener("click", addCustomTab);
-    tabBar.appendChild(addButton);
-}
-
-function activeEntries() {
-    const data = loadData();
-    return data[activeTabId] || [];
-}
-
-function setActiveEntries(entries) {
-    const data = loadData();
-    data[activeTabId] = entries;
-    saveData(data);
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "tab add-tab";
+    addBtn.textContent = "+";
+    addBtn.setAttribute("aria-label", "Add custom tab");
+    addBtn.addEventListener("click", addCustomTab);
+    tabBar.appendChild(addBtn);
 }
 
 function renderSummary(entries) {
-    const planned = entries.reduce((sum, item) => sum + Number(item.planned || 0), 0);
-    const actual = entries.reduce((sum, item) => sum + Number(item.actual || 0), 0);
-
+    const planned = entries.reduce((s, i) => s + Number(i.planned || 0), 0);
+    const actual  = entries.reduce((s, i) => s + Number(i.actual  || 0), 0);
     totals.planned.textContent = formatMoney(planned);
-    totals.actual.textContent = formatMoney(actual);
+    totals.actual.textContent  = formatMoney(actual);
     totals.balance.textContent = formatMoney(planned - actual);
-    totals.count.textContent = String(entries.length);
+    totals.count.textContent   = String(entries.length);
 }
 
 function renderRows(entries) {
-    const query = searchInput.value.trim().toLowerCase();
-    const filtered = entries.filter(item => {
-        const text = [item.name, item.date, item.note].join(" ").toLowerCase();
-        return text.includes(query);
-    });
-
+    const q = searchInput.value.trim().toLowerCase();
+    const fields = TAB_FIELDS[activeTabId] || TAB_FIELDS.monthlyBudget;
+    const filtered = q
+        ? entries.filter(i => fields.map(f => i[f.id]).join(" ").toLowerCase().includes(q))
+        : entries;
     entryRows.innerHTML = "";
     emptyState.classList.toggle("visible", filtered.length === 0);
-
     filtered.forEach(item => {
         const row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${escapeHtml(item.name)}</td>
-            <td class="amount">${formatMoney(Number(item.planned))}</td>
-            <td class="amount">${formatMoney(Number(item.actual || 0))}</td>
-            <td>${escapeHtml(item.date || "-")}</td>
-            <td>${escapeHtml(item.note || "-")}</td>
-            <td><button class="delete-row" type="button" data-id="${item.id}">Delete</button></td>
-        `;
+        fields.forEach(f => {
+            const td = document.createElement("td");
+            if (f.type === "number") {
+                td.textContent = formatMoney(Number(item[f.id] || 0));
+                td.className = "amount";
+            } else {
+                td.textContent = esc(item[f.id] || "—");
+            }
+            row.appendChild(td);
+        });
+        const actionTd = document.createElement("td");
+        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        row.appendChild(actionTd);
         entryRows.appendChild(row);
     });
 }
 
-function render() {
-    const tab = getTabs().find(item => item.id === activeTabId) || DEFAULT_TABS[0];
-    activeSubtitle.textContent = tab.label;
-    renderTabs();
-
-    const entries = activeEntries();
-    renderSummary(entries);
-    renderRows(entries);
-}
-
-function escapeHtml(value) {
-    return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
-
+// ── Entry actions ─────────────────────────────────────────────────────────────
 function addEntry(event) {
     event.preventDefault();
-
-    const entry = {
-        id: String(Date.now()),
-        name: fields.name.value.trim(),
-        planned: Number(fields.planned.value || 0),
-        actual: Number(fields.actual.value || 0),
-        date: fields.date.value,
-        note: fields.note.value.trim()
-    };
-
-    if (!entry.name || entry.planned < 0 || entry.actual < 0) {
-        return;
-    }
-
+    const fields = TAB_FIELDS[activeTabId] || TAB_FIELDS.monthlyBudget;
+    const entry = { id: String(Date.now()) };
+    
+    fields.forEach(f => {
+        const input = fieldInputs[f.id];
+        if (!input) return;
+        if (f.type === "number") {
+            entry[f.id] = Number(input.value || 0);
+        } else {
+            entry[f.id] = input.value.trim();
+        }
+    });
+    
+    if (!entry.name || entry.planned < 0) return;
     const entries = activeEntries();
     entries.unshift(entry);
     setActiveEntries(entries);
@@ -184,15 +2750,12 @@ function addEntry(event) {
 }
 
 function deleteEntry(id) {
-    setActiveEntries(activeEntries().filter(item => item.id !== id));
+    setActiveEntries(activeEntries().filter(i => i.id !== id));
     render();
 }
 
 function clearActiveTab() {
-    if (!activeEntries().length) {
-        return;
-    }
-
+    if (!activeEntries().length) return;
     if (confirm("Clear all items in this tab?")) {
         setActiveEntries([]);
         render();
@@ -200,35 +2763,486 @@ function clearActiveTab() {
 }
 
 function addCustomTab() {
-    const label = prompt("New tab name");
-    if (!label || !label.trim()) {
-        return;
-    }
-
-    const customTabs = loadJson(CUSTOM_TABS_KEY, []);
-    const id = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Date.now();
-
-    customTabs.push({
-        id,
-        label: label.trim(),
-        color: "#222",
-        text: "#fff"
-    });
-
-    localStorage.setItem(CUSTOM_TABS_KEY, JSON.stringify(customTabs));
+    const label = prompt("New tab name:");
+    if (!label || !label.trim()) return;
+    const id = label.trim().toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Date.now();
+    appData.customTabs = [...(appData.customTabs || []), { id, label: label.trim(), color: "#333", text: "#fff" }];
     activeTabId = id;
+    scheduleSave();
     render();
 }
 
+// ── Export to Excel ─────────────────────────────────────────────────────────────
+function exportToExcel() {
+    const entries = activeEntries();
+    if (!entries.length) {
+        alert("No data to export.");
+        return;
+    }
+    
+    const tab = getTabs().find(t => t.id === activeTabId) || DEFAULT_TABS[0];
+    const fields = TAB_FIELDS[activeTabId] || TAB_FIELDS.monthlyBudget;
+    
+    const headers = fields.map(f => f.label);
+    const data = entries.map(e => fields.map(f => e[f.id] || ""));
+    
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, tab.label);
+    XLSX.writeFile(wb, `${tab.label.replace(/\s+/g, "_")}_export.xlsx`);
+}
+
+// ── Reset All Data ─────────────────────────────────────────────────────────────
+function resetAllData() {
+    const confirmation = confirm(
+        "⚠️ WARNING: This will delete ALL your data including:\n\n" +
+        "• All budget entries\n" +
+        "• All monthly budget data\n" +
+        "• All financial goals\n" +
+        "• All investments\n" +
+        "• All insurances\n" +
+        "• All cards\n" +
+        "• Net worth data\n" +
+        "• Tax plan data\n" +
+        "• Gifts\n" +
+        "• Emergency fund data\n\n" +
+        "This action CANNOT be undone!\n\n" +
+        "Type 'DELETE' to confirm:"
+    );
+    
+    if (!confirmation) return;
+    
+    const deleteConfirmation = prompt("Type 'DELETE' to confirm permanent deletion:");
+    if (deleteConfirmation !== "DELETE") {
+        alert("Reset cancelled. Data remains intact.");
+        return;
+    }
+    
+    // Clear all data but preserve user name
+    appData = {
+        tabData: {},
+        monthlyBudgetData: {},
+        customTabs: [],
+        userName: appData.userName || ""
+    };
+    
+    // Save the cleared data
+    doSave();
+    
+    // Re-render
+    render();
+    
+    alert("✅ All data has been permanently deleted.");
+}
+
+// ── Event bindings ────────────────────────────────────────────────────────────
 entryForm.addEventListener("submit", addEntry);
 searchInput.addEventListener("input", render);
+exportBtn.addEventListener("click", exportToExcel);
 clearTabButton.addEventListener("click", clearActiveTab);
+resetAllDataButton.addEventListener("click", resetAllData);
+entryRows.addEventListener("click", e => {
+    const btn = e.target.closest(".delete-row");
+    if (btn) deleteEntry(btn.dataset.id);
+});
 
-entryRows.addEventListener("click", event => {
-    const button = event.target.closest(".delete-row");
-    if (button) {
-        deleteEntry(button.dataset.id);
+// Monthly Budget event bindings
+prevMonthBtn.addEventListener("click", () => {
+    currentMonth.setMonth(currentMonth.getMonth() - 1);
+    renderMonthlyBudget();
+});
+
+nextMonthBtn.addEventListener("click", () => {
+    currentMonth.setMonth(currentMonth.getMonth() + 1);
+    renderMonthlyBudget();
+});
+
+toggleBudgetView.addEventListener("click", () => {
+    isAnnualBudgetView = !isAnnualBudgetView;
+    toggleBudgetView.textContent = isAnnualBudgetView ? "📅 Monthly" : "📊 Annual";
+    renderMonthlyBudget();
+});
+
+toggleBudgetEdit.addEventListener("click", () => {
+    isBudgetEditMode = !isBudgetEditMode;
+    if (!isBudgetEditMode) {
+        // Save when switching back to preview
+        scheduleSave();
+    }
+    renderMonthlyBudget();
+});
+
+saveMonthDataBtn.addEventListener("click", () => {
+    isBudgetEditMode = false;
+    scheduleSave();
+    renderMonthlyBudget();
+});
+
+// Financial Goal event bindings
+toggleGoalEdit.addEventListener("click", () => {
+    isGoalEditMode = !isGoalEditMode;
+    renderFinancialGoal();
+});
+
+goalForm.addEventListener("submit", addGoalEntry);
+goalTableBody.addEventListener("click", e => {
+    const btn = e.target.closest(".delete-row");
+    if (btn) deleteEntry(btn.dataset.id);
+});
+
+// Monthly Fixed Expense event bindings
+toggleExpenseEdit.addEventListener("click", () => {
+    isExpenseEditMode = !isExpenseEditMode;
+    renderMonthlyFixedExpense();
+});
+
+expenseForm.addEventListener("submit", addExpenseEntry);
+expenseTableBody.addEventListener("click", e => {
+    const btn = e.target.closest(".delete-row");
+    if (btn) deleteEntry(btn.dataset.id);
+});
+
+// Investments event bindings
+toggleInvestmentEdit.addEventListener("click", () => {
+    isInvestmentEditMode = !isInvestmentEditMode;
+    renderInvestments();
+});
+
+investmentForm.addEventListener("submit", addInvestmentEntry);
+investmentTableBody.addEventListener("click", e => {
+    const btn = e.target.closest(".delete-row");
+    if (btn) deleteEntry(btn.dataset.id);
+});
+
+// Insurances event bindings
+toggleInsuranceEdit.addEventListener("click", () => {
+    isInsuranceEditMode = !isInsuranceEditMode;
+    renderInsurances();
+});
+
+insuranceForm.addEventListener("submit", addInsuranceEntry);
+insuranceTableBody.addEventListener("click", e => {
+    const btn = e.target.closest(".delete-row");
+    if (btn) deleteEntry(btn.dataset.id);
+});
+
+// Cards event bindings
+toggleCardEdit.addEventListener("click", () => {
+    isCardEditMode = !isCardEditMode;
+    renderCards();
+});
+
+cardForm.addEventListener("submit", addCardEntry);
+cardTableBody.addEventListener("click", e => {
+    const btn = e.target.closest(".delete-row");
+    if (btn) deleteEntry(btn.dataset.id);
+});
+
+// Net Worth event bindings
+toggleNetWorthEdit.addEventListener("click", () => {
+    isNetWorthEditMode = !isNetWorthEditMode;
+    renderNetWorth();
+});
+
+currentAgeInput.addEventListener("input", () => {
+    if (!isNetWorthEditMode) {
+        const entries = activeEntries();
+        renderNetWorthProjectionChart(entries);
     }
 });
 
-render();
+netWorthForm.addEventListener("submit", addNetWorthEntry);
+netWorthTableBody.addEventListener("click", e => {
+    const btn = e.target.closest(".delete-row");
+    if (btn) deleteEntry(btn.dataset.id);
+});
+
+// Tax Plan event bindings
+toggleTaxPlanEdit.addEventListener("click", () => {
+    isTaxPlanEditMode = !isTaxPlanEditMode;
+    renderTaxPlan();
+});
+
+taxRegimeSelect.addEventListener("change", () => {
+    if (!isTaxPlanEditMode) {
+        const entries = activeEntries();
+        renderTaxPlan();
+    }
+});
+
+taxPlanForm.addEventListener("submit", addTaxPlanEntry);
+taxPlanTableBody.addEventListener("click", e => {
+    const btn = e.target.closest(".delete-row");
+    if (btn) deleteEntry(btn.dataset.id);
+});
+
+// Gifts event bindings
+toggleGiftsEdit.addEventListener("click", () => {
+    isGiftsEditMode = !isGiftsEditMode;
+    renderGifts();
+});
+
+giftsForm.addEventListener("submit", addGiftsEntry);
+giftsTableBody.addEventListener("click", e => {
+    const btn = e.target.closest(".delete-row");
+    if (btn) deleteEntry(btn.dataset.id);
+});
+
+// Emergency Fund event bindings
+toggleEmergencyFundEdit.addEventListener("click", () => {
+    isEmergencyFundEditMode = !isEmergencyFundEditMode;
+    renderEmergencyFund();
+});
+
+currentEmergencyFundInput.addEventListener("input", () => {
+    const entries = activeEntries();
+    calculateEmergencyFundSummary(entries);
+});
+
+emergencyFundForm.addEventListener("submit", addEmergencyFundEntry);
+
+// Auto-save on category field changes
+inflowFields.addEventListener("input", handleCategoryFieldChange);
+outflowFields.addEventListener("input", handleCategoryFieldChange);
+investingFields.addEventListener("input", handleCategoryFieldChange);
+monthEndBalance.addEventListener("input", handleCategoryFieldChange);
+
+function handleCategoryFieldChange(e) {
+    if (!e.target.dataset.fieldId) return;
+    
+    const monthKey = getMonthKey(currentMonth);
+    if (!appData.monthlyBudgetData) appData.monthlyBudgetData = {};
+    if (!appData.monthlyBudgetData[monthKey]) {
+        appData.monthlyBudgetData[monthKey] = {
+            inflow: {},
+            outflow: {},
+            investing: {},
+            monthEndBalance: 0
+        };
+    }
+    
+    const monthData = appData.monthlyBudgetData[monthKey];
+    
+    if (e.target.id === "monthEndBalance") {
+        monthData.monthEndBalance = Number(e.target.value) || 0;
+    } else {
+        const category = e.target.parentElement.parentElement.id;
+        const fieldId = e.target.dataset.fieldId;
+        monthData[category][fieldId] = Number(e.target.value) || 0;
+    }
+    
+    // Update edit mode totals
+    const inflowTotal = Object.values(monthData.inflow).reduce((s, v) => s + Number(v || 0), 0);
+    const outflowTotal = Object.values(monthData.outflow).reduce((s, v) => s + Number(v || 0), 0);
+    const investingTotal = Object.values(monthData.investing).reduce((s, v) => s + Number(v || 0), 0);
+    document.getElementById("inflowTotalEdit").textContent = formatMoney(inflowTotal);
+    document.getElementById("outflowTotalEdit").textContent = formatMoney(outflowTotal);
+    document.getElementById("investingTotalEdit").textContent = formatMoney(investingTotal);
+    
+    calculateAndDisplaySummary(monthData);
+    renderPieChart(monthData);
+    scheduleSave();
+}
+
+function addGoalEntry(event) {
+    event.preventDefault();
+    const fields = TAB_FIELDS.financialGoal || TAB_FIELDS.monthlyBudget;
+    const entry = { id: String(Date.now()) };
+    
+    fields.forEach(f => {
+        const input = document.getElementById(`goal_${f.id}`);
+        if (f.type === "number") {
+            entry[f.id] = Number(input.value || 0);
+        } else {
+            entry[f.id] = input.value.trim();
+        }
+    });
+    
+    if (!entry.name || entry.amountNeeded < 0) return;
+    const entries = activeEntries();
+    entries.unshift(entry);
+    setActiveEntries(entries);
+    goalForm.reset();
+    renderFinancialGoal();
+}
+
+function addExpenseEntry(event) {
+    event.preventDefault();
+    const fields = TAB_FIELDS.monthlyFixedExpense || TAB_FIELDS.monthlyBudget;
+    const entry = { id: String(Date.now()) };
+    
+    fields.forEach(f => {
+        const input = document.getElementById(`expense_${f.id}`);
+        if (f.type === "number") {
+            entry[f.id] = Number(input.value || 0);
+        } else {
+            entry[f.id] = input.value.trim();
+        }
+    });
+    
+    if (!entry.name || entry.amount < 0) return;
+    const entries = activeEntries();
+    entries.unshift(entry);
+    setActiveEntries(entries);
+    expenseForm.reset();
+    renderMonthlyFixedExpense();
+}
+
+function addInvestmentEntry(event) {
+    event.preventDefault();
+    const fields = TAB_FIELDS.investments || TAB_FIELDS.monthlyBudget;
+    const entry = { id: String(Date.now()) };
+    
+    fields.forEach(f => {
+        const input = document.getElementById(`investment_${f.id}`);
+        if (f.type === "number") {
+            entry[f.id] = Number(input.value || 0);
+        } else {
+            entry[f.id] = input.value.trim();
+        }
+    });
+    
+    if (!entry.name || entry.initialInvestment < 0) return;
+    const entries = activeEntries();
+    entries.unshift(entry);
+    setActiveEntries(entries);
+    investmentForm.reset();
+    renderInvestments();
+}
+
+function addInsuranceEntry(event) {
+    event.preventDefault();
+    const fields = TAB_FIELDS.insurances || TAB_FIELDS.monthlyBudget;
+    const entry = { id: String(Date.now()) };
+    
+    fields.forEach(f => {
+        const input = document.getElementById(`insurance_${f.id}`);
+        if (f.type === "number") {
+            entry[f.id] = Number(input.value || 0);
+        } else {
+            entry[f.id] = input.value.trim();
+        }
+    });
+    
+    if (!entry.name || entry.premium < 0) return;
+    const entries = activeEntries();
+    entries.unshift(entry);
+    setActiveEntries(entries);
+    insuranceForm.reset();
+    renderInsurances();
+}
+
+function addCardEntry(event) {
+    event.preventDefault();
+    const fields = TAB_FIELDS.cards || TAB_FIELDS.monthlyBudget;
+    const entry = { id: String(Date.now()) };
+    
+    fields.forEach(f => {
+        const input = document.getElementById(`card_${f.id}`);
+        if (f.type === "number") {
+            entry[f.id] = Number(input.value || 0);
+        } else {
+            entry[f.id] = input.value.trim();
+        }
+    });
+    
+    if (!entry.bankName) return;
+    const entries = activeEntries();
+    entries.unshift(entry);
+    setActiveEntries(entries);
+    cardForm.reset();
+    renderCards();
+}
+
+function addNetWorthEntry(event) {
+    event.preventDefault();
+    const fields = TAB_FIELDS.netWorth || TAB_FIELDS.monthlyBudget;
+    const entry = { id: String(Date.now()) };
+    
+    fields.forEach(f => {
+        const input = document.getElementById(`netWorth_${f.id}`);
+        if (f.type === "number") {
+            entry[f.id] = Number(input.value || 0);
+        } else {
+            entry[f.id] = input.value.trim();
+        }
+    });
+    
+    if (!entry.name || entry.value < 0) return;
+    const entries = activeEntries();
+    entries.unshift(entry);
+    setActiveEntries(entries);
+    netWorthForm.reset();
+    renderNetWorth();
+}
+
+function addTaxPlanEntry(event) {
+    event.preventDefault();
+    const fields = TAB_FIELDS.taxPlan || TAB_FIELDS.monthlyBudget;
+    const entry = { id: String(Date.now()) };
+    
+    fields.forEach(f => {
+        const input = document.getElementById(`taxPlan_${f.id}`);
+        if (f.type === "number") {
+            entry[f.id] = Number(input.value || 0);
+        } else {
+            entry[f.id] = input.value.trim();
+        }
+    });
+    
+    if (!entry.name || entry.amount < 0) return;
+    const entries = activeEntries();
+    entries.unshift(entry);
+    setActiveEntries(entries);
+    taxPlanForm.reset();
+    renderTaxPlan();
+}
+
+function addGiftsEntry(event) {
+    event.preventDefault();
+    const fields = TAB_FIELDS.gifts || TAB_FIELDS.monthlyBudget;
+    const entry = { id: String(Date.now()) };
+    
+    fields.forEach(f => {
+        const input = document.getElementById(`gifts_${f.id}`);
+        if (f.type === "number") {
+            entry[f.id] = Number(input.value || 0);
+        } else {
+            entry[f.id] = input.value.trim();
+        }
+    });
+    
+    if (!entry.name) return;
+    const entries = activeEntries();
+    entries.unshift(entry);
+    setActiveEntries(entries);
+    giftsForm.reset();
+    renderGifts();
+}
+
+function addEmergencyFundEntry(event) {
+    event.preventDefault();
+    const fields = TAB_FIELDS.emergencyFund || TAB_FIELDS.monthlyBudget;
+    const entry = { id: String(Date.now()) };
+    
+    fields.forEach(f => {
+        const input = document.getElementById(`emergencyFund_${f.id}`);
+        if (f.type === "number") {
+            entry[f.id] = Number(input.value || 0);
+        } else {
+            entry[f.id] = input.value.trim();
+        }
+    });
+    
+    // Emergency fund is a single entry, replace existing
+    const entries = [entry];
+    setActiveEntries(entries);
+    emergencyFundForm.reset();
+    isEmergencyFundEditMode = false;
+    renderEmergencyFund();
+}
+
+function saveMonthBudgetData() {
+    scheduleSave();
+}

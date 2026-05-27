@@ -1,0 +1,273 @@
+* {
+    box-sizing: border-box;
+}
+
+html {
+    width: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    width: 100%;
+    overflow-x: hidden;
+    background: #000;
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+}
+
+.app-shell {
+    width: min(100%, 1180px);
+    margin: 0 auto;
+    padding: clamp(14px, 3vw, 28px);
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.brand-mark {
+    width: clamp(58px, 12vw, 84px);
+    aspect-ratio: 1;
+    flex: 0 0 auto;
+}
+
+.brand-mark svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+h1 {
+    margin: 0;
+    font-size: clamp(20px, 4vw, 34px);
+    line-height: 1.15;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.app-header p {
+    margin: 8px 0 0 0;
+    color: #888;
+    font-size: clamp(12px, 2vw, 14px);
+}
+
+.tab-bar {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(130px, 1fr));
+    gap: 6px;
+    margin-bottom: 18px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-color: #666 #111;
+}
+
+.tab {
+    min-height: 44px;
+    min-width: 130px;
+    border: 2px solid #333;
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.15;
+    padding: 9px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.tab.active {
+    border-color: #fff;
+    outline: 2px solid #fff;
+    outline-offset: -5px;
+}
+
+.add-tab {
+    min-width: 48px;
+    font-size: 26px;
+    padding: 0;
+    background: #333;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.metric {
+    min-width: 0;
+    background: #0d0d0d;
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: clamp(12px, 3vw, 18px);
+    text-align: center;
+}
+
+.metric-label {
+    display: block;
+    color: #888;
+    font-size: 11px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.metric strong {
+    display: block;
+    font-size: clamp(18px, 4vw, 28px);
+    overflow-wrap: anywhere;
+}
+
+.work-area {
+    background: #0d0d0d;
+    border: 1px solid #222;
+    border-radius: 10px;
+    padding: clamp(14px, 4vw, 22px);
+}
+
+.entry-form {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    align-items: end;
+}
+
+.field {
+    min-width: 0;
+}
+
+.field-wide {
+    grid-column: span 2;
+}
+
+label {
+    display: block;
+    color: #ccc;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+input,
+button {
+    width: 100%;
+    min-height: 48px;
+    max-width: 100%;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 15px;
+    line-height: 1.25;
+}
+
+input {
+    background: #111;
+    color: #fff;
+}
+
+button {
+    background: #fff;
+    color: #000;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+button:hover {
+    background: #e6e6e6;
+}
+
+.toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 160px;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.table-wrap {
+    position: relative;
+    margin-top: 16px;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    border-bottom: 1px solid #222;
+    padding: 12px 10px;
+    text-align: left;
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+th {
+    color: #888;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+
+.amount {
+    white-space: nowrap;
+}
+
+.delete-row {
+    min-height: 36px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #222;
+    color: #fff;
+}
+
+.empty-state {
+    display: none;
+    margin: 18px 0 0 0;
+    color: #777;
+    text-align: center;
+    font-size: 13px;
+}
+
+.empty-state.visible {
+    display: block;
+}
+
+@media (max-width: 900px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .entry-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .app-header {
+        align-items: flex-start;
+    }
+
+    .dashboard-grid,
+    .entry-form,
+    .toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .field-wide {
+        grid-column: auto;
+    }
+
+    input,
+    button {
+        font-size: 16px;
+    }
+}

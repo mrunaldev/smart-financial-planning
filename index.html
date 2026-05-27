@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#000000">
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+
+<title>Smart Financial Planning</title>
+</head>
+<body>
+<main class="app-shell">
+    <header class="app-header">
+        <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 100 100" role="img">
+                <rect x="14" y="14" width="72" height="72" rx="12" fill="#000" stroke="#fff" stroke-width="5"/>
+                <path d="M28 68h44M28 52h16M28 36h28" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+                <path d="M64 35v32M52 47l12-12 12 12" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <div>
+            <h1>Smart Financial Planning</h1>
+            <p id="activeSubtitle">Monthly Budget</p>
+        </div>
+    </header>
+
+    <nav class="tab-bar" id="tabBar" aria-label="Financial planning sections"></nav>
+
+    <section class="dashboard-grid" aria-label="Summary">
+        <article class="metric">
+            <span class="metric-label">Planned</span>
+            <strong id="plannedTotal">₹0</strong>
+        </article>
+        <article class="metric">
+            <span class="metric-label">Actual</span>
+            <strong id="actualTotal">₹0</strong>
+        </article>
+        <article class="metric">
+            <span class="metric-label">Balance</span>
+            <strong id="balanceTotal">₹0</strong>
+        </article>
+        <article class="metric">
+            <span class="metric-label">Items</span>
+            <strong id="itemCount">0</strong>
+        </article>
+    </section>
+
+    <section class="work-area">
+        <form class="entry-form" id="entryForm" autocomplete="off">
+            <div class="field">
+                <label for="entryName">Name</label>
+                <input id="entryName" type="text" required>
+            </div>
+            <div class="field">
+                <label for="entryPlanned">Planned Amount</label>
+                <input id="entryPlanned" type="number" min="0" step="1" required>
+            </div>
+            <div class="field">
+                <label for="entryActual">Actual Amount</label>
+                <input id="entryActual" type="number" min="0" step="1">
+            </div>
+            <div class="field">
+                <label for="entryDate">Date</label>
+                <input id="entryDate" type="date">
+            </div>
+            <div class="field field-wide">
+                <label for="entryNote">Note</label>
+                <input id="entryNote" type="text">
+            </div>
+            <button type="submit">Add Item</button>
+        </form>
+
+        <div class="toolbar">
+            <input id="searchInput" type="search" placeholder="Search">
+            <button type="button" id="clearTab">Clear Tab</button>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Planned</th>
+                        <th>Actual</th>
+                        <th>Date</th>
+                        <th>Note</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="entryRows"></tbody>
+            </table>
+            <p class="empty-state" id="emptyState">No items added yet.</p>
+        </div>
+    </section>
+</main>
+
+<script src="assets/js/app.js"></script>
+</body>
+</html>

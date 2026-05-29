@@ -1,16 +1,16 @@
 'use strict';
 
 const DEFAULT_TABS = [
-    { id: "monthlyBudget",       label: "Monthly Budget",        color: "#333", text: "#fff" },
+    { id: "monthlyBudget",       label: "Monthly Budget",        color: "#444", text: "#fff" },
     { id: "financialGoal",       label: "Financial Goal",        color: "#444", text: "#fff" },
-    { id: "monthlyFixedExpense", label: "Monthly Fixed Expense", color: "#555", text: "#fff" },
-    { id: "investments",         label: "Investments",           color: "#333", text: "#fff" },
+    { id: "monthlyFixedExpense", label: "Monthly Fixed Expense", color: "#444", text: "#fff" },
+    { id: "investments",         label: "Investments",           color: "#444", text: "#fff" },
     { id: "insurances",          label: "Insurances",            color: "#444", text: "#fff" },
-    { id: "cards",               label: "Cards",                 color: "#555", text: "#fff" },
-    { id: "netWorth",            label: "Net Worth",             color: "#333", text: "#fff" },
+    { id: "cards",               label: "Cards",                 color: "#444", text: "#fff" },
+    { id: "netWorth",            label: "Net Worth",             color: "#444", text: "#fff" },
     { id: "taxPlan",             label: "Tax Plan",              color: "#444", text: "#fff" },
-    { id: "gifts",               label: "Gifts",                 color: "#555", text: "#fff" },
-    { id: "emergencyFund",       label: "Emergency Fund",        color: "#22c55e", text: "#fff" }
+    { id: "gifts",               label: "Gifts",                 color: "#444", text: "#fff" },
+    { id: "emergencyFund",       label: "Emergency Fund",        color: "#444", text: "#fff" }
 ];
 
 // ── Tab-specific field configurations ───────────────────────────────────────
@@ -317,13 +317,6 @@ const emergencyFundForm        = document.getElementById("emergencyFundForm");
 const emergencyFundDynamicFields = document.getElementById("emergencyFundDynamicFields");
 
 const fieldInputs = {};
-
-const totals = {
-    planned: document.getElementById("plannedTotal"),
-    actual:  document.getElementById("actualTotal"),
-    balance: document.getElementById("balanceTotal"),
-    count:   document.getElementById("itemCount")
-};
 
 // ── App state ─────────────────────────────────────────────────────────────────
 let isRegisterMode = false;
@@ -683,7 +676,6 @@ function render() {
         emergencyFundUI.hidden = true;
         renderDynamicFields();
         const entries = activeEntries();
-        renderSummary(entries);
         renderTableHead();
         renderRows(entries);
     }
@@ -715,7 +707,7 @@ function renderMonthlyBudget() {
     appData.monthlyBudgetData[monthKey] = monthData;
     
     // Update toggle button text
-    toggleBudgetEdit.textContent = isBudgetEditMode ? "✎ Save" : "✎ Edit";
+    toggleBudgetEdit.textContent = isBudgetEditMode ? "💾 Save" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isBudgetEditMode) {
@@ -780,7 +772,7 @@ function renderFinancialGoal() {
     const entries = activeEntries();
     
     // Update toggle button text
-    toggleGoalEdit.textContent = isGoalEditMode ? "✎ Save" : "✎ Edit";
+    toggleGoalEdit.textContent = isGoalEditMode ? "💾 Save" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isGoalEditMode) {
@@ -937,7 +929,7 @@ function renderMonthlyFixedExpense() {
     const entries = activeEntries();
     
     // Update toggle button text
-    toggleExpenseEdit.textContent = isExpenseEditMode ? "✎ Save" : "✎ Edit";
+    toggleExpenseEdit.textContent = isExpenseEditMode ? "💾 Save" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isExpenseEditMode) {
@@ -1370,7 +1362,7 @@ function renderInsurances() {
     const entries = activeEntries();
     
     // Update toggle button text
-    toggleInsuranceEdit.textContent = isInsuranceEditMode ? "✎ Save" : "✎ Edit";
+    toggleInsuranceEdit.textContent = isInsuranceEditMode ? "💾 Save" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isInsuranceEditMode) {
@@ -1516,7 +1508,7 @@ function renderCards() {
     const entries = activeEntries();
     
     // Update toggle button text
-    toggleCardEdit.textContent = isCardEditMode ? "✎ Save" : "✎ Edit";
+    toggleCardEdit.textContent = isCardEditMode ? "💾 Save" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isCardEditMode) {
@@ -1664,7 +1656,7 @@ function renderNetWorth() {
     const entries = activeEntries();
     
     // Update toggle button text
-    toggleNetWorthEdit.textContent = isNetWorthEditMode ? "✎ Save" : "✎ Edit";
+    toggleNetWorthEdit.textContent = isNetWorthEditMode ? "💾 Save" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isNetWorthEditMode) {
@@ -1929,7 +1921,7 @@ function renderTaxPlan() {
     const taxRegime = taxRegimeSelect.value;
     
     // Update toggle button text
-    toggleTaxPlanEdit.textContent = isTaxPlanEditMode ? "✎ Save" : "✎ Edit";
+    toggleTaxPlanEdit.textContent = isTaxPlanEditMode ? "💾 Save" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isTaxPlanEditMode) {
@@ -2160,7 +2152,7 @@ function renderGifts() {
     const entries = activeEntries();
     
     // Update toggle button text
-    toggleGiftsEdit.textContent = isGiftsEditMode ? "✎ Save" : "✎ Edit";
+    toggleGiftsEdit.textContent = isGiftsEditMode ? "💾 Save" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isGiftsEditMode) {
@@ -2304,7 +2296,7 @@ function renderEmergencyFund() {
     const entries = activeEntries();
     
     // Update toggle button text
-    toggleEmergencyFundEdit.textContent = isEmergencyFundEditMode ? "✎ Save" : "✎ Edit";
+    toggleEmergencyFundEdit.textContent = isEmergencyFundEditMode ? "💾 Save" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isEmergencyFundEditMode) {

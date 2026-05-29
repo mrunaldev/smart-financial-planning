@@ -8,8 +8,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SmartFin">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' rx='14' fill='%23000'/%3E%3Crect width='72' height='72' rx='14' fill='none' stroke='%23fff' stroke-width='2.5'/%3E%3Ctext x='36' y='52' text-anchor='middle' font-size='40' fill='%23fff' font-weight='700' font-family='Arial,sans-serif'%3E₹%3C/text%3E%3C/svg%3E">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' rx='14' fill='%23000'/%3E%3Crect width='72' height='72' rx='14' fill='none' stroke='%23fff' stroke-width='2.5'/%3E%3Ctext x='36' y='52' text-anchor='middle' font-size='40' fill='%23fff' font-weight='700' font-family='Arial,sans-serif'%3E₹%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" href="assets/logo_light.png">
+<link rel="apple-touch-icon" href="assets/logo_dark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
@@ -21,12 +21,7 @@
 <div id="authScreen" class="auth-screen">
     <div class="auth-card">
         <div class="auth-brand">
-            <svg class="logo-mark" viewBox="0 0 72 72" aria-hidden="true">
-                <rect width="72" height="72" rx="14" fill="#000"/>
-                <rect width="72" height="72" rx="14" fill="none" stroke="#fff" stroke-width="2.5"/>
-                <text x="36" y="52" text-anchor="middle" font-size="40" fill="#fff"
-                      font-weight="700" font-family="Arial,sans-serif">₹</text>
-            </svg>
+            <img class="logo-img logo-img-lg" src="assets/logo_light.png" alt="SmartFin">
             <h1>SmartFin</h1>
             <p>Smart Financial Planning</p>
         </div>
@@ -62,12 +57,7 @@
 
     <header class="app-header">
         <div class="app-brand">
-            <svg class="logo-mark logo-sm" viewBox="0 0 72 72" aria-hidden="true">
-                <rect width="72" height="72" rx="14" fill="#000"/>
-                <rect width="72" height="72" rx="14" fill="none" stroke="#fff" stroke-width="2.5"/>
-                <text x="36" y="52" text-anchor="middle" font-size="40" fill="#fff"
-                      font-weight="700" font-family="Arial,sans-serif">₹</text>
-            </svg>
+            <img class="logo-img logo-img-sm" src="assets/logo_light.png" alt="SmartFin">
             <div class="brand-text">
                 <h1>SmartFin</h1>
                 <p id="activeSubtitle">Monthly Budget</p>
@@ -76,29 +66,28 @@
         <div class="user-bar">
             <span id="userEmailDisplay" class="user-email"></span>
             <button type="button" id="logoutBtn" class="btn-ghost">Sign Out</button>
+            <button type="button" id="settingsBtn" class="btn-icon-only" aria-label="Settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+            </button>
         </div>
     </header>
 
-    <nav class="tab-bar" id="tabBar" aria-label="Financial sections"></nav>
-
-    <section class="dashboard-grid" aria-label="Summary">
-        <article class="metric">
-            <span class="metric-label">Planned</span>
-            <strong id="plannedTotal">₹0</strong>
-        </article>
-        <article class="metric">
-            <span class="metric-label">Actual</span>
-            <strong id="actualTotal">₹0</strong>
-        </article>
-        <article class="metric">
-            <span class="metric-label">Balance</span>
-            <strong id="balanceTotal">₹0</strong>
-        </article>
-        <article class="metric">
-            <span class="metric-label">Items</span>
-            <strong id="itemCount">0</strong>
-        </article>
-    </section>
+    <nav class="tab-bar" id="tabBar" aria-label="Financial sections">
+        <div class="tab-mobile-row">
+            <span id="mobileActiveTab" class="mobile-active-tab-name"></span>
+            <button type="button" id="tabMenuToggle" class="tab-menu-toggle" aria-label="Toggle navigation">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="2" y1="5" x2="18" y2="5"/>
+                    <line x1="2" y1="10" x2="18" y2="10"/>
+                    <line x1="2" y1="15" x2="18" y2="15"/>
+                </svg>
+            </button>
+        </div>
+        <div class="tab-list" id="tabList"></div>
+    </nav>
 
     <section class="work-area">
         <!-- Monthly Budget Specific UI -->
@@ -109,6 +98,7 @@
                 <button type="button" id="nextMonth" class="btn-nav">Next →</button>
                 <button type="button" id="toggleBudgetView" class="btn-nav">📊 Annual</button>
                 <button type="button" id="toggleBudgetEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="cancelBudgetEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Annual Summary Section (hidden by default) -->
@@ -135,9 +125,17 @@
                         <strong id="avgMonthlyExpenses">₹0</strong>
                     </div>
                 </div>
-                <div class="annual-months-list">
-                    <h3>Monthly Breakdown</h3>
-                    <div id="annualMonthsList" class="annual-months-list-content"></div>
+                <div class="annual-bottom-row">
+                    <div class="annual-months-list">
+                        <h3>Monthly Breakdown</h3>
+                        <div id="annualMonthsList" class="annual-months-list-content"></div>
+                    </div>
+                    <div class="chart-section annual-pie-section">
+                        <h3>Annual Distribution</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="annualPieChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -187,6 +185,25 @@
                     </div>
                 </div>
 
+                <!-- Fixed Expense Transfer Section -->
+                <div class="expense-transfer-section">
+                    <h3>Expense Account Transfer</h3>
+                    <div class="expense-transfer-grid">
+                        <div class="expense-transfer-item">
+                            <span class="expense-transfer-label">Primary Income</span>
+                            <strong id="transferPrimaryIncome">₹0</strong>
+                        </div>
+                        <div class="expense-transfer-item">
+                            <span class="expense-transfer-label">Fixed Monthly Expenses</span>
+                            <strong id="transferFixedExpenses">₹0</strong>
+                        </div>
+                        <div class="expense-transfer-item highlight-transfer">
+                            <span class="expense-transfer-label">Transfer to Expense Account</span>
+                            <strong id="transferAmount">₹0</strong>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="chart-container">
                     <h3>Monthly Distribution</h3>
                     <canvas id="pieChart"></canvas>
@@ -232,6 +249,7 @@
             <div class="goal-header">
                 <h2>Financial Goals</h2>
                 <button type="button" id="toggleGoalEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="cancelGoalEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Goal Summary -->
@@ -278,33 +296,50 @@
             <div class="goal-header">
                 <h2>Monthly Fixed Expenses</h2>
                 <button type="button" id="toggleExpenseEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="cancelExpenseEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Expense Summary -->
-            <div class="expense-summary">
+            <div class="expense-summary expense-summary-grid">
                 <div class="expense-summary-item">
-                    <span class="expense-summary-label">Total Monthly Deductions</span>
+                    <span class="expense-summary-label">Fixed Monthly Income</span>
+                    <strong id="displayMonthlyIncome">₹0</strong>
+                </div>
+                <div class="expense-summary-item">
+                    <span class="expense-summary-label">Total Fixed Deductions</span>
                     <strong id="totalExpenseDeductions">₹0</strong>
+                </div>
+                <div class="expense-summary-item">
+                    <span class="expense-summary-label">Remaining to Spend</span>
+                    <strong id="remainingToSpend" class="remaining-amount">₹0</strong>
                 </div>
             </div>
 
             <!-- Preview Mode -->
             <div id="expensePreview" class="expense-preview">
+                <div id="expensesList" class="expenses-list"></div>
                 <div class="charts-container">
                     <div class="chart-section">
                         <h3>Amount by Bank</h3>
-                        <canvas id="bankBarChart"></canvas>
+                        <div class="chart-wrapper">
+                            <canvas id="bankBarChart"></canvas>
+                        </div>
                     </div>
                     <div class="chart-section">
                         <h3>Amount by Deduction Type</h3>
-                        <canvas id="typeBarChart"></canvas>
+                        <div class="chart-wrapper">
+                            <canvas id="typeBarChart"></canvas>
+                        </div>
                     </div>
                 </div>
-                <div id="expensesList" class="expenses-list"></div>
             </div>
 
             <!-- Edit Mode -->
             <div id="expenseEdit" class="expense-edit" hidden>
+                <div class="income-field-row">
+                    <label class="income-field-label" for="monthlyIncomeInput">Fixed Monthly Income</label>
+                    <input type="number" id="monthlyIncomeInput" class="income-field-input" min="0" step="1" placeholder="Enter your monthly income">
+                </div>
                 <form class="entry-form" id="expenseForm" autocomplete="off">
                     <div id="expenseDynamicFields"></div>
                     <div class="field field-btn">
@@ -326,6 +361,7 @@
             <div class="goal-header">
                 <h2>Investments</h2>
                 <button type="button" id="toggleInvestmentEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="cancelInvestmentEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Investment Summary -->
@@ -348,7 +384,9 @@
             <div id="investmentPreview" class="investment-preview">
                 <div class="chart-section">
                     <h3>Investment Amounts</h3>
-                    <canvas id="investmentBarChart"></canvas>
+                    <div class="chart-wrapper">
+                        <canvas id="investmentBarChart"></canvas>
+                    </div>
                 </div>
                 <div id="investmentsList" class="investments-list"></div>
             </div>
@@ -376,6 +414,7 @@
             <div class="goal-header">
                 <h2>Insurances</h2>
                 <button type="button" id="toggleInsuranceEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="cancelInsuranceEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Insurance Summary -->
@@ -422,6 +461,7 @@
             <div class="goal-header">
                 <h2>Cards</h2>
                 <button type="button" id="toggleCardEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="cancelCardEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Card Summary -->
@@ -468,14 +508,14 @@
             <div class="goal-header">
                 <h2>Net Worth</h2>
                 <button type="button" id="toggleNetWorthEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="cancelNetWorthEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
-            <!-- Current Age Input -->
-            <div class="age-input-section">
-                <div class="field">
-                    <label for="currentAge">Current Age</label>
-                    <input id="currentAge" type="number" min="0" max="100" placeholder="e.g. 30">
-                </div>
+            <!-- Current Age Display (view mode) -->
+            <div class="age-display-section" id="ageDisplaySection">
+                <span class="age-display-label">Current Age</span>
+                <strong id="currentAgeDisplay">—</strong>
+                <span class="age-display-hint">(click ✎ Edit to change)</span>
             </div>
 
             <!-- Net Worth Summary -->
@@ -506,7 +546,9 @@
                 </div>
                 <div class="chart-section">
                     <h3>Net Worth Projection (Till Age 70)</h3>
-                    <canvas id="netWorthProjectionChart"></canvas>
+                    <div class="chart-wrapper" style="height: 280px;">
+                        <canvas id="netWorthProjectionChart"></canvas>
+                    </div>
                 </div>
                 <div class="projection-details">
                     <div class="projection-detail-item">
@@ -522,6 +564,10 @@
 
             <!-- Edit Mode -->
             <div id="netWorthEdit" class="net-worth-edit" hidden>
+                <div class="income-field-row">
+                    <label class="income-field-label" for="currentAge">Current Age</label>
+                    <input type="number" id="currentAge" class="income-field-input" min="1" max="100" placeholder="e.g. 30">
+                </div>
                 <form class="entry-form" id="netWorthForm" autocomplete="off">
                     <div id="netWorthDynamicFields"></div>
                     <div class="field field-btn">
@@ -543,6 +589,7 @@
             <div class="goal-header">
                 <h2>Tax Plan</h2>
                 <button type="button" id="toggleTaxPlanEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="cancelTaxPlanEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Tax Regime Selection -->
@@ -550,7 +597,7 @@
                 <div class="field">
                     <label for="taxRegime">Tax Regime</label>
                     <select id="taxRegime">
-                        <option value="new">New Tax Regime (FY 2024-25)</option>
+                        <option value="new">New Tax Regime</option>
                         <option value="old">Old Tax Regime</option>
                     </select>
                 </div>
@@ -570,7 +617,7 @@
                     <strong id="annualIncome">₹0</strong>
                 </div>
                 <div class="tax-summary-item">
-                    <span class="tax-summary-label">Total Deductions</span>
+                    <span class="tax-summary-label">Total Deductions (incl. auto)</span>
                     <strong id="totalDeductions">₹0</strong>
                 </div>
                 <div class="tax-summary-item">
@@ -584,6 +631,11 @@
                 <div class="tax-summary-item">
                     <span class="tax-summary-label">Tax Liability YTD</span>
                     <strong id="taxLiabilityYTD">₹0</strong>
+                </div>
+                <div class="tax-summary-item regime-recommend-card">
+                    <span class="tax-summary-label">Recommended Regime</span>
+                    <strong id="recommendedRegime">—</strong>
+                    <span id="regimeSavingsNote" class="regime-savings-note"></span>
                 </div>
             </div>
 
@@ -622,6 +674,7 @@
             <div class="goal-header">
                 <h2>Gifts</h2>
                 <button type="button" id="toggleGiftsEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="cancelGiftsEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Gifts Summary -->
@@ -668,10 +721,15 @@
             <div class="goal-header">
                 <h2>Emergency Fund</h2>
                 <button type="button" id="toggleEmergencyFundEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="cancelEmergencyFundEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Emergency Fund Summary -->
             <div class="emergency-fund-summary">
+                <div class="emergency-fund-summary-item">
+                    <span class="emergency-fund-summary-label">Current Emergency Fund</span>
+                    <strong id="currentEmergencyFundDisplay">₹0</strong>
+                </div>
                 <div class="emergency-fund-summary-item">
                     <span class="emergency-fund-summary-label">Average Monthly Expenses</span>
                     <strong id="averageMonthlyExpenses">₹0</strong>
@@ -683,14 +741,6 @@
                 <div class="emergency-fund-summary-item">
                     <span class="emergency-fund-summary-label">12 Months Needed</span>
                     <strong id="twelveMonthsNeeded">₹0</strong>
-                </div>
-            </div>
-
-            <!-- Current Fund Input -->
-            <div class="current-fund-section">
-                <div class="field">
-                    <label for="currentEmergencyFund">Current Emergency Fund (₹)</label>
-                    <input id="currentEmergencyFund" type="number" min="0" placeholder="0">
                 </div>
             </div>
 
@@ -747,6 +797,74 @@
     </section>
 
 </main>
+
+<!-- ── SETTINGS PANEL ───────────────────────────────── -->
+<div id="settingsOverlay" class="settings-overlay" hidden></div>
+<div id="settingsPanel" class="settings-panel" aria-hidden="true">
+    <div class="settings-header">
+        <h2>Settings</h2>
+        <button type="button" id="closeSettingsBtn" class="btn-icon-only" aria-label="Close settings">✕</button>
+    </div>
+
+    <!-- Appearance -->
+    <div class="settings-section">
+        <h3 class="settings-section-title">Appearance</h3>
+        <div class="settings-row">
+            <div>
+                <div class="settings-row-label">Theme</div>
+                <div class="settings-row-sub">Switch between dark and light mode</div>
+            </div>
+            <button type="button" id="themeToggle" class="theme-switch-btn">
+                <svg class="theme-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                <svg class="theme-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" hidden>
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+                <span id="themeLabel">Light Mode</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Data Management -->
+    <div class="settings-section">
+        <h3 class="settings-section-title">Data Management</h3>
+        <div class="settings-action-row">
+            <div>
+                <div class="settings-row-label">Export All Data</div>
+                <div class="settings-row-sub">Download a backup of all your financial data</div>
+            </div>
+            <button type="button" id="exportDataBtn" class="btn-settings-action">Export (.json)</button>
+        </div>
+        <div class="settings-action-row">
+            <div>
+                <div class="settings-row-label">Import Data</div>
+                <div class="settings-row-sub">Restore from a previously exported backup</div>
+            </div>
+            <label class="btn-settings-action import-label">
+                Import File
+                <input type="file" id="importFileInput" accept=".json" hidden>
+            </label>
+        </div>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="settings-section danger-section">
+        <h3 class="settings-section-title danger-title">Danger Zone</h3>
+        <div class="settings-action-row">
+            <div>
+                <div class="settings-row-label">Reset All Data</div>
+                <div class="settings-row-sub">Permanently delete all your data and start fresh</div>
+            </div>
+            <button type="button" id="resetDataBtn" class="btn-danger-action">Reset</button>
+        </div>
+    </div>
+</div>
+
 </div>
 
 <!-- Firebase SDKs (compat build — no bundler needed) -->

@@ -3066,8 +3066,13 @@ function handleCategoryFieldChange(e) {
     if (e.target.id === "monthEndBalance") {
         monthData.monthEndBalance = Number(e.target.value) || 0;
     } else {
-        const category = e.target.parentElement.parentElement.id;
+        const category = e.target.dataset.category
+            ? e.target.dataset.category.replace(/Fields$/, "")
+            : e.target.parentElement.parentElement.id;
         const fieldId = e.target.dataset.fieldId;
+        if (!monthData[category]) {
+            monthData[category] = {};
+        }
         monthData[category][fieldId] = Number(e.target.value) || 0;
     }
     

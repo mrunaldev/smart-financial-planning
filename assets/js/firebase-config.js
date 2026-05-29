@@ -14,12 +14,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const firebaseConfig = {
-    apiKey:            "YOUR_API_KEY",
-    authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId:         "YOUR_PROJECT_ID",
-    storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId:             "YOUR_APP_ID"
+    apiKey:            "AIzaSyDi4GOQLJxkk9solw3rshjOBAh80YJuIec",
+    authDomain:        "smart-financial-planning.firebaseapp.com",
+    projectId:         "smart-financial-planning",
+    storageBucket:     "smart-financial-planning.firebasestorage.app",
+    messagingSenderId: "590766304497",
+    appId:             "1:590766304497:web:cb4b33c5596940f78a0d50"
 };
 
 firebase.initializeApp(firebaseConfig);

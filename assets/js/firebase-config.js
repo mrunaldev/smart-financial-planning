@@ -19,7 +19,8 @@ const firebaseConfig = {
     projectId:         "smart-financial-planning",
     storageBucket:     "smart-financial-planning.firebasestorage.app",
     messagingSenderId: "590766304497",
-    appId:             "1:590766304497:web:cb4b33c5596940f78a0d50"
+    appId:             "1:590766304497:web:cb4b33c5596940f78a0d50",
+    measurementId:     "G-YE1XL7QWPX"
 };
 
 firebase.initializeApp(firebaseConfig);

@@ -139,6 +139,28 @@ const nameField         = document.getElementById("nameField");
 const logoutBtn         = document.getElementById("logoutBtn");
 const userEmailDisplay  = document.getElementById("userEmailDisplay");
 const tabBar            = document.getElementById("tabBar");
+
+// Ensure the auth form starts in sign-in mode.
+nameField.hidden = true;
+authNameInput.required = false;
+authNameInput.value = "";
+
+window.addEventListener("error", event => {
+    const message = event.error ? event.error.message : event.message || "Unknown error";
+    setAuthError(`Global error: ${message}`);
+    console.error("Global script error:", event.error || event.message, event);
+});
+
+window.addEventListener("unhandledrejection", event => {
+    const reason = event.reason ? (event.reason.message || JSON.stringify(event.reason)) : "Unknown promise rejection";
+    setAuthError(`Unhandled rejection: ${reason}`);
+    console.error("Unhandled rejection:", event.reason);
+});
+
+
+// Ensure the sign-in form starts in sign-in mode.
+nameField.hidden = true;
+authNameInput.required = false;
 const activeSubtitle    = document.getElementById("activeSubtitle");
 const entryForm         = document.getElementById("entryForm");
 const dynamicFields     = document.getElementById("dynamicFields");
@@ -344,6 +366,15 @@ auth.onAuthStateChanged(user => {
         appScreen.hidden  = true;
         authScreen.hidden = false;
         stopListening();
+        isRegisterMode = false;
+        nameField.hidden = true;
+        authNameInput.required = false;
+        authNameInput.value = "";
+        authSubmitBtn.disabled = false;
+        authSubmitBtn.textContent = "Sign In";
+        authToggleBtn.textContent = "Register";
+        authSwitchText.textContent = "Don't have an account?";
+        setAuthError("");
     }
 });
 
@@ -351,8 +382,8 @@ auth.onAuthStateChanged(user => {
 authToggleBtn.addEventListener("click", () => {
     isRegisterMode = !isRegisterMode;
     nameField.hidden = !isRegisterMode;
-    if (isRegisterMode) authNameInput.required = true;
-    else authNameInput.required = false;
+    authNameInput.required = isRegisterMode;
+    if (!isRegisterMode) authNameInput.value = "";
     authSubmitBtn.textContent  = isRegisterMode ? "Create Account"           : "Sign In";
     authToggleBtn.textContent  = isRegisterMode ? "Sign In"                  : "Register";
     authSwitchText.textContent = isRegisterMode ? "Already have an account?" : "Don't have an account?";
@@ -383,7 +414,12 @@ authForm.addEventListener("submit", async e => {
             await auth.signInWithEmailAndPassword(email, password);
         }
     } catch (err) {
-        setAuthError(friendlyError(err.code));
+        console.error("Firebase auth error:", err);
+        const message = friendlyError(err.code);
+        const display = err.code
+            ? `${err.code}: ${message}`
+            : err.message || message || JSON.stringify(err);
+        setAuthError(display);
         authSubmitBtn.disabled    = false;
         authSubmitBtn.textContent = isRegisterMode ? "Create Account" : "Sign In";
     }
@@ -404,6 +440,9 @@ function friendlyError(code) {
         "auth/email-already-in-use":   "Email already registered. Please sign in.",
         "auth/invalid-email":          "Please enter a valid email address.",
         "auth/weak-password":          "Password must be at least 6 characters.",
+        "auth/operation-not-allowed":  "Email/password sign-in is disabled in Firebase Auth.",
+        "auth/invalid-api-key":        "Firebase API key is invalid. Check firebase-config.js.",
+        "auth/unauthorized-domain":    "This domain is not authorized for Firebase Auth.",
         "auth/too-many-requests":      "Too many attempts. Try again later.",
         "auth/network-request-failed": "Network error. Check your connection."
     };

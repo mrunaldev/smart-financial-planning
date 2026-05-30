@@ -2686,6 +2686,28 @@ td.amount {
     flex-shrink: 0;
 }
 
+/* ── Footer ──────────────────────────────────────────── */
+.app-footer {
+    width: 100%;
+    padding: 20px;
+    margin-top: 40px;
+    border-top: 1px solid var(--border);
+    background: var(--surf1);
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.footer-content p {
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
 /* ── Very small phones (≤ 360px) ─────────────────────── */
 @media (max-width: 360px) {
     .dashboard-grid              { grid-template-columns: repeat(2, 1fr); margin: 8px 10px; }

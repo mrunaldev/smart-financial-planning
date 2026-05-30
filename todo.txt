@@ -1,0 +1,37 @@
+Defects to fix
+————————
+When editing last balance of month it does not get saved in current month 
+Also the save button still looks like pencil icon 
+After i cluck it changes to save icon correctly though
+
+Also this initial balance should be added to budget and it should be added to amount to be spent ghis month
+
+Why text boxes are going out of focus automatically in the middle of typing. Fix that
+
+Merge rent/maintainance text boxes into one
+
+Change the cards section to accounts section
+
+In monthly expenses edit page, make it a drop down 
+Get the list from list of accounts section list where account present is yes. If no item is present show an error or some prompt to tell user to go and add an account first
+
+In accounts edit page ask another field debit card present
+In that accounts page 
+Ladd another section  as no of bank accounts which will be calulated based in firld account present
+Then another field no of debit cards based on field os debit card oresent
+Then add another section showing total balance which be sum of balances if all accounts
+
+Show credit actd limit firleld only if credit card oresent is yes
+Also if account present yes then show another text box asking balance
+
+Instead of asking age in networth page ask dob during registeration along with name and use it here
+
+Disable editing age and calculate age automatically  based on date of birth 
+
+Change mothly fixed expense to liability
+
+So arrange the tabs in corect order
+Accounts
+Investments
+Liabilities
+Budget (rename monthly budget)

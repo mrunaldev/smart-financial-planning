@@ -15,7 +15,8 @@
     --red:     #e63946;
     --radius:  10px;
     --shadow:  0 8px 40px rgba(0,0,0,.7);
-    /* Safe area insets for notched phones */
+    /* Safe area insets for notched/Dynamic-Island phones */
+    --safe-top:    env(safe-area-inset-top, 0px);
     --safe-left:   env(safe-area-inset-left, 0px);
     --safe-right:  env(safe-area-inset-right, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -63,14 +64,10 @@ body {
 .logo-img-sm { width: 66px; height: 66px; }
 .logo-img-lg { width: 76px; height: 76px; margin-bottom: 8px; }
 
-/* Dark mode: invert logo_light.png → black bg + white lines */
-[data-theme="dark"] .logo-img {
-    filter: invert(1);
-}
-/* Light mode: use logo_light.png as-is → white bg + dark lines */
-[data-theme="light"] .logo-img {
-    filter: none;
-}
+/* In-app header logo: serve the correct asset per theme.
+   content:url() replaces the rendered <img> src in WebKit/Chromium (all mobile targets). */
+.app-logo                       { content: url("../logo_dark.png");  }
+[data-theme="light"] .app-logo  { content: url("../logo_light.png"); }
 
 /* ── Auth Screen ──────────────────────────────────────── */
 .auth-screen {
@@ -78,7 +75,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px 16px;
+    /* top/bottom padding accounts for status bar and home indicator */
+    padding: calc(24px + var(--safe-top)) calc(16px + var(--safe-right)) calc(24px + var(--safe-bottom)) calc(16px + var(--safe-left));
     background: radial-gradient(ellipse 90% 60% at 50% 0%, #111 0%, #000 65%);
 }
 [data-theme="light"] .auth-screen {
@@ -285,7 +283,8 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: 20px;
-    padding: 16px calc(24px + var(--safe-right)) 16px calc(24px + var(--safe-left));
+    /* top padding absorbs the iOS status bar (time/battery/wifi) */
+    padding: calc(16px + var(--safe-top)) calc(24px + var(--safe-right)) 16px calc(24px + var(--safe-left));
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
@@ -2554,6 +2553,138 @@ td.amount {
 .btn-danger-action:hover { background: rgba(239,68,68,.22); }
 
 .danger-section { border-bottom: none; }
+
+/* ── Dependency Notice ───────────────────────────────── */
+.dependency-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(234,179,8,0.1);
+    border: 1px solid rgba(234,179,8,0.35);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.dependency-notice-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.dependency-notice-text {
+    flex: 1;
+    font-size: 0.88rem;
+    color: #eab308;
+    min-width: 160px;
+}
+.dependency-notice-btn {
+    background: rgba(234,179,8,0.18);
+    border: 1px solid rgba(234,179,8,0.45);
+    color: #eab308;
+    border-radius: 7px;
+    padding: 5px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s;
+}
+.dependency-notice-btn:hover { background: rgba(234,179,8,0.28); }
+
+/* ── Primary Account Badge ──────────────────────────── */
+.primary-badge {
+    background: rgba(234,179,8,0.18) !important;
+    color: #eab308 !important;
+    border: 1px solid rgba(234,179,8,0.35) !important;
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+.card-item-primary {
+    border-color: rgba(234,179,8,0.45) !important;
+    background: linear-gradient(135deg, var(--surf1) 80%, rgba(234,179,8,0.07)) !important;
+}
+
+/* ── Sort/Filter Toolbar ─────────────────────────────── */
+.list-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    align-items: flex-end;
+    padding: 10px 14px;
+    background: var(--surf1);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    margin-bottom: 14px;
+}
+.list-toolbar-sort {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.list-toolbar-sort > label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+.list-toolbar-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+}
+.toolbar-filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.toolbar-filter-item label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--muted);
+}
+.toolbar-sort-select,
+.toolbar-filter-select {
+    font-size: 0.82rem;
+    padding: 5px 8px;
+    background: var(--surf2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--white);
+    cursor: pointer;
+    outline: none;
+    transition: border-color .15s;
+}
+.toolbar-sort-select:focus,
+.toolbar-filter-select:focus {
+    border-color: var(--accent);
+}
+.toolbar-sort-dir {
+    background: var(--surf2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--white);
+    padding: 5px 10px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    white-space: nowrap;
+}
+.toolbar-sort-dir:hover { background: var(--accent); border-color: var(--accent); }
+.list-toolbar-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--border2);
+    align-self: center;
+    flex-shrink: 0;
+}
 
 /* ── Very small phones (≤ 360px) ─────────────────────── */
 @media (max-width: 360px) {

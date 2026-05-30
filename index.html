@@ -8,7 +8,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SmartFin">
-<link rel="icon" type="image/png" href="assets/logo_light.png">
+<link rel="icon" type="image/png" href="assets/logo_light.png" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" href="assets/logo_dark.png"  media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="assets/logo_dark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -21,7 +22,7 @@
 <div id="authScreen" class="auth-screen">
     <div class="auth-card">
         <div class="auth-brand">
-            <img class="logo-img logo-img-lg" src="assets/logo_light.png" alt="SmartFin">
+            <img class="logo-img logo-img-lg" src="assets/logo.png" alt="SmartFin">
             <h1>SmartFin</h1>
             <p>Smart Financial Planning</p>
         </div>
@@ -31,6 +32,10 @@
                 <label for="authName">Your name</label>
                 <input id="authName" type="text" placeholder="e.g. John Doe"
                        autocomplete="name">
+            </div>
+            <div class="field" id="dobField" hidden>
+                <label for="authDob">Date of Birth</label>
+                <input id="authDob" type="date" autocomplete="bday">
             </div>
             <div class="field">
                 <label for="authEmail">Email address</label>
@@ -57,7 +62,7 @@
 
     <header class="app-header">
         <div class="app-brand">
-            <img class="logo-img logo-img-sm" src="assets/logo_light.png" alt="SmartFin">
+            <img class="logo-img logo-img-sm app-logo" src="assets/logo_dark.png" alt="SmartFin">
             <div class="brand-text">
                 <h1>SmartFin</h1>
                 <p id="activeSubtitle">Monthly Budget</p>
@@ -270,6 +275,7 @@
 
             <!-- Preview Mode -->
             <div id="goalPreview" class="goal-preview">
+                <div id="goalSortFilter"></div>
                 <div id="goalsList" class="goals-list"></div>
             </div>
 
@@ -293,6 +299,7 @@
 
         <!-- Monthly Fixed Expense Specific UI -->
         <div id="monthlyFixedExpenseUI" class="monthly-fixed-expense-ui" hidden>
+            <div id="liabilitiesDependencyNotice"></div>
             <div class="goal-header">
                 <h2>Monthly Fixed Expenses</h2>
                 <button type="button" id="toggleExpenseEdit" class="btn-nav btn-icon">✎ Edit</button>
@@ -358,6 +365,7 @@
 
         <!-- Investments Specific UI -->
         <div id="investmentsUI" class="investments-ui" hidden>
+            <div id="investmentsDependencyNotice"></div>
             <div class="goal-header">
                 <h2>Investments</h2>
                 <button type="button" id="toggleInvestmentEdit" class="btn-nav btn-icon">✎ Edit</button>
@@ -388,6 +396,7 @@
                         <canvas id="investmentBarChart"></canvas>
                     </div>
                 </div>
+                <div id="investmentSortFilter"></div>
                 <div id="investmentsList" class="investments-list"></div>
             </div>
 
@@ -435,6 +444,7 @@
 
             <!-- Preview Mode -->
             <div id="insurancePreview" class="insurance-preview">
+                <div id="insuranceSortFilter"></div>
                 <div id="insurancesList" class="insurances-list"></div>
             </div>
 
@@ -459,7 +469,7 @@
         <!-- Cards Specific UI -->
         <div id="cardsUI" class="cards-ui" hidden>
             <div class="goal-header">
-                <h2>Cards</h2>
+                <h2>Accounts</h2>
                 <button type="button" id="toggleCardEdit" class="btn-nav btn-icon">✎ Edit</button>
                 <button type="button" id="cancelCardEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
@@ -467,8 +477,16 @@
             <!-- Card Summary -->
             <div class="card-summary">
                 <div class="card-summary-item">
-                    <span class="card-summary-label">Total Banks</span>
-                    <strong id="totalBanks">₹0</strong>
+                    <span class="card-summary-label">No. of Bank Accounts</span>
+                    <strong id="totalBanks">0</strong>
+                </div>
+                <div class="card-summary-item">
+                    <span class="card-summary-label">No. of Debit Cards</span>
+                    <strong id="totalDebitCards">0</strong>
+                </div>
+                <div class="card-summary-item">
+                    <span class="card-summary-label">Total Balance</span>
+                    <strong id="totalBalance">₹0</strong>
                 </div>
                 <div class="card-summary-item">
                     <span class="card-summary-label">Total Credit Limit</span>
@@ -476,7 +494,7 @@
                 </div>
                 <div class="card-summary-item">
                     <span class="card-summary-label">Accounts with Credit Cards</span>
-                    <strong id="totalCreditCards">₹0</strong>
+                    <strong id="totalCreditCards">0</strong>
                 </div>
             </div>
 
@@ -515,7 +533,7 @@
             <div class="age-display-section" id="ageDisplaySection">
                 <span class="age-display-label">Current Age</span>
                 <strong id="currentAgeDisplay">—</strong>
-                <span class="age-display-hint">(click ✎ Edit to change)</span>
+                <span class="age-display-hint">(auto-calculated from Date of Birth)</span>
             </div>
 
             <!-- Net Worth Summary -->
@@ -564,10 +582,6 @@
 
             <!-- Edit Mode -->
             <div id="netWorthEdit" class="net-worth-edit" hidden>
-                <div class="income-field-row">
-                    <label class="income-field-label" for="currentAge">Current Age</label>
-                    <input type="number" id="currentAge" class="income-field-input" min="1" max="100" placeholder="e.g. 30">
-                </div>
                 <form class="entry-form" id="netWorthForm" autocomplete="off">
                     <div id="netWorthDynamicFields"></div>
                     <div class="field field-btn">
@@ -695,6 +709,7 @@
 
             <!-- Preview Mode -->
             <div id="giftsPreview" class="gifts-preview">
+                <div id="giftsSortFilter"></div>
                 <div id="giftsList" class="gifts-list"></div>
             </div>
 

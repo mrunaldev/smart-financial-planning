@@ -11,12 +11,12 @@ function getChartThemeColors() {
 }
 
 const DEFAULT_TABS = [
-    { id: "monthlyBudget",       label: "Monthly Budget",        color: "#444", text: "#fff" },
-    { id: "financialGoal",       label: "Financial Goal",        color: "#444", text: "#fff" },
-    { id: "monthlyFixedExpense", label: "Monthly Fixed Expense", color: "#444", text: "#fff" },
+    { id: "cards",               label: "Accounts",              color: "#444", text: "#fff" },
     { id: "investments",         label: "Investments",           color: "#444", text: "#fff" },
+    { id: "monthlyFixedExpense", label: "Liabilities",           color: "#444", text: "#fff" },
+    { id: "monthlyBudget",       label: "Budget",                color: "#444", text: "#fff" },
+    { id: "financialGoal",       label: "Financial Goal",        color: "#444", text: "#fff" },
     { id: "insurances",          label: "Insurances",            color: "#444", text: "#fff" },
-    { id: "cards",               label: "Cards",                 color: "#444", text: "#fff" },
     { id: "netWorth",            label: "Net Worth",             color: "#444", text: "#fff" },
     { id: "taxPlan",             label: "Tax Plan",              color: "#444", text: "#fff" },
     { id: "gifts",               label: "Gifts",                 color: "#444", text: "#fff" },
@@ -46,8 +46,7 @@ const TAB_FIELDS = {
         { id: "amount",    label: "Amount (₹)",         type: "number", placeholder: "0", required: true },
         { id: "type",      label: "Deduction Type",     type: "select", options: ["Insurance Premium", "Liability", "Saving", "Expenditure", "Investment"] },
         { id: "bankName", label: "Bank Name",          type: "text",   placeholder: "e.g. HDFC, ICICI" },
-        { id: "endDate",   label: "End Date",           type: "date",   placeholder: "" },
-        { id: "duration", label: "Duration (months)",  type: "number", placeholder: "0" }
+        { id: "endDate",   label: "End Date",           type: "date",   placeholder: "" }
     ],
     investments: [
         { id: "name",      label: "Investment Name",     type: "text",   placeholder: "e.g. HDFC SIP, Stocks", required: true },
@@ -69,7 +68,10 @@ const TAB_FIELDS = {
     ],
     cards: [
         { id: "bankName",      label: "Bank/NBFC Name",      type: "text",   placeholder: "e.g. HDFC, ICICI", required: true },
+        { id: "isPrimary",     label: "Primary Account",     type: "select", options: ["No", "Yes"] },
         { id: "accountPresent", label: "Account Present",    type: "select", options: ["Yes", "No"] },
+        { id: "balance",       label: "Balance (₹)",         type: "number", placeholder: "0" },
+        { id: "debitCardPresent", label: "Debit Card Present", type: "select", options: ["Yes", "No"] },
         { id: "creditCardPresent", label: "Credit Card Present", type: "select", options: ["Yes", "No"] },
         { id: "creditLimit",   label: "Credit Card Limit (₹)", type: "number", placeholder: "0" },
         { id: "purpose",       label: "Purpose of Use",      type: "text",   placeholder: "e.g. Salary, Savings, Investments" },
@@ -115,8 +117,7 @@ const MONTHLY_BUDGET_CATEGORIES = {
     outflow: [
         { id: "loanEMI", label: "Loan EMI", type: "number" },
         { id: "insurance", label: "Insurance", type: "number" },
-        { id: "rent", label: "Rent", type: "number" },
-        { id: "maintenance", label: "Maintenance", type: "number" },
+        { id: "rentMaintenance", label: "Rent/Maintenance", type: "number" },
         { id: "creditCardDue", label: "Unpaid/Pending Credit Card Due", type: "number" },
         { id: "debtRepayment", label: "Debt Repayment/Lending", type: "number" },
         { id: "utilityBills", label: "Utility Bills", type: "number" },
@@ -137,6 +138,7 @@ const authScreen        = document.getElementById("authScreen");
 const appScreen         = document.getElementById("appScreen");
 const authForm          = document.getElementById("authForm");
 const authNameInput     = document.getElementById("authName");
+const authDobInput      = document.getElementById("authDob");
 const authEmailInput    = document.getElementById("authEmail");
 const authPasswordInput = document.getElementById("authPassword");
 const authSubmitBtn     = document.getElementById("authSubmitBtn");
@@ -144,6 +146,7 @@ const authToggleBtn     = document.getElementById("authToggleBtn");
 const authSwitchText    = document.getElementById("authSwitchText");
 const authError         = document.getElementById("authError");
 const nameField         = document.getElementById("nameField");
+const dobField          = document.getElementById("dobField");
 const logoutBtn         = document.getElementById("logoutBtn");
 const themeToggle       = document.getElementById("themeToggle");
 const tabMenuToggle     = document.getElementById("tabMenuToggle");
@@ -154,6 +157,7 @@ const tabBar            = document.getElementById("tabBar");
 
 // Ensure the auth form starts in sign-in mode.
 nameField.hidden = true;
+dobField.hidden = true;
 authNameInput.required = false;
 authNameInput.value = "";
 
@@ -370,6 +374,15 @@ let bankBarChart   = null;
 let typeBarChart   = null;
 let investmentBarChart = null;
 let netWorthProjectionChart = null;
+let localWritePending = false;
+
+// ── Sort/filter state for list views ─────────────────────────────────────────
+const listSortFilter = {
+    financialGoal: { sortBy: "", sortDir: "asc", filters: {} },
+    investments:   { sortBy: "", sortDir: "asc", filters: {} },
+    insurances:    { sortBy: "", sortDir: "asc", filters: {} },
+    gifts:         { sortBy: "", sortDir: "asc", filters: {} },
+};
 
 // ── Firebase handles ──────────────────────────────────────────────────────────
 const auth = firebase.auth();
@@ -403,8 +416,12 @@ auth.onAuthStateChanged(user => {
 authToggleBtn.addEventListener("click", () => {
     isRegisterMode = !isRegisterMode;
     nameField.hidden = !isRegisterMode;
+    dobField.hidden = !isRegisterMode;
     authNameInput.required = isRegisterMode;
-    if (!isRegisterMode) authNameInput.value = "";
+    if (!isRegisterMode) {
+        authNameInput.value = "";
+        authDobInput.value = "";
+    }
     authSubmitBtn.textContent  = isRegisterMode ? "Create Account"           : "Sign In";
     authToggleBtn.textContent  = isRegisterMode ? "Sign In"                  : "Register";
     authSwitchText.textContent = isRegisterMode ? "Already have an account?" : "Don't have an account?";
@@ -416,6 +433,7 @@ authForm.addEventListener("submit", async e => {
     const email    = authEmailInput.value.trim();
     const password = authPasswordInput.value;
     const name     = authNameInput.value.trim();
+    const dob      = authDobInput.value;
     if (!email || !password) return;
     if (isRegisterMode && !name) return;
     setAuthError("");
@@ -428,6 +446,7 @@ authForm.addEventListener("submit", async e => {
                 tabData: {},
                 customTabs: [],
                 userName: name,
+                dateOfBirth: dob,
                 monthlyBudgetData: {},
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
@@ -586,6 +605,10 @@ function startListening() {
     stopListening();
     firestoreUnsub = db.collection("users").doc(currentUser.uid)
         .onSnapshot(snap => {
+            // Skip re-render when this is our own write being echoed back (prevents focus loss)
+            if (snap.metadata.hasPendingWrites) return;
+            if (localWritePending) { localWritePending = false; return; }
+
             if (snap.exists) {
                 const d = snap.data();
                 appData = {
@@ -594,11 +617,11 @@ function startListening() {
                     userName: d.userName || "",
                     monthlyBudgetData: d.monthlyBudgetData || {},
                     fixedMonthlyIncome: d.fixedMonthlyIncome || 0,
-                    currentAge: d.currentAge || 0
+                    dateOfBirth: d.dateOfBirth || "",
                 };
                 userEmailDisplay.textContent = appData.userName || currentUser.email;
             } else {
-                appData = { tabData: {}, customTabs: [], userName: "", monthlyBudgetData: {}, fixedMonthlyIncome: 0, currentAge: 0 };
+                appData = { tabData: {}, customTabs: [], userName: "", monthlyBudgetData: {}, fixedMonthlyIncome: 0, dateOfBirth: "" };
                 userEmailDisplay.textContent = currentUser.email;
             }
             render();
@@ -616,9 +639,10 @@ function scheduleSave() {
 
 function doSave() {
     if (!currentUser) return;
+    localWritePending = true;
     db.collection("users").doc(currentUser.uid)
         .set(appData)
-        .catch(err => console.error("Save failed:", err));
+        .catch(err => { localWritePending = false; console.error("Save failed:", err); });
 }
 
 // ── Tab helpers ───────────────────────────────────────────────────────────────
@@ -645,7 +669,129 @@ function setActiveEntries(entries) {
     }
 }
 
+// ── Dependency helpers ────────────────────────────────────────────────────────
+function getCardEntries() {
+    return (appData.tabData || {}).cards || [];
+}
+
+function hasAnyAccount() {
+    return getCardEntries().length > 0;
+}
+
+function buildDependencyNotice(message, jumpTabId) {
+    return `<div class="dependency-notice">
+        <span class="dependency-notice-icon">ℹ️</span>
+        <span class="dependency-notice-text">${message}</span>
+        <button type="button" class="dependency-notice-btn" onclick="switchToTab('${jumpTabId}')">Go to Accounts →</button>
+    </div>`;
+}
+
+function switchToTab(tabId) {
+    activeTabId = tabId;
+    if (searchInput) searchInput.value = "";
+    render();
+}
+
+// ── Sort/Filter toolbar helpers ───────────────────────────────────────────────
+function buildSortFilterToolbar(tabId) {
+    const fields = TAB_FIELDS[tabId] || [];
+    const state = listSortFilter[tabId];
+    const selectFields = fields.filter(f => f.type === "select");
+
+    const sortOpts = `<option value="">None</option>` +
+        fields.map(f => `<option value="${f.id}"${state.sortBy === f.id ? " selected" : ""}>${f.label}</option>`).join("");
+
+    const filtersHtml = selectFields.map(f => {
+        const val = state.filters[f.id] || "";
+        const optHtml = f.options.map(o => `<option value="${o}"${val === o ? " selected" : ""}>${o}</option>`).join("");
+        return `<div class="toolbar-filter-item">
+            <label>${f.label}</label>
+            <select class="toolbar-filter-select" data-tab="${tabId}" data-field="${f.id}">
+                <option value="">All</option>
+                ${optHtml}
+            </select>
+        </div>`;
+    }).join("");
+
+    const divider = selectFields.length > 0 ? `<div class="list-toolbar-divider"></div>` : "";
+    const filterBlock = selectFields.length > 0
+        ? `<div class="list-toolbar-filters">${filtersHtml}</div>`
+        : "";
+
+    return `<div class="list-toolbar">
+        <div class="list-toolbar-sort">
+            <label>Sort by</label>
+            <select class="toolbar-sort-select" data-tab="${tabId}">${sortOpts}</select>
+            <button type="button" class="toolbar-sort-dir" data-tab="${tabId}">${state.sortDir === "asc" ? "↑ Asc" : "↓ Desc"}</button>
+        </div>
+        ${divider}${filterBlock}
+    </div>`;
+}
+
+function applyListSortFilter(tabId, entries) {
+    const state = listSortFilter[tabId];
+    const fields = TAB_FIELDS[tabId] || [];
+    let result = [...entries];
+
+    Object.entries(state.filters).forEach(([fieldId, val]) => {
+        if (val) result = result.filter(e => (e[fieldId] || "") === val);
+    });
+
+    if (state.sortBy) {
+        const field = fields.find(f => f.id === state.sortBy);
+        result.sort((a, b) => {
+            let av = a[state.sortBy] != null ? a[state.sortBy] : "";
+            let bv = b[state.sortBy] != null ? b[state.sortBy] : "";
+            if (field && field.type === "number") {
+                av = Number(av); bv = Number(bv);
+                return state.sortDir === "asc" ? av - bv : bv - av;
+            }
+            av = String(av).toLowerCase();
+            bv = String(bv).toLowerCase();
+            if (av < bv) return state.sortDir === "asc" ? -1 : 1;
+            if (av > bv) return state.sortDir === "asc" ? 1 : -1;
+            return 0;
+        });
+    }
+    return result;
+}
+
 // ── Formatting ────────────────────────────────────────────────────────────────
+function calcDurationFromToday(endDate) {
+    if (!endDate) return "—";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+    if (end < today) return "Ended";
+    let years  = end.getFullYear() - today.getFullYear();
+    let months = end.getMonth()    - today.getMonth();
+    let days   = end.getDate()     - today.getDate();
+    if (days < 0) {
+        months--;
+        const lastDay = new Date(end.getFullYear(), end.getMonth(), 0).getDate();
+        days += lastDay;
+    }
+    if (months < 0) { years--; months += 12; }
+    const parts = [];
+    if (years  > 0) parts.push(`${years} Year${years   > 1 ? "s" : ""}`);
+    if (months > 0) parts.push(`${months} Month${months > 1 ? "s" : ""}`);
+    if (days   > 0) parts.push(`${days} Day${days     > 1 ? "s" : ""}`);
+    return parts.length ? parts.join(", ") : "< 1 Day";
+}
+
+function calculateAgeFromDob(dob) {
+    if (!dob) return 0;
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+}
+
 function formatMoney(v) {
     try {
         return new Intl.NumberFormat("en-IN", {
@@ -1014,14 +1160,20 @@ function renderGoalTable(entries) {
 }
 
 function renderGoalPreviewCards(entries) {
+    const toolbarEl = document.getElementById("goalSortFilter");
+    if (toolbarEl) toolbarEl.innerHTML = buildSortFilterToolbar("financialGoal");
+
+    const displayEntries = applyListSortFilter("financialGoal", entries);
     goalsList.innerHTML = "";
-    
-    if (entries.length === 0) {
-        goalsList.innerHTML = `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No goals yet. Click Edit to add goals.</div>`;
+
+    if (displayEntries.length === 0) {
+        goalsList.innerHTML = entries.length === 0
+            ? `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No goals yet. Click Edit to add goals.</div>`
+            : `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No results match the current filters.</div>`;
         return;
     }
-    
-    entries.forEach(goal => {
+
+    displayEntries.forEach(goal => {
         const card = document.createElement("div");
         card.className = "goal-card";
         
@@ -1069,7 +1221,12 @@ function calculateGoalSummary(entries) {
 
 function renderMonthlyFixedExpense() {
     const entries = activeEntries();
-    
+    const liabNotice = document.getElementById("liabilitiesDependencyNotice");
+    if (liabNotice) {
+        liabNotice.innerHTML = hasAnyAccount() ? "" :
+            buildDependencyNotice("No accounts set up yet. Set up your accounts first before adding liabilities.", "cards");
+    }
+
     // Update toggle button text
     toggleExpenseEdit.textContent = isExpenseEditMode ? "💾 Save" : "✎ Edit";
     
@@ -1101,17 +1258,40 @@ function renderMonthlyFixedExpense() {
 function renderExpenseDynamicFields() {
     expenseDynamicFields.innerHTML = "";
     const fields = TAB_FIELDS.monthlyFixedExpense || TAB_FIELDS.monthlyBudget;
-    
+    const activeAccounts = getCardEntries().filter(c => c.accountPresent === "Yes");
+
     fields.forEach(field => {
         const div = document.createElement("div");
         div.className = "field";
-        
+
         const label = document.createElement("label");
         label.textContent = field.label;
         div.appendChild(label);
-        
+
         let input;
-        if (field.type === "select") {
+
+        if (field.id === "bankName") {
+            if (activeAccounts.length === 0) {
+                const notice = document.createElement("p");
+                notice.style.cssText = "font-size:0.82rem;color:#eab308;margin:4px 0 0;";
+                notice.innerHTML = `No active accounts found. <button type="button" class="dependency-notice-btn" style="font-size:0.78rem;padding:3px 8px;" onclick="switchToTab('cards')">Set up Accounts →</button>`;
+                div.appendChild(notice);
+                input = document.createElement("input");
+                input.type = "hidden";
+            } else {
+                input = document.createElement("select");
+                const blank = document.createElement("option");
+                blank.value = "";
+                blank.textContent = "— Select Account —";
+                input.appendChild(blank);
+                activeAccounts.forEach(acct => {
+                    const opt = document.createElement("option");
+                    opt.value = acct.bankName;
+                    opt.textContent = acct.bankName;
+                    input.appendChild(opt);
+                });
+            }
+        } else if (field.type === "select") {
             input = document.createElement("select");
             field.options.forEach(opt => {
                 const option = document.createElement("option");
@@ -1123,22 +1303,20 @@ function renderExpenseDynamicFields() {
             input = document.createElement("input");
             input.type = field.type;
             input.placeholder = field.placeholder || "";
-            if (field.type === "number") {
-                input.min = "0";
-                input.step = "1";
-            }
+            if (field.type === "number") { input.min = "0"; input.step = "1"; }
         }
+
         input.id = `expense_${field.id}`;
-        if (field.required) input.required = true;
+        if (field.required && field.id !== "bankName") input.required = true;
         div.appendChild(input);
-        
+
         expenseDynamicFields.appendChild(div);
     });
 }
 
 function renderExpenseTable(entries) {
     const fields = TAB_FIELDS.monthlyFixedExpense || TAB_FIELDS.monthlyBudget;
-    
+
     expenseTableHead.innerHTML = "";
     const tr = document.createElement("tr");
     fields.forEach(f => {
@@ -1146,14 +1324,17 @@ function renderExpenseTable(entries) {
         th.textContent = f.label;
         tr.appendChild(th);
     });
+    const durationTh = document.createElement("th");
+    durationTh.textContent = "Duration";
+    tr.appendChild(durationTh);
     const actionTh = document.createElement("th");
     actionTh.textContent = "";
     tr.appendChild(actionTh);
     expenseTableHead.appendChild(tr);
-    
+
     expenseTableBody.innerHTML = "";
     expenseEmptyState.classList.toggle("visible", entries.length === 0);
-    
+
     entries.forEach(item => {
         const row = document.createElement("tr");
         fields.forEach(f => {
@@ -1166,6 +1347,9 @@ function renderExpenseTable(entries) {
             }
             row.appendChild(td);
         });
+        const durationTd = document.createElement("td");
+        durationTd.textContent = calcDurationFromToday(item.endDate);
+        row.appendChild(durationTd);
         const actionTd = document.createElement("td");
         actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
         row.appendChild(actionTd);
@@ -1195,7 +1379,7 @@ function renderExpensePreviewCards(entries) {
                     <span class="expense-card-type ${typeClass}">${esc(expense.type || "Expenditure")}</span>
                     Bank: ${esc(expense.bankName || "—")}<br>
                     End Date: ${esc(expense.endDate || "—")}<br>
-                    Duration: ${expense.duration ? `${expense.duration} months` : "—"}
+                    Duration: ${calcDurationFromToday(expense.endDate)}
                 </div>
             </div>
             <div class="expense-card-amount">${formatMoney(Number(expense.amount || 0))}</div>
@@ -1321,7 +1505,12 @@ function renderExpenseCharts(entries) {
 
 function renderInvestments() {
     const entries = activeEntries();
-    
+    const invNotice = document.getElementById("investmentsDependencyNotice");
+    if (invNotice) {
+        invNotice.innerHTML = hasAnyAccount() ? "" :
+            buildDependencyNotice("No accounts set up yet. Set up your accounts first before adding investments.", "cards");
+    }
+
     // Update toggle button text
     toggleInvestmentEdit.textContent = isInvestmentEditMode ? "💾 Save" : "✎ Edit";
     
@@ -1426,14 +1615,20 @@ function renderInvestmentTable(entries) {
 }
 
 function renderInvestmentPreviewCards(entries) {
+    const toolbarEl = document.getElementById("investmentSortFilter");
+    if (toolbarEl) toolbarEl.innerHTML = buildSortFilterToolbar("investments");
+
+    const displayEntries = applyListSortFilter("investments", entries);
     investmentsList.innerHTML = "";
-    
-    if (entries.length === 0) {
-        investmentsList.innerHTML = `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No investments yet. Click Edit to add investments.</div>`;
+
+    if (displayEntries.length === 0) {
+        investmentsList.innerHTML = entries.length === 0
+            ? `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No investments yet. Click Edit to add investments.</div>`
+            : `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No results match the current filters.</div>`;
         return;
     }
-    
-    entries.forEach(investment => {
+
+    displayEntries.forEach(investment => {
         const card = document.createElement("div");
         card.className = "investment-card";
         
@@ -1611,14 +1806,20 @@ function renderInsuranceTable(entries) {
 }
 
 function renderInsurancePreviewCards(entries) {
+    const toolbarEl = document.getElementById("insuranceSortFilter");
+    if (toolbarEl) toolbarEl.innerHTML = buildSortFilterToolbar("insurances");
+
+    const displayEntries = applyListSortFilter("insurances", entries);
     insurancesList.innerHTML = "";
-    
-    if (entries.length === 0) {
-        insurancesList.innerHTML = `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No insurances yet. Click Edit to add insurances.</div>`;
+
+    if (displayEntries.length === 0) {
+        insurancesList.innerHTML = entries.length === 0
+            ? `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No insurances yet. Click Edit to add insurances.</div>`
+            : `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No results match the current filters.</div>`;
         return;
     }
-    
-    entries.forEach(insurance => {
+
+    displayEntries.forEach(insurance => {
         const card = document.createElement("div");
         card.className = "insurance-card";
         
@@ -1684,15 +1885,17 @@ function renderCards() {
 function renderCardDynamicFields() {
     cardDynamicFields.innerHTML = "";
     const fields = TAB_FIELDS.cards || TAB_FIELDS.monthlyBudget;
-    
+    const entries = activeEntries();
+    const primaryExists = entries.some(c => c.isPrimary === "Yes");
+
     fields.forEach(field => {
         const div = document.createElement("div");
         div.className = "field";
-        
+
         const label = document.createElement("label");
         label.textContent = field.label;
         div.appendChild(label);
-        
+
         let input;
         if (field.type === "select") {
             input = document.createElement("select");
@@ -1700,6 +1903,10 @@ function renderCardDynamicFields() {
                 const option = document.createElement("option");
                 option.value = opt;
                 option.textContent = opt;
+                if (field.id === "isPrimary" && opt === "Yes" && primaryExists) {
+                    option.disabled = true;
+                    option.textContent = "Yes (already set)";
+                }
                 input.appendChild(option);
             });
         } else {
@@ -1714,9 +1921,33 @@ function renderCardDynamicFields() {
         input.id = `card_${field.id}`;
         if (field.required) input.required = true;
         div.appendChild(input);
-        
+
+        if (field.id === "isPrimary" && primaryExists) {
+            const hint = document.createElement("small");
+            hint.style.cssText = "color: var(--muted); margin-top: 2px; display: block;";
+            hint.textContent = "A primary account already exists.";
+            div.appendChild(hint);
+        }
+
+        div.dataset.fieldId = field.id;
         cardDynamicFields.appendChild(div);
     });
+
+    // Conditional field visibility
+    function updateCardConditionals() {
+        const accountVal     = document.getElementById("card_accountPresent")?.value || "No";
+        const creditCardVal  = document.getElementById("card_creditCardPresent")?.value || "No";
+        cardDynamicFields.querySelectorAll("[data-field-id]").forEach(div => {
+            const fid = div.dataset.fieldId;
+            if (fid === "balance")     div.hidden = (accountVal    !== "Yes");
+            if (fid === "creditLimit") div.hidden = (creditCardVal !== "Yes");
+        });
+    }
+    updateCardConditionals();
+    const acctSel  = document.getElementById("card_accountPresent");
+    const ccSel    = document.getElementById("card_creditCardPresent");
+    if (acctSel)  acctSel.addEventListener("change",  updateCardConditionals);
+    if (ccSel)    ccSel.addEventListener("change",    updateCardConditionals);
 }
 
 function renderCardTable(entries) {
@@ -1766,16 +1997,18 @@ function renderCardPreviewCards(entries) {
     
     entries.forEach(card => {
         const item = document.createElement("div");
-        item.className = "card-item";
-        
-        const accountClass = card.accountPresent?.toLowerCase() === "yes" ? "yes" : "no";
+        item.className = "card-item" + (card.isPrimary === "Yes" ? " card-item-primary" : "");
+
+        const accountClass  = card.accountPresent?.toLowerCase()  === "yes" ? "yes" : "no";
         const creditCardClass = card.creditCardPresent?.toLowerCase() === "yes" ? "yes" : "no";
-        const kycClass = card.kycUpdated?.toLowerCase() === "yes" ? "yes" : "no";
-        const nomineeClass = card.nomineeAdded?.toLowerCase() === "yes" ? "yes" : "no";
-        
+        const kycClass      = card.kycUpdated?.toLowerCase()      === "yes" ? "yes" : "no";
+        const nomineeClass  = card.nomineeAdded?.toLowerCase()    === "yes" ? "yes" : "no";
+        const primaryBadge  = card.isPrimary === "Yes"
+            ? `<span class="card-item-badge primary-badge">⭐ PRIMARY</span>` : "";
+
         item.innerHTML = `
             <div class="card-item-info">
-                <div class="card-item-title">${esc(card.bankName)}</div>
+                <div class="card-item-title">${esc(card.bankName)}${primaryBadge}</div>
                 <div class="card-item-details">
                     <span class="card-item-badge ${accountClass}">Account: ${esc(card.accountPresent || "No")}</span>
                     <span class="card-item-badge ${creditCardClass}">Credit Card: ${esc(card.creditCardPresent || "No")}</span>
@@ -1786,17 +2019,23 @@ function renderCardPreviewCards(entries) {
             </div>
             <div class="card-item-limit">${formatMoney(Number(card.creditLimit || 0))}</div>
         `;
-        
+
         cardsList.appendChild(item);
     });
 }
 
 function calculateCardSummary(entries) {
-    const totalBanks = entries.length;
-    const totalCreditLimit = entries.reduce((s, c) => s + Number(c.creditLimit || 0), 0);
+    const totalBanks = entries.filter(c => c.accountPresent?.toLowerCase() === "yes").length;
+    const totalDebitCards = entries.filter(c => c.debitCardPresent?.toLowerCase() === "yes").length;
+    const totalBalance = entries.filter(c => c.accountPresent?.toLowerCase() === "yes")
+        .reduce((s, c) => s + Number(c.balance || 0), 0);
+    const totalCreditLimit = entries.filter(c => c.creditCardPresent?.toLowerCase() === "yes")
+        .reduce((s, c) => s + Number(c.creditLimit || 0), 0);
     const totalCreditCards = entries.filter(c => c.creditCardPresent?.toLowerCase() === "yes").length;
-    
+
     document.getElementById("totalBanks").textContent = totalBanks;
+    document.getElementById("totalDebitCards").textContent = totalDebitCards;
+    document.getElementById("totalBalance").textContent = formatMoney(totalBalance);
     document.getElementById("totalCreditLimit").textContent = formatMoney(totalCreditLimit);
     document.getElementById("totalCreditCards").textContent = totalCreditCards;
 }
@@ -1847,7 +2086,7 @@ function getAllNetWorthEntries() {
 function renderNetWorth() {
     const manualEntries = activeEntries();
     const allEntries    = getAllNetWorthEntries();
-    const savedAge      = Number(appData.currentAge || 0);
+    const calculatedAge = calculateAgeFromDob(appData.dateOfBirth);
 
     // Update toggle button text
     toggleNetWorthEdit.textContent = isNetWorthEditMode ? "💾 Save" : "✎ Edit";
@@ -1856,7 +2095,6 @@ function renderNetWorth() {
     if (isNetWorthEditMode) {
         netWorthPreview.hidden = true;
         netWorthEdit.hidden = false;
-        currentAgeInput.value = savedAge || "";
 
         // Render form fields
         renderNetWorthDynamicFields();
@@ -1866,7 +2104,7 @@ function renderNetWorth() {
     } else {
         netWorthPreview.hidden = false;
         netWorthEdit.hidden = true;
-        currentAgeDisplay.textContent = savedAge ? savedAge + " yrs" : "—";
+        currentAgeDisplay.textContent = calculatedAge ? calculatedAge + " yrs" : "—";
 
         // Calculate and display summary using combined entries
         calculateNetWorthSummary(allEntries);
@@ -2009,11 +2247,11 @@ function renderAssetsLiabilitiesLists(entries) {
 function renderNetWorthProjectionChart(entries) {
     // Destroy existing chart
     if (netWorthProjectionChart) netWorthProjectionChart.destroy();
-    
-    const currentAge = Number(currentAgeInput.value) || 30;
+
+    const currentAge = calculateAgeFromDob(appData.dateOfBirth) || 30;
     const targetAge = 70;
     const years = targetAge - currentAge;
-    
+
     if (years <= 0 || entries.length === 0) return;
     
     const assets = entries.filter(e => e.type === "Asset");
@@ -2495,14 +2733,20 @@ function calculateGiftsSummary(entries) {
 }
 
 function renderGiftsPreviewCards(entries) {
+    const toolbarEl = document.getElementById("giftsSortFilter");
+    if (toolbarEl) toolbarEl.innerHTML = buildSortFilterToolbar("gifts");
+
+    const displayEntries = applyListSortFilter("gifts", entries);
     giftsList.innerHTML = "";
-    
-    if (entries.length === 0) {
-        giftsList.innerHTML = `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No gifts yet. Click Edit to add gifts.</div>`;
+
+    if (displayEntries.length === 0) {
+        giftsList.innerHTML = entries.length === 0
+            ? `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No gifts yet. Click Edit to add gifts.</div>`
+            : `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No results match the current filters.</div>`;
         return;
     }
-    
-    entries.forEach(gift => {
+
+    displayEntries.forEach(gift => {
         const item = document.createElement("div");
         item.className = "gift-item";
         
@@ -2848,14 +3092,15 @@ function calculateAndDisplaySummary(monthData) {
     
     document.getElementById("initialBalance").textContent = formatMoney(initialBalance);
     
-    // Budget status
+    // Budget status - include initial balance in amount to spend
+    const totalAvailable = initialBalance + cashFlow;
     budgetStatus.className = "budget-status";
-    if (cashFlow > 0) {
+    if (totalAvailable > 0) {
         budgetStatus.classList.add("positive");
-        budgetStatus.textContent = `Budget Positive: +${formatMoney(cashFlow)} to spend`;
-    } else if (cashFlow < 0) {
+        budgetStatus.textContent = `Budget Positive: +${formatMoney(totalAvailable)} to spend`;
+    } else if (totalAvailable < 0) {
         budgetStatus.classList.add("negative");
-        budgetStatus.textContent = `Budget Negative: ${formatMoney(cashFlow)} overspent`;
+        budgetStatus.textContent = `Budget Negative: ${formatMoney(totalAvailable)} overspent`;
     } else {
         budgetStatus.classList.add("neutral");
         budgetStatus.textContent = `Budget Neutral: ₹0 remaining`;
@@ -2900,8 +3145,10 @@ function renderPieChart(monthData) {
     const loanEMI = Number(monthData.outflow.loanEMI || 0);
     const debtRepaymentLending = Number(monthData.outflow.debtRepayment || 0)
         + Number(monthData.outflow.lending || 0); // include legacy lending data
-    
-    const otherExpenses = outflowTotal - loanEMI - debtRepaymentLending;
+    const rentMaintenance = Number(monthData.outflow.rentMaintenance || 0)
+        + Number(monthData.outflow.rent || 0) + Number(monthData.outflow.maintenance || 0); // include legacy rent/maintenance
+
+    const otherExpenses = outflowTotal - loanEMI - debtRepaymentLending - rentMaintenance;
     const otherInvestments = investingTotal - sipInvestment - retirementInvestment - monthlySaving - onetimeSaving - onetimeInvestment;
     
     const data = {
@@ -3114,6 +3361,19 @@ function addEntry(event) {
 }
 
 function deleteEntry(id) {
+    if (activeTabId === "cards") {
+        const entry = activeEntries().find(i => i.id === id);
+        if (entry && entry.isPrimary === "Yes") {
+            const confirmed = confirm(
+                "⚠️  You are about to delete your PRIMARY account.\n\n" +
+                "This account is used for tracking your monthly balance. " +
+                "Deleting it will remove the primary designation and may affect " +
+                "monthly balance calculations until a new primary account is set.\n\n" +
+                "Are you sure you want to delete this primary account?"
+            );
+            if (!confirmed) return;
+        }
+    }
     setActiveEntries(activeEntries().filter(i => i.id !== id));
     render();
 }
@@ -3225,6 +3485,7 @@ toggleBudgetEdit.addEventListener("click", () => {
     }
     isBudgetEditMode = !isBudgetEditMode;
     cancelBudgetEdit.hidden = !isBudgetEditMode;
+    toggleBudgetEdit.textContent = isBudgetEditMode ? "💾 Save" : "✎ Edit";
     if (!isBudgetEditMode) {
         scheduleSave();
     }
@@ -3241,6 +3502,39 @@ saveMonthDataBtn.addEventListener("click", () => {
     scheduleSave();
     renderMonthlyBudget();
 });
+
+// ── Sort/Filter toolbar event delegation ─────────────────────────────────────
+(function () {
+    const previewMap = {
+        goalPreview:        { tabId: "financialGoal", render: () => renderFinancialGoal() },
+        investmentPreview:  { tabId: "investments",   render: () => renderInvestments() },
+        insurancePreview:   { tabId: "insurances",    render: () => renderInsurances() },
+        giftsPreview:       { tabId: "gifts",         render: () => renderGifts() },
+    };
+
+    Object.entries(previewMap).forEach(([containerId, { tabId, render }]) => {
+        const el = document.getElementById(containerId);
+        if (!el) return;
+
+        el.addEventListener("change", e => {
+            if (e.target.classList.contains("toolbar-sort-select")) {
+                listSortFilter[tabId].sortBy = e.target.value;
+                render();
+            } else if (e.target.classList.contains("toolbar-filter-select")) {
+                const fieldId = e.target.dataset.field;
+                listSortFilter[tabId].filters[fieldId] = e.target.value;
+                render();
+            }
+        });
+
+        el.addEventListener("click", e => {
+            if (e.target.classList.contains("toolbar-sort-dir")) {
+                listSortFilter[tabId].sortDir = listSortFilter[tabId].sortDir === "asc" ? "desc" : "asc";
+                render();
+            }
+        });
+    });
+}());
 
 // Financial Goal event bindings
 toggleGoalEdit.addEventListener("click", () => {
@@ -3341,11 +3635,6 @@ cardTableBody.addEventListener("click", e => {
 
 // Net Worth event bindings
 toggleNetWorthEdit.addEventListener("click", () => {
-    if (isNetWorthEditMode) {
-        // Saving — persist age
-        appData.currentAge = Number(currentAgeInput.value || 0);
-        scheduleSave();
-    }
     isNetWorthEditMode = !isNetWorthEditMode;
     cancelNetWorthEdit.hidden = !isNetWorthEditMode;
     renderNetWorth();
@@ -3354,11 +3643,6 @@ cancelNetWorthEdit.addEventListener("click", () => {
     isNetWorthEditMode = false;
     cancelNetWorthEdit.hidden = true;
     renderNetWorth();
-});
-
-currentAgeInput.addEventListener("input", () => {
-    appData.currentAge = Number(currentAgeInput.value || 0);
-    renderNetWorthProjectionChart(getAllNetWorthEntries());
 });
 
 netWorthForm.addEventListener("submit", addNetWorthEntry);
@@ -3448,6 +3732,7 @@ function handleCategoryFieldChange(e) {
     
     if (e.target.id === "monthEndBalance") {
         monthData.monthEndBalance = Number(e.target.value) || 0;
+        scheduleSave();
     } else {
         const category = e.target.dataset.category
             ? e.target.dataset.category.replace(/Fields$/, "")
@@ -3564,18 +3849,27 @@ function addCardEntry(event) {
     event.preventDefault();
     const fields = TAB_FIELDS.cards || TAB_FIELDS.monthlyBudget;
     const entry = { id: String(Date.now()) };
-    
+
     fields.forEach(f => {
         const input = document.getElementById(`card_${f.id}`);
+        if (!input) return;
         if (f.type === "number") {
             entry[f.id] = Number(input.value || 0);
         } else {
             entry[f.id] = input.value.trim();
         }
     });
-    
+
     if (!entry.bankName) return;
+
     const entries = activeEntries();
+
+    if (entry.isPrimary === "Yes" && entries.some(c => c.isPrimary === "Yes")) {
+        alert("A primary account already exists.\nPlease delete the existing primary account before setting another one as primary, or choose \"No\" for this account.");
+        renderCardDynamicFields();
+        return;
+    }
+
     entries.unshift(entry);
     setActiveEntries(entries);
     cardForm.reset();

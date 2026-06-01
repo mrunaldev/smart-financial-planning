@@ -35,3 +35,52 @@ Accounts
 Investments
 Liabilities
 Budget (rename monthly budget)
+
+
+
+New defect fix needed
+===================
+When account s primary purpose of use should be expenditure and textbox should be disabled
+
+Check if we also need tos how balance for that account too as we show the credit limit
+Curently they dont have  label to identify in ui what is what
+
+In investment page when i give initial investment only and domt add any value in amount so far it reduces the number and saves it why is that so
+
+
+Along with delete option edit option should be there for all  list items wherever possible and instead of adding new page the the add button should be save option for that particular item list and the pre existing values should be auto populated for edits
+
+One most inportant observation
+Along with the variable inputs of the month
+Check if we can establish relation ship between fields from monthly investments and monthly fixed liabilities to auto populate and disbale for editing
+
+Make them editable only in investmenta nd lia olities
+Infuture when the values cahnege in in invetsmenta nd liabilities only currenta nd future month calculation should inpact not historical
+
+In annual page show all 6 sections total for year and same 6 fields fir monthly average  like income expenditure saving investment liability insurance others and asjust the pie cahrt accordily with same colours as monthly view for all calculations keep financial year for all calulation through out the app not jan- dec in annual view 
+
+In annual view then month change s is not needed replace it with a finanial year view to see previous and next financial year like cutrentyet it should say FY 2026-27. Take care of tax calculation accoudingly
+
+In fiancial goal page
+Auto select the status dropdown based onamount neede amount accumulated and target date
+We might need to add one  more field like missed
+And asjust colour of progress bar red for missed green for achieved or white for ongoing goals and blue for planned state
+
+
+In insurance sectuon add policy type drop down
+With life insurance / term insuranc/ vehicle insurance etc like most famous and common types and add one other type n case anything not covered
+Premium type monthly semia nualy ir annually 
+Show a small progress bar for time till maturity from day of satrting ask for start date in form too
+
+On right side of list instead of premium only add sum assured too and add lebels for both
+
+
+In investmentsection add input for rate of interest per anum 
+And acalulate networthand total amountvso far etc based in that start date and current date
+
+In monthly budget page
+I want to track this month tital untracked expese which is actual expense aprt from the fixed liabilities and this will be variable every month
+At begung of month once salary credited there will some amount to spend
+But n actual sometime we spend more or less taht that using credit card and that month after paing all possible credit card paymnet and expense we have some outstanding credit card bill to pay if we cross the budge of taht month that shouls make the budget red for taht month
+At wnd if month i can update balance in last day and  redit cardoutstanding amont unpaid for that month. Ofcourse i need to oay taht additional amount next month feom savings or suppress current month budget
+I should be able to update what i did next month and show all the corecuping details of that montb accordingly

@@ -8,14 +8,17 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
 
 1. **Monthly Budget** - Track income and expenses with category-based fields
    - Inflow categories: Primary Income, Secondary Income, Borrowing, Interest, Other
-   - Outflow categories: Housing, Food, Transport, Utilities, Entertainment, Health, Education, Shopping, Savings, Insurance, Loan Repayment, Investing, Other
+   - Outflow categories include loan EMI, insurance, untracked actual expense, credit card due/outstanding, utilities, family expenditure, and miscellaneous expenses
+   - Investment and liability fields can auto-populate from the Investments and Liabilities tabs for current/future months
    - Month-to-month navigation
-   - Budget status indicator
-   - Pie chart visualization
+   - Financial-year annual view with Apr-Mar calculations and matching monthly chart colors
+   - Budget status indicator turns negative when unpaid credit card outstanding pushes the month over budget
+   - Pie chart visualization for Investment, Liability, Saving, Expenditure, Insurance, and Other
 
 2. **Financial Goal** - Set and track financial goals
    - Target amount, current amount, target date
-   - Progress tracking
+   - Automatic status selection: Planned, Ongoing, Achieved, or Missed
+   - Progress tracking with status-based colors
    - Preview/Edit mode
    - Summary calculations
 
@@ -26,19 +29,24 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
    - Preview/Edit mode
 
 4. **Investments** - Manage investment portfolio
-   - Type, initial investment, total accumulated amount, frequency, start date, maturity date, details
-   - Total investments calculation
+   - Type, initial investment, total accumulated amount, annual interest rate, frequency, start date, maturity date, details
+   - Current value/net worth calculation based on start date, amount, and annual interest rate
+   - Blank total amount now falls back to initial investment instead of reducing the value to zero
    - Bar graph visualization
    - Preview/Edit mode
 
 5. **Insurances** - Track insurance policies
-   - Company name, maturity date, sum assured, nominee name, NIR linked status
+   - Policy type, premium frequency, company name, start date, maturity date, sum assured, nominee name, NIR linked status
+   - Maturity progress bar from start date to maturity date
+   - Labeled premium and sum assured values in policy cards
    - Preview/Edit mode
    - Summary calculations
 
-6. **Cards** - Manage bank cards
-   - Bank/NBFC name, account present, credit card present, credit limit, purpose of use, address/KYC updated, nominee added
-   - Summary: Total Banks, Total Credit Limit, Accounts with Credit Cards
+6. **Accounts** - Manage bank accounts and cards
+   - Bank/NBFC name, account present, balance, debit card, credit card, credit limit, purpose of use, address/KYC updated, nominee added
+   - Primary accounts automatically use `Expenditure` as purpose and disable manual purpose edits
+   - Account cards show labeled balance and credit limit values
+   - Summary: Total Banks, Total Balance, Total Credit Limit, Accounts with Credit Cards
    - Preview/Edit mode
 
 7. **Net Worth** - Calculate and project net worth
@@ -71,7 +79,7 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
 
 ### Additional Features
 
-- **Add/Update/Delete** - Full CRUD operations for all tabs
+- **Add/Edit/Delete** - List rows include Edit and Delete actions. Edit populates the existing item into the form and the submit button becomes Save.
 - **Preview/Edit Toggle** - Switch between view and edit modes for custom tabs
 - **Excel Export** - Export tab data to Excel format
 - **Data Reset** - Clear all local data with confirmation

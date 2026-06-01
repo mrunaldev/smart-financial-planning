@@ -188,11 +188,11 @@ graph TD
 | Tab ID | Name | Purpose | Key Fields |
 |--------|------|---------|------------|
 | `monthlyBudget` | Monthly Budget | Recurring monthly income & expenses | Item Name, Planned, Actual, Date, Note |
-| `financialGoal` | Financial Goal | Savings targets (emergency fund, down payment) | Goal Name, Target Amount, Current Amount, Target Date |
-| `monthlyFixedExpense` | Monthly Fixed Expense | Fixed bills (rent, insurance, utilities) | Expense Name, Monthly Cost, Actual Paid, Due Date |
-| `investments` | Investments | Stocks, mutual funds, SIPs | Investment Name, Invested Amount, Current Value, Purchase Date |
-| `insurances` | Insurances | Life, health, vehicle policies | Policy Name, Premium, Coverage, Renewal Date |
-| `cards` | Cards | Credit/debit card tracking | Card Name, Credit Limit, Outstanding, Due Date |
+| `financialGoal` | Financial Goal | Savings targets (emergency fund, down payment) | Goal Name, Amount Needed, Amount Accumulated, Target Date, Auto Status |
+| `monthlyFixedExpense` | Liabilities | Fixed bills, insurance premiums, savings, investments, liabilities | Expense Name, Amount, Deduction Type, Bank Name, End Date |
+| `investments` | Investments | Stocks, mutual funds, SIPs | Investment Name, Initial Investment, Amount So Far, Annual Interest Rate, Frequency, Start/Maturity Date |
+| `insurances` | Insurances | Life, term, health, vehicle, and other policies | Policy Name, Policy Type, Premium, Premium Type, Sum Assured, Start/Maturity Date |
+| `cards` | Accounts | Bank accounts plus debit/credit card tracking | Bank/NBFC, Primary Account, Balance, Credit Limit, Purpose |
 | `netWorth` | Net Worth | Asset & liability summary | Asset/Liability Name, Value, Type (Asset/Liability), Date |
 | `taxPlan` | Tax Plan | Tax-saving investments, deductions | Tax Saving Item, Amount Invested, Tax Saved, Investment Date |
 | `gifts` | Gifts | Gifts given/received | Gift Description, Value, Given/Received, Date |
@@ -232,7 +232,8 @@ flowchart TD
 
 1. **Select a tab** from the tab bar
 2. **Fill in the form fields** (fields change based on tab)
-3. **Click Add** to save the entry
+3. **Click Add** to save a new entry
+4. To update an existing entry, click **Edit** in the list/table. The form is populated with the existing values and the button changes to **Save**.
 
 ### Example: Adding a Monthly Budget Entry
 

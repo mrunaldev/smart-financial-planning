@@ -407,6 +407,8 @@ appData.monthlyBudgetData[YYYY-MM][category][fieldId] = value
         └── calls:   scheduleSave()
 ```
 
+Current and future monthly budget records also maintain `autoLinkedFields`, populated from Investments and Liabilities. Auto-linked budget fields are disabled in the monthly editor and should be changed only in their source tab. Historical months are not re-linked automatically, preserving older calculations after future source changes.
+
 ---
 
 ## 5. Sequence Diagrams
@@ -499,11 +501,11 @@ sequenceDiagram
     App->>App: annualSummarySection.hidden = false
     App->>App: monthlyViewSection.hidden = true
     App->>App: calculateAnnualSummary()
-    App->>App: iterate appData.monthlyBudgetData keys
-    App->>App: sum inflow / outflow / investing per month
-    App->>App: sort months desc (using "YYYY-MM-01" dates)
-    App->>UI: annualTotalIncome, annualTotalExpenses, annualTotalSavings updated
-    App->>UI: avgMonthlyIncome, avgMonthlyExpenses updated
+    App->>App: build Apr-Mar financial-year month keys
+    App->>App: sum income, expenditure, saving, investment, liability, insurance, other
+    App->>App: sort FY months desc (using "YYYY-MM-01" dates)
+    App->>UI: annual total cards updated for all six outflow sections plus income
+    App->>UI: monthly average cards updated for the same sections
     App->>UI: monthly breakdown list rendered
 
     User->>UI: Click "📅 Monthly" button

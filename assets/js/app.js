@@ -39,7 +39,7 @@ const TAB_FIELDS = {
         { id: "targetDate", label: "Target Date", type: "date", placeholder: "" },
         { id: "details", label: "Details", type: "text", placeholder: "Optional" },
         { id: "goalType", label: "Goal Type", type: "select", options: ["Short Term", "Mid Term", "Long Term"] },
-        { id: "status", label: "Status", type: "select", options: ["Planned", "Ongoing", "Achieved"] }
+        { id: "status", label: "Status", type: "select", options: ["Planned", "Ongoing", "Achieved", "Missed"] }
     ],
     monthlyFixedExpense: [
         { id: "name",      label: "Expense Name",        type: "text",   placeholder: "e.g. Rent, Insurance", required: true },
@@ -52,6 +52,7 @@ const TAB_FIELDS = {
         { id: "name",      label: "Investment Name",     type: "text",   placeholder: "e.g. HDFC SIP, Stocks", required: true },
         { id: "initialInvestment", label: "Initial Investment (₹)", type: "number", placeholder: "0", required: true },
         { id: "totalAmount", label: "Total Amount So Far (₹)", type: "number", placeholder: "0" },
+        { id: "annualInterestRate", label: "Annual Interest Rate (%)", type: "number", placeholder: "0" },
         { id: "frequency", label: "Frequency", type: "select", options: ["Monthly", "Annually", "One-Time"] },
         { id: "startDate", label: "Start Date", type: "date", placeholder: "" },
         { id: "maturityDate", label: "Maturity Date", type: "date", placeholder: "" },
@@ -59,9 +60,12 @@ const TAB_FIELDS = {
     ],
     insurances: [
         { id: "name",      label: "Policy Name",         type: "text",   placeholder: "e.g. Term Life, Health", required: true },
+        { id: "policyType", label: "Policy Type", type: "select", options: ["Life Insurance", "Term Insurance", "Health Insurance", "Vehicle Insurance", "Travel Insurance", "Home Insurance", "Other"] },
         { id: "companyName", label: "Company Name",       type: "text",   placeholder: "e.g. HDFC, ICICI" },
         { id: "premium",   label: "Premium (₹)",        type: "number", placeholder: "0", required: true },
+        { id: "premiumFrequency", label: "Premium Type", type: "select", options: ["Monthly", "Semi-Annual", "Annual"] },
         { id: "sumAssured", label: "Sum Assured (₹)",    type: "number", placeholder: "0" },
+        { id: "startDate", label: "Start Date",      type: "date",   placeholder: "" },
         { id: "maturityDate", label: "Maturity Date",      type: "date",   placeholder: "" },
         { id: "nomineeName", label: "Nominee Name",       type: "text",   placeholder: "e.g. John Doe" },
         { id: "nirLinked", label: "NIR Linked",          type: "select", options: ["Yes", "No"] }
@@ -74,7 +78,7 @@ const TAB_FIELDS = {
         { id: "debitCardPresent", label: "Debit Card Present", type: "select", options: ["Yes", "No"] },
         { id: "creditCardPresent", label: "Credit Card Present", type: "select", options: ["Yes", "No"] },
         { id: "creditLimit",   label: "Credit Card Limit (₹)", type: "number", placeholder: "0" },
-        { id: "purpose",       label: "Purpose of Use",      type: "text",   placeholder: "e.g. Salary, Savings, Investments" },
+        { id: "purpose",       label: "Purpose of Use",      type: "select", options: ["Income", "Expenditure", "Saving", "Investment", "Other"] },
         { id: "kycUpdated",   label: "Address/KYC Updated",  type: "select", options: ["Yes", "No"] },
         { id: "nomineeAdded",  label: "Nominee Added",       type: "select", options: ["Yes", "No"] }
     ],
@@ -118,7 +122,9 @@ const MONTHLY_BUDGET_CATEGORIES = {
         { id: "loanEMI", label: "Loan EMI", type: "number" },
         { id: "insurance", label: "Insurance", type: "number" },
         { id: "rentMaintenance", label: "Rent/Maintenance", type: "number" },
+        { id: "untrackedExpense", label: "Untracked Actual Expense", type: "number" },
         { id: "creditCardDue", label: "Unpaid/Pending Credit Card Due", type: "number" },
+        { id: "creditCardOutstanding", label: "Credit Card Outstanding After Payment", type: "number" },
         { id: "debtRepayment", label: "Debt Repayment/Lending", type: "number" },
         { id: "utilityBills", label: "Utility Bills", type: "number" },
         { id: "familyExpenditure", label: "Family Expenditure", type: "number" },
@@ -206,10 +212,19 @@ const saveMonthDataBtn  = document.getElementById("saveMonthData");
 const annualSummarySection = document.getElementById("annualSummarySection");
 const monthlyViewSection   = document.getElementById("monthlyViewSection");
 const annualTotalIncome    = document.getElementById("annualTotalIncome");
-const annualTotalExpenses  = document.getElementById("annualTotalExpenses");
+const annualTotalExpenditure = document.getElementById("annualTotalExpenditure");
 const annualTotalSavings   = document.getElementById("annualTotalSavings");
+const annualTotalInvestment = document.getElementById("annualTotalInvestment");
+const annualTotalLiability = document.getElementById("annualTotalLiability");
+const annualTotalInsurance = document.getElementById("annualTotalInsurance");
+const annualTotalOther = document.getElementById("annualTotalOther");
 const avgMonthlyIncome     = document.getElementById("avgMonthlyIncome");
-const avgMonthlyExpenses   = document.getElementById("avgMonthlyExpenses");
+const avgMonthlyExpenditure = document.getElementById("avgMonthlyExpenditure");
+const avgMonthlySavings = document.getElementById("avgMonthlySavings");
+const avgMonthlyInvestment = document.getElementById("avgMonthlyInvestment");
+const avgMonthlyLiability = document.getElementById("avgMonthlyLiability");
+const avgMonthlyInsurance = document.getElementById("avgMonthlyInsurance");
+const avgMonthlyOther = document.getElementById("avgMonthlyOther");
 const annualMonthsList     = document.getElementById("annualMonthsList");
 const annualPieChartCanvas = document.getElementById("annualPieChart");
 const pieCanvas        = document.getElementById("pieChart");
@@ -382,6 +397,30 @@ const listSortFilter = {
     investments:   { sortBy: "", sortDir: "asc", filters: {} },
     insurances:    { sortBy: "", sortDir: "asc", filters: {} },
     gifts:         { sortBy: "", sortDir: "asc", filters: {} },
+};
+
+const editingEntryIds = {
+    financialGoal: null,
+    monthlyFixedExpense: null,
+    investments: null,
+    insurances: null,
+    cards: null,
+    netWorth: null,
+    taxPlan: null,
+    gifts: null,
+    standard: null,
+};
+
+const sectionConfig = {
+    financialGoal: { prefix: "goal", form: () => goalForm, submitText: "Save Goal", addText: "Add Goal", render: () => renderFinancialGoal() },
+    monthlyFixedExpense: { prefix: "expense", form: () => expenseForm, submitText: "Save Expense", addText: "Add Expense", render: () => renderMonthlyFixedExpense() },
+    investments: { prefix: "investment", form: () => investmentForm, submitText: "Save Investment", addText: "Add Investment", render: () => renderInvestments() },
+    insurances: { prefix: "insurance", form: () => insuranceForm, submitText: "Save Insurance", addText: "Add Insurance", render: () => renderInsurances() },
+    cards: { prefix: "card", form: () => cardForm, submitText: "Save Account", addText: "Add Account", render: () => renderCards() },
+    netWorth: { prefix: "netWorth", form: () => netWorthForm, submitText: "Save Asset/Liability", addText: "Add Asset/Liability", render: () => renderNetWorth() },
+    taxPlan: { prefix: "taxPlan", form: () => taxPlanForm, submitText: "Save Tax Item", addText: "Add Tax Saving Item", render: () => renderTaxPlan() },
+    gifts: { prefix: "gifts", form: () => giftsForm, submitText: "Save Gift", addText: "Add Gift", render: () => renderGifts() },
+    standard: { prefix: "field", form: () => entryForm, submitText: "Save", addText: "Add", render: () => render() },
 };
 
 // ── Firebase handles ──────────────────────────────────────────────────────────
@@ -812,6 +851,228 @@ function esc(s) {
         .replaceAll("'", "&#039;");
 }
 
+function getSectionEntries(tabId) {
+    if (tabId === "standard") return activeEntries();
+    return ((appData.tabData || {})[tabId] || []);
+}
+
+function setSectionEntries(tabId, entries) {
+    if (tabId === "standard") {
+        setActiveEntries(entries);
+        return;
+    }
+    if (!appData.tabData) appData.tabData = {};
+    appData.tabData[tabId] = entries || [];
+    scheduleSave();
+}
+
+function getSectionSubmitButton(tabId) {
+    const cfg = sectionConfig[tabId];
+    return cfg?.form()?.querySelector("button[type='submit']") || null;
+}
+
+function updateSectionSubmitButton(tabId) {
+    const btn = getSectionSubmitButton(tabId);
+    if (!btn) return;
+    const cfg = sectionConfig[tabId] || {};
+    btn.textContent = editingEntryIds[tabId] ? (cfg.submitText || "Save") : (cfg.addText || "Add");
+}
+
+function clearEditing(tabId) {
+    editingEntryIds[tabId] = null;
+    updateSectionSubmitButton(tabId);
+}
+
+function readSectionFormEntry(tabId) {
+    const cfg = sectionConfig[tabId];
+    const fields = TAB_FIELDS[tabId === "standard" ? activeTabId : tabId] || TAB_FIELDS.monthlyBudget;
+    const entry = { id: editingEntryIds[tabId] || String(Date.now()) };
+
+    fields.forEach(f => {
+        const input = document.getElementById(`${cfg.prefix}_${f.id}`);
+        if (!input) return;
+        if (f.type === "number") {
+            entry[f.id] = input.value === "" ? "" : Number(input.value || 0);
+        } else {
+            entry[f.id] = input.value.trim();
+        }
+    });
+
+    return normalizeEntry(tabId, entry);
+}
+
+function populateSectionForm(tabId, entry) {
+    const cfg = sectionConfig[tabId];
+    const fields = TAB_FIELDS[tabId === "standard" ? activeTabId : tabId] || TAB_FIELDS.monthlyBudget;
+    fields.forEach(f => {
+        const input = document.getElementById(`${cfg.prefix}_${f.id}`);
+        if (!input) return;
+        input.value = entry[f.id] ?? "";
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    if (tabId === "cards") {
+        document.getElementById("card_isPrimary")?.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    updateSectionSubmitButton(tabId);
+}
+
+function beginEditEntry(tabId, id) {
+    const entry = getSectionEntries(tabId).find(i => i.id === id);
+    if (!entry) return;
+    editingEntryIds[tabId] = id;
+    const cfg = sectionConfig[tabId];
+    cfg.render();
+    populateSectionForm(tabId, entry);
+    cfg.form()?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function upsertSectionEntry(tabId, entry) {
+    const entries = getSectionEntries(tabId);
+    const editId = editingEntryIds[tabId];
+    if (editId) {
+        setSectionEntries(tabId, entries.map(item => item.id === editId ? { ...item, ...entry, id: editId } : item));
+    } else {
+        setSectionEntries(tabId, [entry, ...entries]);
+    }
+    clearEditing(tabId);
+}
+
+function resetSectionForm(tabId) {
+    const cfg = sectionConfig[tabId];
+    cfg.form()?.reset();
+    updateSectionSubmitButton(tabId);
+}
+
+function renderRowActions(id) {
+    return `<button class="edit-row" type="button" data-id="${id}">Edit</button><button class="delete-row" type="button" data-id="${id}">Delete</button>`;
+}
+
+function handleTableAction(tabId, e) {
+    const editBtn = e.target.closest(".edit-row");
+    if (editBtn) {
+        beginEditEntry(tabId, editBtn.dataset.id);
+        return;
+    }
+    const deleteBtn = e.target.closest(".delete-row");
+    if (deleteBtn) deleteEntry(deleteBtn.dataset.id);
+}
+
+function normalizeGoalStatus(goal) {
+    const needed = Number(goal.amountNeeded || 0);
+    const accumulated = Number(goal.amountAccumulated || 0);
+    if (needed > 0 && accumulated >= needed) return "Achieved";
+    if (goal.targetDate) {
+        const target = new Date(goal.targetDate);
+        target.setHours(23, 59, 59, 999);
+        if (target < new Date()) return "Missed";
+    }
+    return accumulated > 0 ? "Ongoing" : "Planned";
+}
+
+function monthsBetween(startDate, endDate = new Date()) {
+    if (!startDate) return 0;
+    const start = new Date(startDate);
+    if (Number.isNaN(start.getTime()) || start > endDate) return 0;
+    return Math.max(0, (endDate.getFullYear() - start.getFullYear()) * 12 + (endDate.getMonth() - start.getMonth()));
+}
+
+function getInvestmentCurrentValue(inv) {
+    const initial = Number(inv.initialInvestment || 0);
+    const manualTotal = inv.totalAmount === "" || inv.totalAmount == null ? 0 : Number(inv.totalAmount || 0);
+    const base = Math.max(initial, manualTotal || initial);
+    const annualRate = Number(inv.annualInterestRate || 0) / 100;
+    const years = monthsBetween(inv.startDate) / 12;
+    if (base <= 0 || annualRate <= 0 || years <= 0) return base;
+    return base * Math.pow(1 + annualRate, years);
+}
+
+function getInsuranceAnnualPremium(insurance) {
+    const premium = Number(insurance.premium || 0);
+    const freq = insurance.premiumFrequency || "Annual";
+    if (freq === "Monthly") return premium * 12;
+    if (freq === "Semi-Annual") return premium * 2;
+    return premium;
+}
+
+function getDateProgress(startDate, endDate) {
+    if (!startDate || !endDate) return 0;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const now = new Date();
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return 0;
+    return Math.max(0, Math.min(100, ((now - start) / (end - start)) * 100));
+}
+
+function normalizeEntry(tabId, entry) {
+    if (tabId === "financialGoal") {
+        entry.status = normalizeGoalStatus(entry);
+    }
+    if (tabId === "investments") {
+        if (entry.totalAmount === "" || Number(entry.totalAmount || 0) <= 0) {
+            entry.totalAmount = Number(entry.initialInvestment || 0);
+        }
+    }
+    if (tabId === "cards" && entry.isPrimary === "Yes") {
+        entry.purpose = "Expenditure";
+    }
+    return entry;
+}
+
+function isCurrentOrFutureMonth(monthKey) {
+    return monthKey >= getMonthKey(new Date());
+}
+
+function buildMonthlyAutoValues(monthKey) {
+    const values = { inflow: {}, outflow: {}, investing: {} };
+    const liabilities = (appData.tabData || {}).monthlyFixedExpense || [];
+    liabilities.forEach(item => {
+        const amount = Number(item.amount || 0);
+        if (amount <= 0) return;
+        if (item.endDate && monthKey > item.endDate.slice(0, 7)) return;
+        if (item.type === "Liability") values.outflow.loanEMI = (values.outflow.loanEMI || 0) + amount;
+        if (item.type === "Insurance Premium") values.outflow.insurance = (values.outflow.insurance || 0) + amount;
+        if (item.type === "Expenditure") values.outflow.rentMaintenance = (values.outflow.rentMaintenance || 0) + amount;
+        if (item.type === "Investment") values.investing.sipInvestment = (values.investing.sipInvestment || 0) + amount;
+        if (item.type === "Saving") values.investing.monthlySaving = (values.investing.monthlySaving || 0) + amount;
+    });
+
+    const investments = (appData.tabData || {}).investments || [];
+    investments.forEach(inv => {
+        const amount = Number(inv.initialInvestment || 0);
+        if (amount <= 0) return;
+        if (inv.startDate && monthKey < inv.startDate.slice(0, 7)) return;
+        if (inv.maturityDate && monthKey > inv.maturityDate.slice(0, 7)) return;
+        if (inv.frequency === "Monthly") values.investing.sipInvestment = (values.investing.sipInvestment || 0) + amount;
+        if (inv.frequency === "Annually" && (!inv.startDate || monthKey.slice(5) === inv.startDate.slice(5, 7))) {
+            values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
+        }
+        if (inv.frequency === "One-Time" && inv.startDate && monthKey === inv.startDate.slice(0, 7)) {
+            values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
+        }
+    });
+
+    return values;
+}
+
+function applyMonthlyAutoValues(monthKey, monthData) {
+    monthData.autoLinkedFields = monthData.autoLinkedFields || {};
+    if (!isCurrentOrFutureMonth(monthKey)) return monthData.autoLinkedFields;
+    Object.keys(monthData.autoLinkedFields).forEach(key => {
+        const [category, fieldId] = key.split(".");
+        if (monthData[category]) monthData[category][fieldId] = 0;
+        delete monthData.autoLinkedFields[key];
+    });
+    const autoValues = buildMonthlyAutoValues(monthKey);
+    Object.entries(autoValues).forEach(([category, values]) => {
+        if (!monthData[category]) monthData[category] = {};
+        Object.entries(values).forEach(([fieldId, value]) => {
+            monthData[category][fieldId] = value;
+            monthData.autoLinkedFields[`${category}.${fieldId}`] = true;
+        });
+    });
+    return monthData.autoLinkedFields;
+}
+
 // ── Render ────────────────────────────────────────────────────────────────────
 function render() {
     const tab = getTabs().find(t => t.id === activeTabId) || DEFAULT_TABS[0];
@@ -962,6 +1223,7 @@ function render() {
         giftsUI.hidden = true;
         emergencyFundUI.hidden = true;
         renderDynamicFields();
+        updateSectionSubmitButton("standard");
         const entries = activeEntries();
         renderTableHead();
         renderRows(entries);
@@ -993,6 +1255,7 @@ function renderMonthlyBudget() {
         monthEndBalance: 0
     };
     appData.monthlyBudgetData[monthKey] = monthData;
+    const autoLinkedFields = applyMonthlyAutoValues(monthKey, monthData);
     
     // Update toggle button text
     toggleBudgetEdit.textContent = isBudgetEditMode ? "💾 Save" : "✎ Edit";
@@ -1003,9 +1266,9 @@ function renderMonthlyBudget() {
         budgetEdit.hidden = false;
         
         // Render category fields in edit mode
-        renderCategoryFields(inflowFields, MONTHLY_BUDGET_CATEGORIES.inflow, monthData.inflow);
-        renderCategoryFields(outflowFields, MONTHLY_BUDGET_CATEGORIES.outflow, monthData.outflow);
-        renderCategoryFields(investingFields, MONTHLY_BUDGET_CATEGORIES.investing, monthData.investing);
+        renderCategoryFields(inflowFields, MONTHLY_BUDGET_CATEGORIES.inflow, monthData.inflow, autoLinkedFields);
+        renderCategoryFields(outflowFields, MONTHLY_BUDGET_CATEGORIES.outflow, monthData.outflow, autoLinkedFields);
+        renderCategoryFields(investingFields, MONTHLY_BUDGET_CATEGORIES.investing, monthData.investing, autoLinkedFields);
         monthEndBalance.value = monthData.monthEndBalance || "";
         
         // Update edit mode totals
@@ -1056,6 +1319,52 @@ function getMonthKey(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function getFinancialYearStartYear(date = currentMonth) {
+    return date.getMonth() >= 3 ? date.getFullYear() : date.getFullYear() - 1;
+}
+
+function getFinancialYearLabel(startYear) {
+    return `FY ${startYear}-${String(startYear + 1).slice(-2)}`;
+}
+
+function getFinancialYearMonthKeys(startYear) {
+    return Array.from({ length: 12 }, (_, idx) => {
+        const d = new Date(startYear, 3 + idx, 1);
+        return getMonthKey(d);
+    });
+}
+
+function getMonthlyDistribution(monthData) {
+    const inflowTotal = Object.values(monthData.inflow || {}).reduce((s, v) => s + Number(v || 0), 0);
+    const investingTotal = Object.values(monthData.investing || {}).reduce((s, v) => s + Number(v || 0), 0);
+    const outflowTotal = Object.values(monthData.outflow || {}).reduce((s, v) => s + Number(v || 0), 0);
+    const loanEMI = Number(monthData.outflow?.loanEMI || 0);
+    const debtRepayment = Number(monthData.outflow?.debtRepayment || 0);
+    const insurance = Number(monthData.outflow?.insurance || 0);
+    const saving = Number(monthData.investing?.monthlySaving || 0) + Number(monthData.investing?.onetimeSaving || 0);
+    const investment = Math.max(0, investingTotal - saving);
+    const liability = loanEMI + debtRepayment;
+    const expenditure = Number(monthData.outflow?.rentMaintenance || 0)
+        + Number(monthData.outflow?.untrackedExpense || 0)
+        + Number(monthData.outflow?.utilityBills || 0)
+        + Number(monthData.outflow?.familyExpenditure || 0)
+        + Number(monthData.outflow?.miscExpenses || 0)
+        + Number(monthData.outflow?.creditCardDue || 0)
+        + Number(monthData.outflow?.creditCardOutstanding || 0);
+    const knownOutflow = liability + insurance + expenditure;
+    const other = Math.max(0, outflowTotal - knownOutflow);
+
+    return {
+        income: inflowTotal,
+        expenditure,
+        saving,
+        investment,
+        liability,
+        insurance,
+        other,
+    };
+}
+
 function renderFinancialGoal() {
     const entries = activeEntries();
     
@@ -1069,6 +1378,7 @@ function renderFinancialGoal() {
         
         // Render form fields
         renderGoalDynamicFields();
+        updateSectionSubmitButton("financialGoal");
         
         // Render table
         renderGoalTable(entries);
@@ -1120,6 +1430,22 @@ function renderGoalDynamicFields() {
         
         goalDynamicFields.appendChild(div);
     });
+
+    const syncStatus = () => {
+        const status = document.getElementById("goal_status");
+        if (!status) return;
+        status.value = normalizeGoalStatus({
+            amountNeeded: document.getElementById("goal_amountNeeded")?.value,
+            amountAccumulated: document.getElementById("goal_amountAccumulated")?.value,
+            targetDate: document.getElementById("goal_targetDate")?.value,
+        });
+    };
+    ["goal_amountNeeded", "goal_amountAccumulated", "goal_targetDate"].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.addEventListener("input", syncStatus);
+        if (input) input.addEventListener("change", syncStatus);
+    });
+    syncStatus();
 }
 
 function renderGoalTable(entries) {
@@ -1153,7 +1479,7 @@ function renderGoalTable(entries) {
             row.appendChild(td);
         });
         const actionTd = document.createElement("td");
-        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        actionTd.innerHTML = `${renderRowActions(item.id)}`;
         row.appendChild(actionTd);
         goalTableBody.appendChild(row);
     });
@@ -1181,13 +1507,15 @@ function renderGoalPreviewCards(entries) {
         const amountAccumulated = Number(goal.amountAccumulated || 0);
         const progress = amountNeeded > 0 ? (amountAccumulated / amountNeeded) * 100 : 0;
         const progressClamped = Math.min(progress, 100);
+        const status = normalizeGoalStatus(goal);
+        const statusClass = status.toLowerCase();
         
         card.innerHTML = `
             <div class="goal-card-header">
                 <span class="goal-card-title">${esc(goal.name)}</span>
                 <div style="display: flex; gap: 8px;">
                     <span class="goal-card-type">${esc(goal.goalType || "Short Term")}</span>
-                    <span class="goal-card-status ${goal.status?.toLowerCase() || "planned"}">${esc(goal.status || "Planned")}</span>
+                    <span class="goal-card-status ${statusClass}">${esc(status)}</span>
                 </div>
             </div>
             <div class="goal-card-details">
@@ -1196,7 +1524,7 @@ function renderGoalPreviewCards(entries) {
             </div>
             <div class="goal-card-progress">
                 <div class="goal-progress-bar">
-                    <div class="goal-progress-fill" style="width: ${progressClamped}%"></div>
+                    <div class="goal-progress-fill ${statusClass}" style="width: ${progressClamped}%"></div>
                 </div>
                 <div class="goal-progress-text">
                     <span>${formatMoney(amountAccumulated)} / ${formatMoney(amountNeeded)}</span>
@@ -1237,6 +1565,7 @@ function renderMonthlyFixedExpense() {
         
         // Render form fields
         renderExpenseDynamicFields();
+        updateSectionSubmitButton("monthlyFixedExpense");
         
         // Render table
         renderExpenseTable(entries);
@@ -1351,7 +1680,7 @@ function renderExpenseTable(entries) {
         durationTd.textContent = calcDurationFromToday(item.endDate);
         row.appendChild(durationTd);
         const actionTd = document.createElement("td");
-        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        actionTd.innerHTML = `${renderRowActions(item.id)}`;
         row.appendChild(actionTd);
         expenseTableBody.appendChild(row);
     });
@@ -1521,6 +1850,7 @@ function renderInvestments() {
         
         // Render form fields
         renderInvestmentDynamicFields();
+        updateSectionSubmitButton("investments");
         
         // Render table
         renderInvestmentTable(entries);
@@ -1608,7 +1938,7 @@ function renderInvestmentTable(entries) {
             row.appendChild(td);
         });
         const actionTd = document.createElement("td");
-        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        actionTd.innerHTML = `${renderRowActions(item.id)}`;
         row.appendChild(actionTd);
         investmentTableBody.appendChild(row);
     });
@@ -1631,6 +1961,7 @@ function renderInvestmentPreviewCards(entries) {
     displayEntries.forEach(investment => {
         const card = document.createElement("div");
         card.className = "investment-card";
+        const currentValue = getInvestmentCurrentValue(investment);
         
         card.innerHTML = `
             <div class="investment-card-info">
@@ -1638,13 +1969,15 @@ function renderInvestmentPreviewCards(entries) {
                 <div class="investment-card-details">
                     <span class="investment-card-frequency">${esc(investment.frequency || "One-Time")}</span>
                     Initial: ${formatMoney(Number(investment.initialInvestment || 0))}<br>
-                    Current: ${formatMoney(Number(investment.totalAmount || 0))}<br>
+                    Amount So Far: ${formatMoney(Number(investment.totalAmount || 0))}<br>
+                    Net Worth Today: ${formatMoney(currentValue)}<br>
+                    Interest: ${Number(investment.annualInterestRate || 0)}% p.a.<br>
                     Start: ${esc(investment.startDate || "—")}<br>
                     Maturity: ${esc(investment.maturityDate || "—")}<br>
                     ${esc(investment.details || "")}
                 </div>
             </div>
-            <div class="investment-card-amount">${formatMoney(Number(investment.totalAmount || 0))}</div>
+            <div class="investment-card-amount">${formatMoney(currentValue)}</div>
         `;
         
         investmentsList.appendChild(card);
@@ -1653,7 +1986,7 @@ function renderInvestmentPreviewCards(entries) {
 
 function calculateInvestmentSummary(entries) {
     const totalInitial = entries.reduce((s, i) => s + Number(i.initialInvestment || 0), 0);
-    const totalCurrent = entries.reduce((s, i) => s + Number(i.totalAmount || 0), 0);
+    const totalCurrent = entries.reduce((s, i) => s + getInvestmentCurrentValue(i), 0);
     const totalInvestments = entries.length;
     
     document.getElementById("totalInitialInvestment").textContent = formatMoney(totalInitial);
@@ -1668,7 +2001,7 @@ function renderInvestmentChart(entries) {
     if (entries.length === 0) return;
     
     const labels = entries.map(e => e.name || "Unnamed");
-    const values = entries.map(e => Number(e.totalAmount || 0));
+    const values = entries.map(e => getInvestmentCurrentValue(e));
     
     const ctx = investmentBarChartCanvas.getContext("2d");
     investmentBarChart = new Chart(ctx, {
@@ -1715,6 +2048,7 @@ function renderInsurances() {
         
         // Render form fields
         renderInsuranceDynamicFields();
+        updateSectionSubmitButton("insurances");
         
         // Render table
         renderInsuranceTable(entries);
@@ -1799,7 +2133,7 @@ function renderInsuranceTable(entries) {
             row.appendChild(td);
         });
         const actionTd = document.createElement("td");
-        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        actionTd.innerHTML = `${renderRowActions(item.id)}`;
         row.appendChild(actionTd);
         insuranceTableBody.appendChild(row);
     });
@@ -1824,20 +2158,30 @@ function renderInsurancePreviewCards(entries) {
         card.className = "insurance-card";
         
         const nirClass = insurance.nirLinked?.toLowerCase() === "yes" ? "yes" : "no";
+        const maturityProgress = getDateProgress(insurance.startDate, insurance.maturityDate);
         
         card.innerHTML = `
             <div class="insurance-card-info">
                 <div class="insurance-card-title">${esc(insurance.name)}</div>
                 <div class="insurance-card-details">
                     <span class="insurance-card-nir ${nirClass}">NIR: ${esc(insurance.nirLinked || "No")}</span>
+                    <span class="insurance-card-nir">${esc(insurance.policyType || "Other")}</span>
                     Company: ${esc(insurance.companyName || "—")}<br>
-                    Premium: ${formatMoney(Number(insurance.premium || 0))}<br>
+                    Premium: ${formatMoney(Number(insurance.premium || 0))} (${esc(insurance.premiumFrequency || "Annual")})<br>
                     Sum Assured: ${formatMoney(Number(insurance.sumAssured || 0))}<br>
+                    Start: ${esc(insurance.startDate || "—")}<br>
                     Maturity: ${esc(insurance.maturityDate || "—")}<br>
                     Nominee: ${esc(insurance.nomineeName || "—")}
+                    <div class="maturity-progress">
+                        <div class="maturity-progress-bar"><span style="width: ${maturityProgress}%"></span></div>
+                        <small>${maturityProgress.toFixed(0)}% time to maturity</small>
+                    </div>
                 </div>
             </div>
-            <div class="insurance-card-amount">${formatMoney(Number(insurance.premium || 0))}</div>
+            <div class="insurance-card-amounts">
+                <div><span>Premium</span><strong>${formatMoney(Number(insurance.premium || 0))}</strong></div>
+                <div><span>Sum Assured</span><strong>${formatMoney(Number(insurance.sumAssured || 0))}</strong></div>
+            </div>
         `;
         
         insurancesList.appendChild(card);
@@ -1845,7 +2189,7 @@ function renderInsurancePreviewCards(entries) {
 }
 
 function calculateInsuranceSummary(entries) {
-    const totalPremium = entries.reduce((s, i) => s + Number(i.premium || 0), 0);
+    const totalPremium = entries.reduce((s, i) => s + getInsuranceAnnualPremium(i), 0);
     const totalSumAssured = entries.reduce((s, i) => s + Number(i.sumAssured || 0), 0);
     const totalPolicies = entries.length;
     
@@ -1867,6 +2211,7 @@ function renderCards() {
         
         // Render form fields
         renderCardDynamicFields();
+        updateSectionSubmitButton("cards");
         
         // Render table
         renderCardTable(entries);
@@ -1886,7 +2231,8 @@ function renderCardDynamicFields() {
     cardDynamicFields.innerHTML = "";
     const fields = TAB_FIELDS.cards || TAB_FIELDS.monthlyBudget;
     const entries = activeEntries();
-    const primaryExists = entries.some(c => c.isPrimary === "Yes");
+    const editingId = editingEntryIds.cards;
+    const primaryExists = entries.some(c => c.isPrimary === "Yes" && c.id !== editingId);
 
     fields.forEach(field => {
         const div = document.createElement("div");
@@ -1937,17 +2283,29 @@ function renderCardDynamicFields() {
     function updateCardConditionals() {
         const accountVal     = document.getElementById("card_accountPresent")?.value || "No";
         const creditCardVal  = document.getElementById("card_creditCardPresent")?.value || "No";
+        const primaryVal     = document.getElementById("card_isPrimary")?.value || "No";
+        const purposeInput   = document.getElementById("card_purpose");
         cardDynamicFields.querySelectorAll("[data-field-id]").forEach(div => {
             const fid = div.dataset.fieldId;
             if (fid === "balance")     div.hidden = (accountVal    !== "Yes");
             if (fid === "creditLimit") div.hidden = (creditCardVal !== "Yes");
         });
+        if (purposeInput) {
+            if (primaryVal === "Yes") {
+                purposeInput.value = "Expenditure";
+                purposeInput.disabled = true;
+            } else {
+                purposeInput.disabled = false;
+            }
+        }
     }
     updateCardConditionals();
     const acctSel  = document.getElementById("card_accountPresent");
     const ccSel    = document.getElementById("card_creditCardPresent");
+    const primarySel = document.getElementById("card_isPrimary");
     if (acctSel)  acctSel.addEventListener("change",  updateCardConditionals);
     if (ccSel)    ccSel.addEventListener("change",    updateCardConditionals);
+    if (primarySel) primarySel.addEventListener("change", updateCardConditionals);
 }
 
 function renderCardTable(entries) {
@@ -1981,7 +2339,7 @@ function renderCardTable(entries) {
             row.appendChild(td);
         });
         const actionTd = document.createElement("td");
-        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        actionTd.innerHTML = `${renderRowActions(item.id)}`;
         row.appendChild(actionTd);
         cardTableBody.appendChild(row);
     });
@@ -2017,7 +2375,10 @@ function renderCardPreviewCards(entries) {
                     Purpose: ${esc(card.purpose || "—")}
                 </div>
             </div>
-            <div class="card-item-limit">${formatMoney(Number(card.creditLimit || 0))}</div>
+            <div class="card-item-amounts">
+                <div><span>Balance</span><strong>${formatMoney(Number(card.balance || 0))}</strong></div>
+                <div><span>Credit Limit</span><strong>${formatMoney(Number(card.creditLimit || 0))}</strong></div>
+            </div>
         `;
 
         cardsList.appendChild(item);
@@ -2045,14 +2406,14 @@ function getAutoNetWorthEntries() {
     // Investments → Assets
     const investments = (appData.tabData || {}).investments || [];
     investments.forEach(inv => {
-        const val = Number(inv.totalAmount || inv.initialInvestment || 0);
+        const val = getInvestmentCurrentValue(inv);
         if (val > 0) {
             auto.push({
                 id: 'auto_inv_' + inv.id,
                 name: inv.name || 'Investment',
                 type: 'Asset',
                 value: val,
-                growthRate: '',
+                growthRate: inv.annualInterestRate || '',
                 details: 'From Investments tab',
                 auto: true
             });
@@ -2098,6 +2459,7 @@ function renderNetWorth() {
 
         // Render form fields
         renderNetWorthDynamicFields();
+        updateSectionSubmitButton("netWorth");
 
         // Render table (manual entries only)
         renderNetWorthTable(manualEntries);
@@ -2186,7 +2548,7 @@ function renderNetWorthTable(entries) {
             row.appendChild(td);
         });
         const actionTd = document.createElement("td");
-        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        actionTd.innerHTML = `${renderRowActions(item.id)}`;
         row.appendChild(actionTd);
         netWorthTableBody.appendChild(row);
     });
@@ -2347,13 +2709,30 @@ function renderNetWorthProjectionChart(entries) {
 }
 
 // ── Tax Plan auto-population helpers ────────────────────────────────────────
-function getAnnualIncomeFromBudget() {
+function getSelectedTaxFyStartYear() {
+    const selected = financialYearSelect?.value || "";
+    const match = selected.match(/^(\d{4})/);
+    return match ? Number(match[1]) : getFinancialYearStartYear(new Date());
+}
+
+function populateFinancialYearOptions() {
+    if (!financialYearSelect) return;
+    const currentFy = getFinancialYearStartYear(new Date());
+    const existing = financialYearSelect.value;
+    financialYearSelect.innerHTML = "";
+    for (let year = currentFy - 3; year <= currentFy + 1; year++) {
+        const option = document.createElement("option");
+        option.value = `${year}-${String(year + 1).slice(-2)}`;
+        option.textContent = getFinancialYearLabel(year);
+        if (existing ? option.value === existing : year === currentFy) option.selected = true;
+        financialYearSelect.appendChild(option);
+    }
+}
+
+function getAnnualIncomeFromBudget(fyStartYear = getFinancialYearStartYear(new Date())) {
     const mbData = appData.monthlyBudgetData || {};
-    const now = new Date();
-    const fyStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-    const fyStart = new Date(fyStartYear, 3, 1);
-    const fyEnd   = new Date(fyStartYear + 1, 2, 31);
-    const fyMonths = Object.keys(mbData).filter(k => { const d = new Date(k + '-01'); return d >= fyStart && d <= fyEnd; });
+    const fyMonthSet = new Set(getFinancialYearMonthKeys(fyStartYear));
+    const fyMonths = Object.keys(mbData).filter(k => fyMonthSet.has(k));
     const pool = fyMonths.length > 0 ? fyMonths : Object.keys(mbData).sort().reverse().slice(0, 1);
     if (pool.length === 0) return 0;
     let total = 0;
@@ -2399,6 +2778,7 @@ function getEffectiveDeductions(allEntries, regime) {
 function renderTaxPlan() {
     const entries = activeEntries();
     const taxRegime = taxRegimeSelect.value;
+    populateFinancialYearOptions();
     
     // Update toggle button text
     toggleTaxPlanEdit.textContent = isTaxPlanEditMode ? "💾 Save" : "✎ Edit";
@@ -2410,6 +2790,7 @@ function renderTaxPlan() {
         
         // Render form fields
         renderTaxPlanDynamicFields();
+        updateSectionSubmitButton("taxPlan");
         
         // Render table
         renderTaxPlanTable(entries);
@@ -2497,22 +2878,25 @@ function renderTaxPlanTable(entries) {
             row.appendChild(td);
         });
         const actionTd = document.createElement("td");
-        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        actionTd.innerHTML = `${renderRowActions(item.id)}`;
         row.appendChild(actionTd);
         taxPlanTableBody.appendChild(row);
     });
 }
 
 function calculateTaxSummary(entries, taxRegime) {
-    const annualIncome  = getAnnualIncomeFromBudget();
+    const fyStartYear = getSelectedTaxFyStartYear();
+    const annualIncome  = getAnnualIncomeFromBudget(fyStartYear);
     const allDeductions = getAllTaxDeductions();
     const ded = getEffectiveDeductions(allDeductions, taxRegime);
     const taxableIncome = Math.max(0, annualIncome - ded.stdDeduction - ded.totalDeductions);
     const annualTaxLiability = calculateTax(taxableIncome, taxRegime);
 
     // YTD: based on FY month index (Apr=1, May=2 … Mar=12)
-    const m = currentMonth.getMonth();
-    const fyMonth = m >= 3 ? m - 2 : m + 10;
+    const now = new Date();
+    const currentFyStart = getFinancialYearStartYear(now);
+    const m = now.getMonth();
+    const fyMonth = fyStartYear < currentFyStart ? 12 : (fyStartYear > currentFyStart ? 0 : (m >= 3 ? m - 2 : m + 10));
     const taxLiabilityYTD = (annualTaxLiability * fyMonth) / 12;
 
     // Regime comparison
@@ -2580,7 +2964,7 @@ function renderTaxDeductionsList(entries) {
 
 function renderTaxBreakdown(entries, taxRegime) {
     taxBreakdown.innerHTML = "";
-    const annualIncome  = getAnnualIncomeFromBudget();
+    const annualIncome  = getAnnualIncomeFromBudget(getSelectedTaxFyStartYear());
     const allDeductions = getAllTaxDeductions();
     const ded = getEffectiveDeductions(allDeductions, taxRegime);
     const taxableIncome = Math.max(0, annualIncome - ded.stdDeduction - ded.totalDeductions);
@@ -2632,6 +3016,7 @@ function renderGifts() {
         
         // Render form fields
         renderGiftsDynamicFields();
+        updateSectionSubmitButton("gifts");
         
         // Render table
         renderGiftsTable(entries);
@@ -2716,7 +3101,7 @@ function renderGiftsTable(entries) {
             row.appendChild(td);
         });
         const actionTd = document.createElement("td");
-        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        actionTd.innerHTML = `${renderRowActions(item.id)}`;
         row.appendChild(actionTd);
         giftsTableBody.appendChild(row);
     });
@@ -2908,56 +3293,57 @@ function calculateEmergencyFundSummary(entries) {
 function calculateAnnualSummary() {
     try {
         const monthlyBudgetData = appData.monthlyBudgetData || {};
-        const monthKeys = Object.keys(monthlyBudgetData);
+        const fyStartYear = getFinancialYearStartYear(currentMonth);
+        const monthKeys = getFinancialYearMonthKeys(fyStartYear);
+        currentMonthDisplay.textContent = getFinancialYearLabel(fyStartYear);
         
-        if (monthKeys.length === 0) {
-            annualTotalIncome.textContent = "₹0";
-            annualTotalExpenses.textContent = "₹0";
-            annualTotalSavings.textContent = "₹0";
-            avgMonthlyIncome.textContent = "₹0";
-            avgMonthlyExpenses.textContent = "₹0";
+        if (!monthKeys.some(k => monthlyBudgetData[k])) {
+            [annualTotalIncome, annualTotalExpenditure, annualTotalSavings, annualTotalInvestment, annualTotalLiability, annualTotalInsurance, annualTotalOther,
+             avgMonthlyIncome, avgMonthlyExpenditure, avgMonthlySavings, avgMonthlyInvestment, avgMonthlyLiability, avgMonthlyInsurance, avgMonthlyOther]
+                .forEach(el => { if (el) el.textContent = "₹0"; });
             annualMonthsList.innerHTML = "<p class='empty-state visible'>No monthly data available yet. Add data in Monthly view first.</p>";
             return;
         }
         
-        let totalIncome = 0;
-        let totalExpenses = 0;
-        let totalInvesting = 0;
+        const totals = {
+            income: 0,
+            expenditure: 0,
+            saving: 0,
+            investment: 0,
+            liability: 0,
+            insurance: 0,
+            other: 0,
+        };
         const monthDataList = [];
         
         monthKeys.forEach(monthKey => {
             const monthData = monthlyBudgetData[monthKey] || {};
-            const inflowTotal = Object.values(monthData.inflow || {}).reduce((s, v) => s + Number(v || 0), 0);
-            const outflowTotal = Object.values(monthData.outflow || {}).reduce((s, v) => s + Number(v || 0), 0);
-            const investingTotal = Object.values(monthData.investing || {}).reduce((s, v) => s + Number(v || 0), 0);
-            const savings = inflowTotal - outflowTotal - investingTotal;
-            
-            totalIncome += inflowTotal;
-            totalExpenses += outflowTotal;
-            totalInvesting += investingTotal;
-            
-            monthDataList.push({
-                month: monthKey,
-                income: inflowTotal,
-                expenses: outflowTotal,
-                investing: investingTotal,
-                savings: savings
-            });
+            const dist = getMonthlyDistribution(monthData);
+            Object.keys(totals).forEach(key => { totals[key] += Number(dist[key] || 0); });
+            monthDataList.push({ month: monthKey, ...dist });
         });
         
-        const totalSavings = totalIncome - totalExpenses - totalInvesting;
-        const monthCount = monthKeys.length;
-        const avgIncome = monthCount > 0 ? totalIncome / monthCount : 0;
-        const avgExpenses = monthCount > 0 ? totalExpenses / monthCount : 0;
+        const monthCount = 12;
+        const netSavings = totals.income - totals.expenditure - totals.investment - totals.liability - totals.insurance - totals.other;
+        totals.saving = Math.max(0, totals.saving || netSavings);
         
-        annualTotalIncome.textContent = formatMoney(totalIncome);
-        annualTotalExpenses.textContent = formatMoney(totalExpenses);
-        annualTotalSavings.textContent = formatMoney(totalSavings);
-        avgMonthlyIncome.textContent = formatMoney(avgIncome);
-        avgMonthlyExpenses.textContent = formatMoney(avgExpenses);
+        annualTotalIncome.textContent = formatMoney(totals.income);
+        annualTotalExpenditure.textContent = formatMoney(totals.expenditure);
+        annualTotalSavings.textContent = formatMoney(totals.saving);
+        annualTotalInvestment.textContent = formatMoney(totals.investment);
+        annualTotalLiability.textContent = formatMoney(totals.liability);
+        annualTotalInsurance.textContent = formatMoney(totals.insurance);
+        annualTotalOther.textContent = formatMoney(totals.other);
+        avgMonthlyIncome.textContent = formatMoney(totals.income / monthCount);
+        avgMonthlyExpenditure.textContent = formatMoney(totals.expenditure / monthCount);
+        avgMonthlySavings.textContent = formatMoney(totals.saving / monthCount);
+        avgMonthlyInvestment.textContent = formatMoney(totals.investment / monthCount);
+        avgMonthlyLiability.textContent = formatMoney(totals.liability / monthCount);
+        avgMonthlyInsurance.textContent = formatMoney(totals.insurance / monthCount);
+        avgMonthlyOther.textContent = formatMoney(totals.other / monthCount);
 
         // Render annual pie chart
-        renderAnnualPieChart(totalExpenses, totalInvesting, Math.max(0, totalSavings));
+        renderAnnualPieChart(totals);
         
         // Render monthly breakdown
         annualMonthsList.innerHTML = "";
@@ -2971,8 +3357,12 @@ function calculateAnnualSummary() {
                 <span class="annual-month-name">${monthName}</span>
                 <div class="annual-month-details">
                     <span class="annual-month-detail">Income: <strong>${formatMoney(month.income)}</strong></span>
-                    <span class="annual-month-detail">Expenses: <strong>${formatMoney(month.expenses)}</strong></span>
-                    <span class="annual-month-detail">Savings: <strong>${formatMoney(month.savings)}</strong></span>
+                    <span class="annual-month-detail">Expenditure: <strong>${formatMoney(month.expenditure)}</strong></span>
+                    <span class="annual-month-detail">Saving: <strong>${formatMoney(month.saving)}</strong></span>
+                    <span class="annual-month-detail">Investment: <strong>${formatMoney(month.investment)}</strong></span>
+                    <span class="annual-month-detail">Liability: <strong>${formatMoney(month.liability)}</strong></span>
+                    <span class="annual-month-detail">Insurance: <strong>${formatMoney(month.insurance)}</strong></span>
+                    <span class="annual-month-detail">Other: <strong>${formatMoney(month.other)}</strong></span>
                 </div>
             `;
             annualMonthsList.appendChild(div);
@@ -2980,26 +3370,27 @@ function calculateAnnualSummary() {
     } catch (error) {
         console.error("Error calculating annual summary:", error);
         annualTotalIncome.textContent = "₹0";
-        annualTotalExpenses.textContent = "₹0";
+        annualTotalExpenditure.textContent = "₹0";
         annualTotalSavings.textContent = "₹0";
         avgMonthlyIncome.textContent = "₹0";
-        avgMonthlyExpenses.textContent = "₹0";
+        avgMonthlyExpenditure.textContent = "₹0";
         annualMonthsList.innerHTML = "<p class='empty-state visible'>Error loading annual data. Please try again.</p>";
     }
 }
 
-function renderAnnualPieChart(expenses, investing, savings) {
+function renderAnnualPieChart(totals) {
     if (annualPieChart) annualPieChart.destroy();
-    if (expenses === 0 && investing === 0 && savings === 0) return;
+    const values = [totals.investment, totals.liability, totals.saving, totals.expenditure, totals.insurance, totals.other];
+    if (values.every(v => Number(v || 0) === 0)) return;
 
     const ctx = annualPieChartCanvas.getContext("2d");
     annualPieChart = new Chart(ctx, {
         type: "pie",
         data: {
-            labels: ["Expenses", "Investing", "Savings"],
+            labels: ["Investment", "Liability", "Saving", "Expenditure", "Insurance", "Other"],
             datasets: [{
-                data: [expenses, investing, savings],
-                backgroundColor: ["#ef4444", "#3b82f6", "#22c55e"],
+                data: values,
+                backgroundColor: ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#eab308", "#a855f7"],
                 borderWidth: 0
             }]
         },
@@ -3039,14 +3430,16 @@ function renderAnnualPieChart(expenses, investing, savings) {
     });
 }
 
-function renderCategoryFields(container, fields, data) {
+function renderCategoryFields(container, fields, data, autoLinkedFields = {}) {
     container.innerHTML = "";
+    const categoryName = container.id.replace(/Fields$/, "");
     fields.forEach(field => {
         const div = document.createElement("div");
         div.className = "field";
+        const isAutoLinked = Boolean(autoLinkedFields[`${categoryName}.${field.id}`]);
         
         const label = document.createElement("label");
-        label.textContent = field.label;
+        label.textContent = isAutoLinked ? `${field.label} (auto)` : field.label;
         div.appendChild(label);
         
         const input = document.createElement("input");
@@ -3057,6 +3450,11 @@ function renderCategoryFields(container, fields, data) {
         input.value = data[field.id] || "";
         input.dataset.fieldId = field.id;
         input.dataset.category = container.id;
+        if (isAutoLinked) {
+            input.disabled = true;
+            input.title = "Auto-populated from Investments or Liabilities. Edit the source item to change current/future months.";
+            div.classList.add("auto-linked-field");
+        }
         
         div.appendChild(input);
         container.appendChild(div);
@@ -3089,21 +3487,26 @@ function calculateAndDisplaySummary(monthData) {
     const prevMonthKey = getMonthKey(prevMonth);
     const prevMonthData = appData.monthlyBudgetData[prevMonthKey];
     const initialBalance = prevMonthData ? Number(prevMonthData.monthEndBalance || 0) : 0;
+    const carriedCreditOutstanding = prevMonthData ? Number(prevMonthData.outflow?.creditCardOutstanding || 0) : 0;
     
     document.getElementById("initialBalance").textContent = formatMoney(initialBalance);
     
     // Budget status - include initial balance in amount to spend
-    const totalAvailable = initialBalance + cashFlow;
+    const currentCreditOutstanding = Number(monthData.outflow.creditCardOutstanding || 0);
+    const totalAvailable = initialBalance + cashFlow - currentCreditOutstanding;
     budgetStatus.className = "budget-status";
     if (totalAvailable > 0) {
         budgetStatus.classList.add("positive");
         budgetStatus.textContent = `Budget Positive: +${formatMoney(totalAvailable)} to spend`;
     } else if (totalAvailable < 0) {
         budgetStatus.classList.add("negative");
-        budgetStatus.textContent = `Budget Negative: ${formatMoney(totalAvailable)} overspent`;
+        budgetStatus.textContent = `Budget Negative: ${formatMoney(Math.abs(totalAvailable))} overspent including unpaid credit card outstanding`;
     } else {
         budgetStatus.classList.add("neutral");
         budgetStatus.textContent = `Budget Neutral: ₹0 remaining`;
+    }
+    if (carriedCreditOutstanding > 0) {
+        budgetStatus.textContent += ` • Previous unpaid card outstanding: ${formatMoney(carriedCreditOutstanding)}`;
     }
 
     // Fixed Expense Transfer section
@@ -3129,45 +3532,25 @@ function renderPieChart(monthData) {
         pieChart.destroy();
     }
     
-    const investingTotal = Object.values(monthData.investing).reduce((s, v) => s + Number(v || 0), 0);
-    const outflowTotal = Object.values(monthData.outflow).reduce((s, v) => s + Number(v || 0), 0);
-    const monthEndBalance = Number(monthData.monthEndBalance || 0);
-    
-    // Categorize for pie chart
-    const sipInvestment = Number(monthData.investing.sipInvestment || 0);
-    const retirementInvestment = Number(monthData.investing.retirementInvestment || 0);
-    const monthlySaving = Number(monthData.investing.monthlySaving || 0);
-    const onetimeSaving = Number(monthData.investing.onetimeSaving || 0);
-    const onetimeInvestment = Number(monthData.investing.onetimeInvestment || 0);
-    const interestDividend = Number(monthData.inflow.interest || 0)
-        + Number(monthData.inflow.dividend || 0); // include legacy dividend data
-
-    const loanEMI = Number(monthData.outflow.loanEMI || 0);
-    const debtRepaymentLending = Number(monthData.outflow.debtRepayment || 0)
-        + Number(monthData.outflow.lending || 0); // include legacy lending data
-    const rentMaintenance = Number(monthData.outflow.rentMaintenance || 0)
-        + Number(monthData.outflow.rent || 0) + Number(monthData.outflow.maintenance || 0); // include legacy rent/maintenance
-
-    const otherExpenses = outflowTotal - loanEMI - debtRepaymentLending - rentMaintenance;
-    const otherInvestments = investingTotal - sipInvestment - retirementInvestment - monthlySaving - onetimeSaving - onetimeInvestment;
+    const dist = getMonthlyDistribution(monthData);
     
     const data = {
-        labels: ["Investment", "Liability", "Saving", "Expenditure", "Retirement", "Other"],
+        labels: ["Investment", "Liability", "Saving", "Expenditure", "Insurance", "Other"],
         datasets: [{
             data: [
-                sipInvestment + otherInvestments,
-                loanEMI + debtRepaymentLending,
-                monthlySaving + onetimeSaving,
-                otherExpenses,
-                retirementInvestment,
-                onetimeInvestment
+                dist.investment,
+                dist.liability,
+                dist.saving,
+                dist.expenditure,
+                dist.insurance,
+                dist.other
             ],
             backgroundColor: [
                 "#3b82f6", // Investment - blue
                 "#ef4444", // Liability - red
                 "#22c55e", // Saving - green
                 "#f97316", // Expenditure - orange
-                "#eab308", // Retirement - yellow
+                "#eab308", // Insurance - yellow
                 "#a855f7"  // Other - purple
             ],
             borderWidth: 0
@@ -3330,7 +3713,7 @@ function renderRows(entries) {
             row.appendChild(td);
         });
         const actionTd = document.createElement("td");
-        actionTd.innerHTML = `<button class="delete-row" type="button" data-id="${item.id}">Delete</button>`;
+        actionTd.innerHTML = `${renderRowActions(item.id)}`;
         row.appendChild(actionTd);
         entryRows.appendChild(row);
     });
@@ -3339,24 +3722,10 @@ function renderRows(entries) {
 // ── Entry actions ─────────────────────────────────────────────────────────────
 function addEntry(event) {
     event.preventDefault();
-    const fields = TAB_FIELDS[activeTabId] || TAB_FIELDS.monthlyBudget;
-    const entry = { id: String(Date.now()) };
-    
-    fields.forEach(f => {
-        const input = fieldInputs[f.id];
-        if (!input) return;
-        if (f.type === "number") {
-            entry[f.id] = Number(input.value || 0);
-        } else {
-            entry[f.id] = input.value.trim();
-        }
-    });
-    
+    const entry = readSectionFormEntry("standard");
     if (!entry.name || entry.planned < 0) return;
-    const entries = activeEntries();
-    entries.unshift(entry);
-    setActiveEntries(entries);
-    entryForm.reset();
+    upsertSectionEntry("standard", entry);
+    resetSectionForm("standard");
     render();
 }
 
@@ -3375,6 +3744,9 @@ function deleteEntry(id) {
         }
     }
     setActiveEntries(activeEntries().filter(i => i.id !== id));
+    Object.keys(editingEntryIds).forEach(tabId => {
+        if (editingEntryIds[tabId] === id) editingEntryIds[tabId] = null;
+    });
     render();
 }
 
@@ -3456,24 +3828,25 @@ exportBtn.addEventListener("click", exportToExcel);
 clearTabButton.addEventListener("click", clearActiveTab);
 resetAllDataButton.addEventListener("click", resetAllData);
 entryRows.addEventListener("click", e => {
-    const btn = e.target.closest(".delete-row");
-    if (btn) deleteEntry(btn.dataset.id);
+    handleTableAction("standard", e);
 });
 
 // Monthly Budget event bindings
 prevMonthBtn.addEventListener("click", () => {
-    currentMonth.setMonth(currentMonth.getMonth() - 1);
+    currentMonth.setMonth(currentMonth.getMonth() + (isAnnualBudgetView ? -12 : -1));
     renderMonthlyBudget();
 });
 
 nextMonthBtn.addEventListener("click", () => {
-    currentMonth.setMonth(currentMonth.getMonth() + 1);
+    currentMonth.setMonth(currentMonth.getMonth() + (isAnnualBudgetView ? 12 : 1));
     renderMonthlyBudget();
 });
 
 toggleBudgetView.addEventListener("click", () => {
     isAnnualBudgetView = !isAnnualBudgetView;
     toggleBudgetView.textContent = isAnnualBudgetView ? "📅 Monthly" : "📊 Annual";
+    prevMonthBtn.textContent = isAnnualBudgetView ? "← Previous FY" : "← Previous";
+    nextMonthBtn.textContent = isAnnualBudgetView ? "Next FY →" : "Next →";
     renderMonthlyBudget();
 });
 
@@ -3482,6 +3855,8 @@ toggleBudgetEdit.addEventListener("click", () => {
     if (isAnnualBudgetView) {
         isAnnualBudgetView = false;
         toggleBudgetView.textContent = "📊 Annual";
+        prevMonthBtn.textContent = "← Previous";
+        nextMonthBtn.textContent = "Next →";
     }
     isBudgetEditMode = !isBudgetEditMode;
     cancelBudgetEdit.hidden = !isBudgetEditMode;
@@ -3544,14 +3919,14 @@ toggleGoalEdit.addEventListener("click", () => {
 });
 cancelGoalEdit.addEventListener("click", () => {
     isGoalEditMode = false;
+    clearEditing("financialGoal");
     cancelGoalEdit.hidden = true;
     renderFinancialGoal();
 });
 
 goalForm.addEventListener("submit", addGoalEntry);
 goalTableBody.addEventListener("click", e => {
-    const btn = e.target.closest(".delete-row");
-    if (btn) deleteEntry(btn.dataset.id);
+    handleTableAction("financialGoal", e);
 });
 
 // Monthly Fixed Expense event bindings
@@ -3569,14 +3944,14 @@ toggleExpenseEdit.addEventListener("click", () => {
 });
 cancelExpenseEdit.addEventListener("click", () => {
     isExpenseEditMode = false;
+    clearEditing("monthlyFixedExpense");
     cancelExpenseEdit.hidden = true;
     renderMonthlyFixedExpense();
 });
 
 expenseForm.addEventListener("submit", addExpenseEntry);
 expenseTableBody.addEventListener("click", e => {
-    const btn = e.target.closest(".delete-row");
-    if (btn) deleteEntry(btn.dataset.id);
+    handleTableAction("monthlyFixedExpense", e);
 });
 
 // Investments event bindings
@@ -3587,14 +3962,14 @@ toggleInvestmentEdit.addEventListener("click", () => {
 });
 cancelInvestmentEdit.addEventListener("click", () => {
     isInvestmentEditMode = false;
+    clearEditing("investments");
     cancelInvestmentEdit.hidden = true;
     renderInvestments();
 });
 
 investmentForm.addEventListener("submit", addInvestmentEntry);
 investmentTableBody.addEventListener("click", e => {
-    const btn = e.target.closest(".delete-row");
-    if (btn) deleteEntry(btn.dataset.id);
+    handleTableAction("investments", e);
 });
 
 // Insurances event bindings
@@ -3605,14 +3980,14 @@ toggleInsuranceEdit.addEventListener("click", () => {
 });
 cancelInsuranceEdit.addEventListener("click", () => {
     isInsuranceEditMode = false;
+    clearEditing("insurances");
     cancelInsuranceEdit.hidden = true;
     renderInsurances();
 });
 
 insuranceForm.addEventListener("submit", addInsuranceEntry);
 insuranceTableBody.addEventListener("click", e => {
-    const btn = e.target.closest(".delete-row");
-    if (btn) deleteEntry(btn.dataset.id);
+    handleTableAction("insurances", e);
 });
 
 // Cards event bindings
@@ -3623,14 +3998,14 @@ toggleCardEdit.addEventListener("click", () => {
 });
 cancelCardEdit.addEventListener("click", () => {
     isCardEditMode = false;
+    clearEditing("cards");
     cancelCardEdit.hidden = true;
     renderCards();
 });
 
 cardForm.addEventListener("submit", addCardEntry);
 cardTableBody.addEventListener("click", e => {
-    const btn = e.target.closest(".delete-row");
-    if (btn) deleteEntry(btn.dataset.id);
+    handleTableAction("cards", e);
 });
 
 // Net Worth event bindings
@@ -3641,14 +4016,14 @@ toggleNetWorthEdit.addEventListener("click", () => {
 });
 cancelNetWorthEdit.addEventListener("click", () => {
     isNetWorthEditMode = false;
+    clearEditing("netWorth");
     cancelNetWorthEdit.hidden = true;
     renderNetWorth();
 });
 
 netWorthForm.addEventListener("submit", addNetWorthEntry);
 netWorthTableBody.addEventListener("click", e => {
-    const btn = e.target.closest(".delete-row");
-    if (btn) deleteEntry(btn.dataset.id);
+    handleTableAction("netWorth", e);
 });
 
 // Tax Plan event bindings
@@ -3659,21 +4034,23 @@ toggleTaxPlanEdit.addEventListener("click", () => {
 });
 cancelTaxPlanEdit.addEventListener("click", () => {
     isTaxPlanEditMode = false;
+    clearEditing("taxPlan");
     cancelTaxPlanEdit.hidden = true;
     renderTaxPlan();
 });
 
 taxRegimeSelect.addEventListener("change", () => {
     if (!isTaxPlanEditMode) {
-        const entries = activeEntries();
         renderTaxPlan();
     }
+});
+financialYearSelect.addEventListener("change", () => {
+    if (!isTaxPlanEditMode) renderTaxPlan();
 });
 
 taxPlanForm.addEventListener("submit", addTaxPlanEntry);
 taxPlanTableBody.addEventListener("click", e => {
-    const btn = e.target.closest(".delete-row");
-    if (btn) deleteEntry(btn.dataset.id);
+    handleTableAction("taxPlan", e);
 });
 
 // Gifts event bindings
@@ -3684,14 +4061,14 @@ toggleGiftsEdit.addEventListener("click", () => {
 });
 cancelGiftsEdit.addEventListener("click", () => {
     isGiftsEditMode = false;
+    clearEditing("gifts");
     cancelGiftsEdit.hidden = true;
     renderGifts();
 });
 
 giftsForm.addEventListener("submit", addGiftsEntry);
 giftsTableBody.addEventListener("click", e => {
-    const btn = e.target.closest(".delete-row");
-    if (btn) deleteEntry(btn.dataset.id);
+    handleTableAction("gifts", e);
 });
 
 // Emergency Fund event bindings
@@ -3715,6 +4092,7 @@ investingFields.addEventListener("input", handleCategoryFieldChange);
 monthEndBalance.addEventListener("input", handleCategoryFieldChange);
 
 function handleCategoryFieldChange(e) {
+    if (e.target.disabled) return;
     if (!e.target.dataset.fieldId && e.target.id !== "monthEndBalance") return;
     
     const monthKey = getMonthKey(currentMonth);
@@ -3759,186 +4137,83 @@ function handleCategoryFieldChange(e) {
 
 function addGoalEntry(event) {
     event.preventDefault();
-    const fields = TAB_FIELDS.financialGoal || TAB_FIELDS.monthlyBudget;
-    const entry = { id: String(Date.now()) };
-    
-    fields.forEach(f => {
-        const input = document.getElementById(`goal_${f.id}`);
-        if (f.type === "number") {
-            entry[f.id] = Number(input.value || 0);
-        } else {
-            entry[f.id] = input.value.trim();
-        }
-    });
-    
+    const entry = readSectionFormEntry("financialGoal");
     if (!entry.name || entry.amountNeeded < 0) return;
-    const entries = activeEntries();
-    entries.unshift(entry);
-    setActiveEntries(entries);
-    goalForm.reset();
+    upsertSectionEntry("financialGoal", entry);
+    resetSectionForm("financialGoal");
     renderFinancialGoal();
 }
 
 function addExpenseEntry(event) {
     event.preventDefault();
-    const fields = TAB_FIELDS.monthlyFixedExpense || TAB_FIELDS.monthlyBudget;
-    const entry = { id: String(Date.now()) };
-    
-    fields.forEach(f => {
-        const input = document.getElementById(`expense_${f.id}`);
-        if (f.type === "number") {
-            entry[f.id] = Number(input.value || 0);
-        } else {
-            entry[f.id] = input.value.trim();
-        }
-    });
-    
+    const entry = readSectionFormEntry("monthlyFixedExpense");
     if (!entry.name || entry.amount < 0) return;
-    const entries = activeEntries();
-    entries.unshift(entry);
-    setActiveEntries(entries);
-    expenseForm.reset();
+    upsertSectionEntry("monthlyFixedExpense", entry);
+    resetSectionForm("monthlyFixedExpense");
     renderMonthlyFixedExpense();
 }
 
 function addInvestmentEntry(event) {
     event.preventDefault();
-    const fields = TAB_FIELDS.investments || TAB_FIELDS.monthlyBudget;
-    const entry = { id: String(Date.now()) };
-    
-    fields.forEach(f => {
-        const input = document.getElementById(`investment_${f.id}`);
-        if (f.type === "number") {
-            entry[f.id] = Number(input.value || 0);
-        } else {
-            entry[f.id] = input.value.trim();
-        }
-    });
-    
+    const entry = readSectionFormEntry("investments");
     if (!entry.name || entry.initialInvestment < 0) return;
-    const entries = activeEntries();
-    entries.unshift(entry);
-    setActiveEntries(entries);
-    investmentForm.reset();
+    upsertSectionEntry("investments", entry);
+    resetSectionForm("investments");
     renderInvestments();
 }
 
 function addInsuranceEntry(event) {
     event.preventDefault();
-    const fields = TAB_FIELDS.insurances || TAB_FIELDS.monthlyBudget;
-    const entry = { id: String(Date.now()) };
-    
-    fields.forEach(f => {
-        const input = document.getElementById(`insurance_${f.id}`);
-        if (f.type === "number") {
-            entry[f.id] = Number(input.value || 0);
-        } else {
-            entry[f.id] = input.value.trim();
-        }
-    });
-    
+    const entry = readSectionFormEntry("insurances");
     if (!entry.name || entry.premium < 0) return;
-    const entries = activeEntries();
-    entries.unshift(entry);
-    setActiveEntries(entries);
-    insuranceForm.reset();
+    upsertSectionEntry("insurances", entry);
+    resetSectionForm("insurances");
     renderInsurances();
 }
 
 function addCardEntry(event) {
     event.preventDefault();
-    const fields = TAB_FIELDS.cards || TAB_FIELDS.monthlyBudget;
-    const entry = { id: String(Date.now()) };
-
-    fields.forEach(f => {
-        const input = document.getElementById(`card_${f.id}`);
-        if (!input) return;
-        if (f.type === "number") {
-            entry[f.id] = Number(input.value || 0);
-        } else {
-            entry[f.id] = input.value.trim();
-        }
-    });
-
+    const entry = readSectionFormEntry("cards");
     if (!entry.bankName) return;
 
     const entries = activeEntries();
+    const editingId = editingEntryIds.cards;
 
-    if (entry.isPrimary === "Yes" && entries.some(c => c.isPrimary === "Yes")) {
-        alert("A primary account already exists.\nPlease delete the existing primary account before setting another one as primary, or choose \"No\" for this account.");
+    if (entry.isPrimary === "Yes" && entries.some(c => c.isPrimary === "Yes" && c.id !== editingId)) {
+        alert("A primary account already exists.\nPlease edit the existing primary account or choose \"No\" for this account.");
         renderCardDynamicFields();
         return;
     }
 
-    entries.unshift(entry);
-    setActiveEntries(entries);
-    cardForm.reset();
+    upsertSectionEntry("cards", entry);
+    resetSectionForm("cards");
     renderCards();
 }
 
 function addNetWorthEntry(event) {
     event.preventDefault();
-    const fields = TAB_FIELDS.netWorth || TAB_FIELDS.monthlyBudget;
-    const entry = { id: String(Date.now()) };
-    
-    fields.forEach(f => {
-        const input = document.getElementById(`netWorth_${f.id}`);
-        if (f.type === "number") {
-            entry[f.id] = Number(input.value || 0);
-        } else {
-            entry[f.id] = input.value.trim();
-        }
-    });
-    
+    const entry = readSectionFormEntry("netWorth");
     if (!entry.name || entry.value < 0) return;
-    const entries = activeEntries();
-    entries.unshift(entry);
-    setActiveEntries(entries);
-    netWorthForm.reset();
+    upsertSectionEntry("netWorth", entry);
+    resetSectionForm("netWorth");
     renderNetWorth();
 }
 
 function addTaxPlanEntry(event) {
     event.preventDefault();
-    const fields = TAB_FIELDS.taxPlan || TAB_FIELDS.monthlyBudget;
-    const entry = { id: String(Date.now()) };
-    
-    fields.forEach(f => {
-        const input = document.getElementById(`taxPlan_${f.id}`);
-        if (f.type === "number") {
-            entry[f.id] = Number(input.value || 0);
-        } else {
-            entry[f.id] = input.value.trim();
-        }
-    });
-    
+    const entry = readSectionFormEntry("taxPlan");
     if (!entry.name || entry.amount < 0) return;
-    const entries = activeEntries();
-    entries.unshift(entry);
-    setActiveEntries(entries);
-    taxPlanForm.reset();
+    upsertSectionEntry("taxPlan", entry);
+    resetSectionForm("taxPlan");
     renderTaxPlan();
 }
 
 function addGiftsEntry(event) {
     event.preventDefault();
-    const fields = TAB_FIELDS.gifts || TAB_FIELDS.monthlyBudget;
-    const entry = { id: String(Date.now()) };
-    
-    fields.forEach(f => {
-        const input = document.getElementById(`gifts_${f.id}`);
-        if (f.type === "number") {
-            entry[f.id] = Number(input.value || 0);
-        } else {
-            entry[f.id] = input.value.trim();
-        }
-    });
-    
+    const entry = readSectionFormEntry("gifts");
     if (!entry.name) return;
-    const entries = activeEntries();
-    entries.unshift(entry);
-    setActiveEntries(entries);
-    giftsForm.reset();
+    upsertSectionEntry("gifts", entry);
+    resetSectionForm("gifts");
     renderGifts();
 }
 

@@ -78,7 +78,7 @@ const TAB_FIELDS = {
         { id: "debitCardPresent", label: "Debit Card Present", type: "select", options: ["Yes", "No"] },
         { id: "creditCardPresent", label: "Credit Card Present", type: "select", options: ["Yes", "No"] },
         { id: "creditLimit",   label: "Credit Card Limit (₹)", type: "number", placeholder: "0" },
-        { id: "purpose",       label: "Purpose of Use",      type: "select", options: ["Income", "Expenditure", "Saving", "Investment", "Other"] },
+        { id: "purpose",       label: "Purpose of Use",      type: "select", options: ["Income", "Expenditure", "Saving", "Investment", "Loan", "Others"] },
         { id: "kycUpdated",   label: "Address/KYC Updated",  type: "select", options: ["Yes", "No"] },
         { id: "nomineeAdded",  label: "Nominee Added",       type: "select", options: ["Yes", "No"] }
     ],

@@ -599,22 +599,6 @@ td.amount {
     white-space: nowrap;
 }
 
-.delete-row {
-    background: transparent;
-    border: 1px solid var(--border2);
-    color: var(--muted);
-    border-radius: 6px;
-    font-size: 0.72rem;
-    font-family: inherit;
-    padding: 6px 12px;
-    cursor: pointer;
-    white-space: nowrap;
-    width: auto;
-    line-height: 1;
-    transition: background .15s, border-color .15s, color .15s;
-}
-.delete-row:hover { background: var(--surf2); border-color: var(--red); color: var(--red); }
-
 /* ── Empty State ──────────────────────────────────────── */
 .empty-state {
     display: none;
@@ -2200,14 +2184,36 @@ td.amount {
     margin: 8px 0 0;
 }
 
-.edit-row {
-    background: var(--surf2);
-    color: var(--text);
+.edit-row,
+.delete-row {
+    background: transparent;
     border: 1px solid var(--border2);
-    border-radius: 8px;
-    padding: 6px 10px;
-    margin-right: 8px;
+    color: var(--muted);
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-family: inherit;
+    padding: 6px 12px;
     cursor: pointer;
+    white-space: nowrap;
+    width: auto;
+    line-height: 1;
+    transition: background .15s, border-color .15s, color .15s;
+}
+
+.edit-row {
+    margin-right: 8px;
+}
+
+.edit-row:hover {
+    background: var(--surf2);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.delete-row:hover {
+    background: var(--surf2);
+    border-color: var(--red);
+    color: var(--red);
 }
 
 .annual-summary-item {

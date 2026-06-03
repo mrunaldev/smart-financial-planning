@@ -1,5 +1,19 @@
 'use strict';
 
+// ── Theme-based favicon switching ─────────────────────────────────────────────
+function updateFaviconForTheme() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const faviconIcon = document.getElementById('favicon-icon');
+    const faviconIcon32 = document.getElementById('favicon-icon-32');
+    const appleTouchIcon = document.getElementById('apple-touch-icon');
+    
+    const logoPath = isLight ? 'assets/logo_light.png' : 'assets/logo_dark.png';
+    
+    if (faviconIcon) faviconIcon.href = logoPath;
+    if (faviconIcon32) faviconIcon32.href = logoPath;
+    if (appleTouchIcon) appleTouchIcon.href = logoPath;
+}
+
 // ── Chart theme color helper ─────────────────────────────────────────────────
 function getChartThemeColors() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
@@ -44,7 +58,8 @@ const TAB_FIELDS = {
     monthlyFixedExpense: [
         { id: "name",      label: "Expense Name",        type: "text",   placeholder: "e.g. Rent, Insurance", required: true },
         { id: "amount",    label: "Amount (₹)",         type: "number", placeholder: "0", required: true },
-        { id: "type",      label: "Deduction Type",     type: "select", options: ["Insurance Premium", "Liability", "Saving", "Expenditure", "Investment"] },
+        { id: "type",      label: "Deduction Type",     type: "select", options: ["Insurance", "Liability", "Saving", "Expenditure", "Investment"] },
+        { id: "frequency", label: "Frequency",          type: "select", options: ["Monthly", "Quarterly", "Semi-Annual", "Annual", "One-Time"] },
         { id: "bankName", label: "Bank Name",          type: "text",   placeholder: "e.g. HDFC, ICICI" },
         { id: "endDate",   label: "End Date",           type: "date",   placeholder: "" }
     ],
@@ -79,6 +94,7 @@ const TAB_FIELDS = {
         { id: "creditCardPresent", label: "Credit Card Present", type: "select", options: ["Yes", "No"] },
         { id: "creditLimit",   label: "Credit Card Limit (₹)", type: "number", placeholder: "0" },
         { id: "purpose",       label: "Purpose of Use",      type: "select", options: ["Income", "Expenditure", "Saving", "Investment", "Loan", "Others"] },
+        { id: "purposeOther",  label: "Specify Purpose",     type: "text",   placeholder: "Custom purpose (if Others selected)", noTable: true },
         { id: "kycUpdated",   label: "Address/KYC Updated",  type: "select", options: ["Yes", "No"] },
         { id: "nomineeAdded",  label: "Nominee Added",       type: "select", options: ["Yes", "No"] }
     ],
@@ -119,23 +135,18 @@ const MONTHLY_BUDGET_CATEGORIES = {
         { id: "othersInflow", label: "Others", type: "number" }
     ],
     outflow: [
-        { id: "loanEMI", label: "Loan EMI", type: "number" },
-        { id: "insurance", label: "Insurance", type: "number" },
-        { id: "rentMaintenance", label: "Rent/Maintenance", type: "number" },
-        { id: "untrackedExpense", label: "Untracked Actual Expense", type: "number" },
-        { id: "creditCardDue", label: "Unpaid/Pending Credit Card Due", type: "number" },
-        { id: "creditCardOutstanding", label: "Credit Card Outstanding After Payment", type: "number" },
+        { id: "loanEMI", label: "Auto-calculated Liabilities", type: "number" },
+        { id: "creditCardOutstanding", label: "Credit Card Outstanding Amount So Far", type: "number" },
         { id: "debtRepayment", label: "Debt Repayment/Lending", type: "number" },
         { id: "utilityBills", label: "Utility Bills", type: "number" },
         { id: "familyExpenditure", label: "Family Expenditure", type: "number" },
         { id: "miscExpenses", label: "Miscellaneous Expenses", type: "number" }
     ],
     investing: [
-        { id: "sipInvestment", label: "SIP Investment", type: "number" },
-        { id: "retirementInvestment", label: "Retirement Plan Investment", type: "number" },
-        { id: "monthlySaving", label: "Monthly Saving", type: "number" },
-        { id: "onetimeSaving", label: "One-Time Saving of the Month", type: "number" },
-        { id: "onetimeInvestment", label: "One-Time Investment of the Month", type: "number" }
+        { id: "onetimeSaving", label: "On-Demand Saving", type: "number" },
+        { id: "onetimeInvestment", label: "On-Demand Investment", type: "number" },
+        { id: "ondemandExpenditure", label: "On-Demand Expenditure", type: "number" },
+        { id: "ondemandLiability", label: "On-Demand Liability", type: "number" }
     ]
 };
 
@@ -206,7 +217,6 @@ const inflowFields      = document.getElementById("inflowFields");
 const outflowFields     = document.getElementById("outflowFields");
 const investingFields   = document.getElementById("investingFields");
 const monthEndBalance   = document.getElementById("monthEndBalance");
-const saveMonthDataBtn  = document.getElementById("saveMonthData");
 
 // Annual summary refs
 const annualSummarySection = document.getElementById("annualSummarySection");
@@ -216,14 +226,12 @@ const annualTotalExpenditure = document.getElementById("annualTotalExpenditure")
 const annualTotalSavings   = document.getElementById("annualTotalSavings");
 const annualTotalInvestment = document.getElementById("annualTotalInvestment");
 const annualTotalLiability = document.getElementById("annualTotalLiability");
-const annualTotalInsurance = document.getElementById("annualTotalInsurance");
 const annualTotalOther = document.getElementById("annualTotalOther");
 const avgMonthlyIncome     = document.getElementById("avgMonthlyIncome");
 const avgMonthlyExpenditure = document.getElementById("avgMonthlyExpenditure");
 const avgMonthlySavings = document.getElementById("avgMonthlySavings");
 const avgMonthlyInvestment = document.getElementById("avgMonthlyInvestment");
 const avgMonthlyLiability = document.getElementById("avgMonthlyLiability");
-const avgMonthlyInsurance = document.getElementById("avgMonthlyInsurance");
 const avgMonthlyOther = document.getElementById("avgMonthlyOther");
 const annualMonthsList     = document.getElementById("annualMonthsList");
 const annualPieChartCanvas = document.getElementById("annualPieChart");
@@ -261,6 +269,7 @@ const expenseEmptyState    = document.getElementById("expenseEmptyState");
 const bankBarChartCanvas  = document.getElementById("bankBarChart");
 const typeBarChartCanvas  = document.getElementById("typeBarChart");
 const monthlyIncomeInput  = document.getElementById("monthlyIncomeInput");
+const saveMonthlyIncome   = document.getElementById("saveMonthlyIncome");
 const displayMonthlyIncome = document.getElementById("displayMonthlyIncome");
 const remainingToSpend    = document.getElementById("remainingToSpend");
 
@@ -390,6 +399,7 @@ let typeBarChart   = null;
 let investmentBarChart = null;
 let netWorthProjectionChart = null;
 let localWritePending = false;
+let budgetEditSnapshot = null;
 
 // ── Sort/filter state for list views ─────────────────────────────────────────
 const listSortFilter = {
@@ -522,6 +532,7 @@ function applyTheme(theme) {
         if (label) label.textContent = "Light Mode";
     }
     localStorage.setItem("theme", theme);
+    updateFaviconForTheme();
 }
 
 themeToggle.addEventListener("click", () => {
@@ -531,6 +542,7 @@ themeToggle.addEventListener("click", () => {
 });
 
 applyTheme(localStorage.getItem("theme") || "dark");
+updateFaviconForTheme();
 
 // ── Settings Panel ──────────────────────────────────────────────────────────
 const settingsBtn      = document.getElementById("settingsBtn");
@@ -657,10 +669,11 @@ function startListening() {
                     monthlyBudgetData: d.monthlyBudgetData || {},
                     fixedMonthlyIncome: d.fixedMonthlyIncome || 0,
                     dateOfBirth: d.dateOfBirth || "",
+                    currentAge: d.currentAge || 0,
                 };
                 userEmailDisplay.textContent = appData.userName || currentUser.email;
             } else {
-                appData = { tabData: {}, customTabs: [], userName: "", monthlyBudgetData: {}, fixedMonthlyIncome: 0, dateOfBirth: "" };
+                appData = { tabData: {}, customTabs: [], userName: "", monthlyBudgetData: {}, fixedMonthlyIncome: 0, dateOfBirth: "", currentAge: 0 };
                 userEmailDisplay.textContent = currentUser.email;
             }
             render();
@@ -1024,16 +1037,19 @@ function isCurrentOrFutureMonth(monthKey) {
 
 function buildMonthlyAutoValues(monthKey) {
     const values = { inflow: {}, outflow: {}, investing: {} };
+    const breakdown = { inflow: {}, outflow: {}, investing: {} };
     const liabilities = (appData.tabData || {}).monthlyFixedExpense || [];
     liabilities.forEach(item => {
         const amount = Number(item.amount || 0);
         if (amount <= 0) return;
         if (item.endDate && monthKey > item.endDate.slice(0, 7)) return;
-        if (item.type === "Liability") values.outflow.loanEMI = (values.outflow.loanEMI || 0) + amount;
-        if (item.type === "Insurance Premium") values.outflow.insurance = (values.outflow.insurance || 0) + amount;
-        if (item.type === "Expenditure") values.outflow.rentMaintenance = (values.outflow.rentMaintenance || 0) + amount;
-        if (item.type === "Investment") values.investing.sipInvestment = (values.investing.sipInvestment || 0) + amount;
-        if (item.type === "Saving") values.investing.monthlySaving = (values.investing.monthlySaving || 0) + amount;
+        const freq = item.frequency || "Monthly";
+        if (freq !== "Monthly") return;
+        if (item.type === "Liability") {
+            values.outflow.loanEMI = (values.outflow.loanEMI || 0) + amount;
+            if (!breakdown.outflow.loanEMI) breakdown.outflow.loanEMI = [];
+            breakdown.outflow.loanEMI.push({ name: item.name, amount, source: "Liabilities" });
+        }
     });
 
     const investments = (appData.tabData || {}).investments || [];
@@ -1042,7 +1058,6 @@ function buildMonthlyAutoValues(monthKey) {
         if (amount <= 0) return;
         if (inv.startDate && monthKey < inv.startDate.slice(0, 7)) return;
         if (inv.maturityDate && monthKey > inv.maturityDate.slice(0, 7)) return;
-        if (inv.frequency === "Monthly") values.investing.sipInvestment = (values.investing.sipInvestment || 0) + amount;
         if (inv.frequency === "Annually" && (!inv.startDate || monthKey.slice(5) === inv.startDate.slice(5, 7))) {
             values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
         }
@@ -1051,23 +1066,29 @@ function buildMonthlyAutoValues(monthKey) {
         }
     });
 
-    return values;
+    // NOTE: Credit card outstanding is NOT auto-carried (user manages it manually per month)
+    // It was removed from auto-values to keep the field editable
+
+    return { values, breakdown };
 }
 
 function applyMonthlyAutoValues(monthKey, monthData) {
     monthData.autoLinkedFields = monthData.autoLinkedFields || {};
+    monthData.autoLinkedBreakdown = monthData.autoLinkedBreakdown || {};
     if (!isCurrentOrFutureMonth(monthKey)) return monthData.autoLinkedFields;
     Object.keys(monthData.autoLinkedFields).forEach(key => {
         const [category, fieldId] = key.split(".");
         if (monthData[category]) monthData[category][fieldId] = 0;
         delete monthData.autoLinkedFields[key];
+        delete monthData.autoLinkedBreakdown[key];
     });
-    const autoValues = buildMonthlyAutoValues(monthKey);
-    Object.entries(autoValues).forEach(([category, values]) => {
+    const { values, breakdown } = buildMonthlyAutoValues(monthKey);
+    Object.entries(values).forEach(([category, fieldValues]) => {
         if (!monthData[category]) monthData[category] = {};
-        Object.entries(values).forEach(([fieldId, value]) => {
+        Object.entries(fieldValues).forEach(([fieldId, value]) => {
             monthData[category][fieldId] = value;
             monthData.autoLinkedFields[`${category}.${fieldId}`] = true;
+            monthData.autoLinkedBreakdown[`${category}.${fieldId}`] = breakdown[category][fieldId] || [];
         });
     });
     return monthData.autoLinkedFields;
@@ -1258,7 +1279,7 @@ function renderMonthlyBudget() {
     const autoLinkedFields = applyMonthlyAutoValues(monthKey, monthData);
     
     // Update toggle button text
-    toggleBudgetEdit.textContent = isBudgetEditMode ? "💾 Save" : "✎ Edit";
+    toggleBudgetEdit.textContent = isBudgetEditMode ? "✓ Done" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isBudgetEditMode) {
@@ -1266,10 +1287,10 @@ function renderMonthlyBudget() {
         budgetEdit.hidden = false;
         
         // Render category fields in edit mode
-        renderCategoryFields(inflowFields, MONTHLY_BUDGET_CATEGORIES.inflow, monthData.inflow, autoLinkedFields);
-        renderCategoryFields(outflowFields, MONTHLY_BUDGET_CATEGORIES.outflow, monthData.outflow, autoLinkedFields);
-        renderCategoryFields(investingFields, MONTHLY_BUDGET_CATEGORIES.investing, monthData.investing, autoLinkedFields);
-        monthEndBalance.value = monthData.monthEndBalance || "";
+        renderCategoryFields(inflowFields, MONTHLY_BUDGET_CATEGORIES.inflow, monthData.inflow, autoLinkedFields, monthData.autoLinkedBreakdown);
+        renderCategoryFields(outflowFields, MONTHLY_BUDGET_CATEGORIES.outflow, monthData.outflow, autoLinkedFields, monthData.autoLinkedBreakdown);
+        renderCategoryFields(investingFields, MONTHLY_BUDGET_CATEGORIES.investing, monthData.investing, autoLinkedFields, monthData.autoLinkedBreakdown);
+        // monthEndBalance removed – primary account balance is used instead
         
         // Update edit mode totals
         const inflowTotal = Object.values(monthData.inflow).reduce((s, v) => s + Number(v || 0), 0);
@@ -1286,7 +1307,10 @@ function renderMonthlyBudget() {
         renderCategoryPreview(inflowPreview, MONTHLY_BUDGET_CATEGORIES.inflow, monthData.inflow);
         renderCategoryPreview(outflowPreview, MONTHLY_BUDGET_CATEGORIES.outflow, monthData.outflow);
         renderCategoryPreview(investingPreview, MONTHLY_BUDGET_CATEGORIES.investing, monthData.investing);
-        
+        const investingTotalVal = Object.values(monthData.investing || {}).reduce((s, v) => s + Number(v || 0), 0);
+        const investingSection = document.getElementById("investingPreviewSection");
+        if (investingSection) investingSection.hidden = (investingTotalVal === 0);
+
         // Calculate and display totals
         calculateAndDisplaySummary(monthData);
         
@@ -1340,18 +1364,16 @@ function getMonthlyDistribution(monthData) {
     const outflowTotal = Object.values(monthData.outflow || {}).reduce((s, v) => s + Number(v || 0), 0);
     const loanEMI = Number(monthData.outflow?.loanEMI || 0);
     const debtRepayment = Number(monthData.outflow?.debtRepayment || 0);
-    const insurance = Number(monthData.outflow?.insurance || 0);
-    const saving = Number(monthData.investing?.monthlySaving || 0) + Number(monthData.investing?.onetimeSaving || 0);
-    const investment = Math.max(0, investingTotal - saving);
+    const saving = Number(monthData.investing?.onetimeSaving || 0);
+    const investment = Number(monthData.investing?.onetimeInvestment || 0);
     const liability = loanEMI + debtRepayment;
-    const expenditure = Number(monthData.outflow?.rentMaintenance || 0)
-        + Number(monthData.outflow?.untrackedExpense || 0)
-        + Number(monthData.outflow?.utilityBills || 0)
+    const expenditure = Number(monthData.outflow?.utilityBills || 0)
         + Number(monthData.outflow?.familyExpenditure || 0)
         + Number(monthData.outflow?.miscExpenses || 0)
-        + Number(monthData.outflow?.creditCardDue || 0)
-        + Number(monthData.outflow?.creditCardOutstanding || 0);
-    const knownOutflow = liability + insurance + expenditure;
+        + Number(monthData.outflow?.creditCardOutstanding || 0)
+        + Number(monthData.investing?.ondemandExpenditure || 0)
+        + Number(monthData.investing?.ondemandLiability || 0);
+    const knownOutflow = liability + expenditure;
     const other = Math.max(0, outflowTotal - knownOutflow);
 
     return {
@@ -1360,7 +1382,6 @@ function getMonthlyDistribution(monthData) {
         saving,
         investment,
         liability,
-        insurance,
         other,
     };
 }
@@ -1369,7 +1390,7 @@ function renderFinancialGoal() {
     const entries = activeEntries();
     
     // Update toggle button text
-    toggleGoalEdit.textContent = isGoalEditMode ? "💾 Save" : "✎ Edit";
+    toggleGoalEdit.textContent = isGoalEditMode ? "✓ Done" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isGoalEditMode) {
@@ -1556,7 +1577,7 @@ function renderMonthlyFixedExpense() {
     }
 
     // Update toggle button text
-    toggleExpenseEdit.textContent = isExpenseEditMode ? "💾 Save" : "✎ Edit";
+    toggleExpenseEdit.textContent = isExpenseEditMode ? "✓ Done" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isExpenseEditMode) {
@@ -1706,6 +1727,7 @@ function renderExpensePreviewCards(entries) {
                 <div class="expense-card-title">${esc(expense.name)}</div>
                 <div class="expense-card-details">
                     <span class="expense-card-type ${typeClass}">${esc(expense.type || "Expenditure")}</span>
+                    <span style="color:var(--muted);font-size:0.75rem;">${esc(expense.frequency || "Monthly")}</span><br>
                     Bank: ${esc(expense.bankName || "—")}<br>
                     End Date: ${esc(expense.endDate || "—")}<br>
                     Duration: ${calcDurationFromToday(expense.endDate)}
@@ -1732,8 +1754,8 @@ function calculateExpenseSummary(entries) {
 
 function renderExpenseCharts(entries) {
     // Destroy existing charts
-    if (bankBarChart) bankBarChart.destroy();
-    if (typeBarChart) typeBarChart.destroy();
+    if (bankBarChart) { bankBarChart.destroy(); bankBarChart = null; }
+    if (typeBarChart) { typeBarChart.destroy(); typeBarChart = null; }
     
     if (entries.length === 0) return;
     
@@ -1781,11 +1803,11 @@ function renderExpenseCharts(entries) {
     
     // Prepare data for Type chart with color codes
     const typeData = {
-        "Insurance Premium": { amount: 0, color: "#ef4444" },
+        "Insurance": { amount: 0, color: "#a855f7" },
         "Investment": { amount: 0, color: "#3b82f6" },
         "Saving": { amount: 0, color: "#22c55e" },
         "Liability": { amount: 0, color: "#f97316" },
-        "Expenditure": { amount: 0, color: "#a855f7" }
+        "Expenditure": { amount: 0, color: "#f97316" }
     };
     
     entries.forEach(e => {
@@ -1841,7 +1863,7 @@ function renderInvestments() {
     }
 
     // Update toggle button text
-    toggleInvestmentEdit.textContent = isInvestmentEditMode ? "💾 Save" : "✎ Edit";
+    toggleInvestmentEdit.textContent = isInvestmentEditMode ? "✓ Done" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isInvestmentEditMode) {
@@ -2039,7 +2061,7 @@ function renderInsurances() {
     const entries = activeEntries();
     
     // Update toggle button text
-    toggleInsuranceEdit.textContent = isInsuranceEditMode ? "💾 Save" : "✎ Edit";
+    toggleInsuranceEdit.textContent = isInsuranceEditMode ? "✓ Done" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isInsuranceEditMode) {
@@ -2202,7 +2224,7 @@ function renderCards() {
     const entries = activeEntries();
     
     // Update toggle button text
-    toggleCardEdit.textContent = isCardEditMode ? "💾 Save" : "✎ Edit";
+    toggleCardEdit.textContent = isCardEditMode ? "✓ Done" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isCardEditMode) {
@@ -2287,8 +2309,9 @@ function renderCardDynamicFields() {
         const purposeInput   = document.getElementById("card_purpose");
         cardDynamicFields.querySelectorAll("[data-field-id]").forEach(div => {
             const fid = div.dataset.fieldId;
-            if (fid === "balance")     div.hidden = (accountVal    !== "Yes");
-            if (fid === "creditLimit") div.hidden = (creditCardVal !== "Yes");
+            if (fid === "balance")      div.hidden = (accountVal    !== "Yes");
+            if (fid === "creditLimit")  div.hidden = (creditCardVal !== "Yes");
+            if (fid === "purposeOther") div.hidden = (document.getElementById("card_purpose")?.value !== "Others");
         });
         if (purposeInput) {
             if (primaryVal === "Yes") {
@@ -2300,16 +2323,18 @@ function renderCardDynamicFields() {
         }
     }
     updateCardConditionals();
-    const acctSel  = document.getElementById("card_accountPresent");
-    const ccSel    = document.getElementById("card_creditCardPresent");
+    const acctSel    = document.getElementById("card_accountPresent");
+    const ccSel      = document.getElementById("card_creditCardPresent");
     const primarySel = document.getElementById("card_isPrimary");
-    if (acctSel)  acctSel.addEventListener("change",  updateCardConditionals);
-    if (ccSel)    ccSel.addEventListener("change",    updateCardConditionals);
+    const purposeSel = document.getElementById("card_purpose");
+    if (acctSel)    acctSel.addEventListener("change",    updateCardConditionals);
+    if (ccSel)      ccSel.addEventListener("change",      updateCardConditionals);
     if (primarySel) primarySel.addEventListener("change", updateCardConditionals);
+    if (purposeSel) purposeSel.addEventListener("change", updateCardConditionals);
 }
 
 function renderCardTable(entries) {
-    const fields = TAB_FIELDS.cards || TAB_FIELDS.monthlyBudget;
+    const fields = (TAB_FIELDS.cards || TAB_FIELDS.monthlyBudget).filter(f => !f.noTable);
     
     cardTableHead.innerHTML = "";
     const tr = document.createElement("tr");
@@ -2345,15 +2370,28 @@ function renderCardTable(entries) {
     });
 }
 
+function sortCardEntries(entries) {
+    const purposeOrder = { "Expenditure": 1, "Saving": 2 };
+    return [...entries].sort((a, b) => {
+        if (a.isPrimary === "Yes" && b.isPrimary !== "Yes") return -1;
+        if (b.isPrimary === "Yes" && a.isPrimary !== "Yes") return 1;
+        const aOrder = purposeOrder[a.purpose] || 3;
+        const bOrder = purposeOrder[b.purpose] || 3;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return Number(b.balance || 0) - Number(a.balance || 0);
+    });
+}
+
 function renderCardPreviewCards(entries) {
+    const sorted = sortCardEntries(entries);
     cardsList.innerHTML = "";
     
-    if (entries.length === 0) {
-        cardsList.innerHTML = `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No cards yet. Click Edit to add cards.</div>`;
+    if (sorted.length === 0) {
+        cardsList.innerHTML = `<div class="empty-state visible" style="background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">No accounts yet. Click Edit to add accounts.</div>`;
         return;
     }
     
-    entries.forEach(card => {
+    sorted.forEach(card => {
         const item = document.createElement("div");
         item.className = "card-item" + (card.isPrimary === "Yes" ? " card-item-primary" : "");
 
@@ -2372,7 +2410,7 @@ function renderCardPreviewCards(entries) {
                     <span class="card-item-badge ${creditCardClass}">Credit Card: ${esc(card.creditCardPresent || "No")}</span>
                     <span class="card-item-badge ${kycClass}">KYC: ${esc(card.kycUpdated || "No")}</span>
                     <span class="card-item-badge ${nomineeClass}">Nominee: ${esc(card.nomineeAdded || "No")}</span><br>
-                    Purpose: ${esc(card.purpose || "—")}
+                    Purpose: ${esc(card.purpose === "Others" && card.purposeOther ? card.purposeOther : (card.purpose || "—"))}
                 </div>
             </div>
             <div class="card-item-amounts">
@@ -2450,7 +2488,7 @@ function renderNetWorth() {
     const calculatedAge = calculateAgeFromDob(appData.dateOfBirth);
 
     // Update toggle button text
-    toggleNetWorthEdit.textContent = isNetWorthEditMode ? "💾 Save" : "✎ Edit";
+    toggleNetWorthEdit.textContent = isNetWorthEditMode ? "✓ Done" : "✎ Edit";
 
     // Show/hide preview/edit modes
     if (isNetWorthEditMode) {
@@ -2743,7 +2781,7 @@ function getAnnualIncomeFromBudget(fyStartYear = getFinancialYearStartYear(new D
 function getAutoTaxDeductions() {
     const auto = [];
     const expenses = (appData.tabData || {}).monthlyFixedExpense || [];
-    expenses.filter(e => e.type === 'Insurance Premium').forEach(exp => {
+    expenses.filter(e => e.type === 'Insurance').forEach(exp => {
         const annual = Number(exp.amount || 0) * 12;
         if (annual > 0) auto.push({ id: 'atax_ins_' + exp.id, name: exp.name || 'Insurance', amount: annual, section: '80D', details: formatMoney(exp.amount) + '/mo × 12', auto: true });
     });
@@ -2781,7 +2819,7 @@ function renderTaxPlan() {
     populateFinancialYearOptions();
     
     // Update toggle button text
-    toggleTaxPlanEdit.textContent = isTaxPlanEditMode ? "💾 Save" : "✎ Edit";
+    toggleTaxPlanEdit.textContent = isTaxPlanEditMode ? "✓ Done" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isTaxPlanEditMode) {
@@ -3007,7 +3045,7 @@ function renderGifts() {
     const entries = activeEntries();
     
     // Update toggle button text
-    toggleGiftsEdit.textContent = isGiftsEditMode ? "💾 Save" : "✎ Edit";
+    toggleGiftsEdit.textContent = isGiftsEditMode ? "✓ Done" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isGiftsEditMode) {
@@ -3158,7 +3196,7 @@ function renderEmergencyFund() {
     const entries = activeEntries();
     
     // Update toggle button text
-    toggleEmergencyFundEdit.textContent = isEmergencyFundEditMode ? "💾 Save" : "✎ Edit";
+    toggleEmergencyFundEdit.textContent = isEmergencyFundEditMode ? "✓ Done" : "✎ Edit";
     
     // Show/hide preview/edit modes
     if (isEmergencyFundEditMode) {
@@ -3298,8 +3336,8 @@ function calculateAnnualSummary() {
         currentMonthDisplay.textContent = getFinancialYearLabel(fyStartYear);
         
         if (!monthKeys.some(k => monthlyBudgetData[k])) {
-            [annualTotalIncome, annualTotalExpenditure, annualTotalSavings, annualTotalInvestment, annualTotalLiability, annualTotalInsurance, annualTotalOther,
-             avgMonthlyIncome, avgMonthlyExpenditure, avgMonthlySavings, avgMonthlyInvestment, avgMonthlyLiability, avgMonthlyInsurance, avgMonthlyOther]
+            [annualTotalIncome, annualTotalExpenditure, annualTotalSavings, annualTotalInvestment, annualTotalLiability, annualTotalOther,
+             avgMonthlyIncome, avgMonthlyExpenditure, avgMonthlySavings, avgMonthlyInvestment, avgMonthlyLiability, avgMonthlyOther]
                 .forEach(el => { if (el) el.textContent = "₹0"; });
             annualMonthsList.innerHTML = "<p class='empty-state visible'>No monthly data available yet. Add data in Monthly view first.</p>";
             return;
@@ -3311,7 +3349,6 @@ function calculateAnnualSummary() {
             saving: 0,
             investment: 0,
             liability: 0,
-            insurance: 0,
             other: 0,
         };
         const monthDataList = [];
@@ -3324,7 +3361,7 @@ function calculateAnnualSummary() {
         });
         
         const monthCount = 12;
-        const netSavings = totals.income - totals.expenditure - totals.investment - totals.liability - totals.insurance - totals.other;
+        const netSavings = totals.income - totals.expenditure - totals.investment - totals.liability - totals.other;
         totals.saving = Math.max(0, totals.saving || netSavings);
         
         annualTotalIncome.textContent = formatMoney(totals.income);
@@ -3332,14 +3369,12 @@ function calculateAnnualSummary() {
         annualTotalSavings.textContent = formatMoney(totals.saving);
         annualTotalInvestment.textContent = formatMoney(totals.investment);
         annualTotalLiability.textContent = formatMoney(totals.liability);
-        annualTotalInsurance.textContent = formatMoney(totals.insurance);
         annualTotalOther.textContent = formatMoney(totals.other);
         avgMonthlyIncome.textContent = formatMoney(totals.income / monthCount);
         avgMonthlyExpenditure.textContent = formatMoney(totals.expenditure / monthCount);
         avgMonthlySavings.textContent = formatMoney(totals.saving / monthCount);
         avgMonthlyInvestment.textContent = formatMoney(totals.investment / monthCount);
         avgMonthlyLiability.textContent = formatMoney(totals.liability / monthCount);
-        avgMonthlyInsurance.textContent = formatMoney(totals.insurance / monthCount);
         avgMonthlyOther.textContent = formatMoney(totals.other / monthCount);
 
         // Render annual pie chart
@@ -3361,7 +3396,6 @@ function calculateAnnualSummary() {
                     <span class="annual-month-detail">Saving: <strong>${formatMoney(month.saving)}</strong></span>
                     <span class="annual-month-detail">Investment: <strong>${formatMoney(month.investment)}</strong></span>
                     <span class="annual-month-detail">Liability: <strong>${formatMoney(month.liability)}</strong></span>
-                    <span class="annual-month-detail">Insurance: <strong>${formatMoney(month.insurance)}</strong></span>
                     <span class="annual-month-detail">Other: <strong>${formatMoney(month.other)}</strong></span>
                 </div>
             `;
@@ -3380,14 +3414,14 @@ function calculateAnnualSummary() {
 
 function renderAnnualPieChart(totals) {
     if (annualPieChart) annualPieChart.destroy();
-    const values = [totals.investment, totals.liability, totals.saving, totals.expenditure, totals.insurance, totals.other];
+    const values = [totals.investment, totals.liability, totals.saving, totals.expenditure, totals.other];
     if (values.every(v => Number(v || 0) === 0)) return;
 
     const ctx = annualPieChartCanvas.getContext("2d");
     annualPieChart = new Chart(ctx, {
         type: "pie",
         data: {
-            labels: ["Investment", "Liability", "Saving", "Expenditure", "Insurance", "Other"],
+            labels: ["Investment", "Liability", "Saving", "Expenditure", "Other"],
             datasets: [{
                 data: values,
                 backgroundColor: ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#eab308", "#a855f7"],
@@ -3430,16 +3464,31 @@ function renderAnnualPieChart(totals) {
     });
 }
 
-function renderCategoryFields(container, fields, data, autoLinkedFields = {}) {
+function renderCategoryFields(container, fields, data, autoLinkedFields = {}, autoLinkedBreakdown = {}) {
     container.innerHTML = "";
     const categoryName = container.id.replace(/Fields$/, "");
     fields.forEach(field => {
         const div = document.createElement("div");
         div.className = "field";
         const isAutoLinked = Boolean(autoLinkedFields[`${categoryName}.${field.id}`]);
+        const fieldKey = `${categoryName}.${field.id}`;
+        const breakdown = (autoLinkedBreakdown && autoLinkedBreakdown[fieldKey]) || [];
         
         const label = document.createElement("label");
-        label.textContent = isAutoLinked ? `${field.label} (auto)` : field.label;
+        label.textContent = field.label;
+        if (isAutoLinked) {
+            const autoBadge = document.createElement("span");
+            autoBadge.className = "auto-badge";
+            autoBadge.textContent = "auto-calculated";
+            if (breakdown && breakdown.length > 0) {
+                const tooltipText = breakdown.map(b => `${b.name}: ${formatMoney(b.amount)} (${b.source})`).join("\n");
+                autoBadge.title = tooltipText;
+                autoBadge.setAttribute("aria-label", tooltipText);
+            } else {
+                autoBadge.title = "No source items found - add Liabilities (type=Liability, freq=Monthly) to auto-calculate";
+            }
+            label.appendChild(autoBadge);
+        }
         div.appendChild(label);
         
         const input = document.createElement("input");
@@ -3463,60 +3512,75 @@ function renderCategoryFields(container, fields, data, autoLinkedFields = {}) {
 
 function calculateAndDisplaySummary(monthData) {
     // Calculate totals
-    const inflowTotal = Object.values(monthData.inflow).reduce((s, v) => s + Number(v || 0), 0);
-    const outflowTotal = Object.values(monthData.outflow).reduce((s, v) => s + Number(v || 0), 0);
-    const investingTotal = Object.values(monthData.investing).reduce((s, v) => s + Number(v || 0), 0);
-    
-    // Update display
+    const inflowTotal = Object.values(monthData.inflow || {}).reduce((s, v) => s + Number(v || 0), 0);
+    const outflowTotal = Object.values(monthData.outflow || {}).reduce((s, v) => s + Number(v || 0), 0);
+    const investingTotal = Object.values(monthData.investing || {}).reduce((s, v) => s + Number(v || 0), 0);
+
     document.getElementById("inflowTotal").textContent = formatMoney(inflowTotal);
     document.getElementById("outflowTotal").textContent = formatMoney(outflowTotal);
     document.getElementById("investingTotal").textContent = formatMoney(investingTotal);
-    
-    // Summary calculations
-    const totalIncome = inflowTotal;
-    const totalExpenses = outflowTotal;
-    const cashFlow = totalIncome - totalExpenses;
-    
-    document.getElementById("totalIncome").textContent = formatMoney(totalIncome);
-    document.getElementById("totalExpenses").textContent = formatMoney(totalExpenses);
+
+    const cashFlow = inflowTotal - outflowTotal - investingTotal;
+    document.getElementById("totalIncome").textContent = formatMoney(inflowTotal);
+    document.getElementById("totalExpenses").textContent = formatMoney(outflowTotal + investingTotal);
     document.getElementById("cashFlow").textContent = formatMoney(cashFlow);
-    
-    // Initial Balance = Month-End Balance of previous month
+
+    // Primary account current balance (replaces manual monthEndBalance)
+    const primaryAccount = (appData.tabData?.cards || []).find(c => c.isPrimary === "Yes");
+    const primaryBalance = Number(primaryAccount?.balance || 0);
+    document.getElementById("initialBalance").textContent = formatMoney(primaryBalance);
+
+    // Previous month credit card outstanding
     const prevMonth = new Date(currentMonth);
     prevMonth.setMonth(prevMonth.getMonth() - 1);
     const prevMonthKey = getMonthKey(prevMonth);
-    const prevMonthData = appData.monthlyBudgetData[prevMonthKey];
-    const initialBalance = prevMonthData ? Number(prevMonthData.monthEndBalance || 0) : 0;
-    const carriedCreditOutstanding = prevMonthData ? Number(prevMonthData.outflow?.creditCardOutstanding || 0) : 0;
-    
-    document.getElementById("initialBalance").textContent = formatMoney(initialBalance);
-    
-    // Budget status - include initial balance in amount to spend
-    const currentCreditOutstanding = Number(monthData.outflow.creditCardOutstanding || 0);
-    const totalAvailable = initialBalance + cashFlow - currentCreditOutstanding;
+    const prevMonthData = (appData.monthlyBudgetData || {})[prevMonthKey];
+    const prevCreditCardOutstanding = prevMonthData ? Number(prevMonthData.outflow?.creditCardOutstanding || 0) : 0;
+
+    // Fixed liabilities from the Liabilities tab (used for transfer section only)
+    const fixedLiabilities = ((appData.tabData || {}).monthlyFixedExpense || [])
+        .reduce((s, e) => s + Number(e.amount || 0), 0);
+
+    const primaryIncome = Number(monthData.inflow?.primaryIncome || 0);
+
+    // Balance to spend = starting balance + ALL income - ALL outflows - ALL on-demand outflows
+    // (prevCreditCardOutstanding is already included in outflowTotal via auto-carry)
+    const balanceToSpend = primaryBalance + inflowTotal - outflowTotal - investingTotal;
+    const balanceToSpendEl = document.getElementById("balanceToSpend");
+    if (balanceToSpendEl) balanceToSpendEl.textContent = formatMoney(balanceToSpend);
+
+    // Amount available to spend = net cash flow after all incomes and outflows
+    const amountAvailableToSpend = inflowTotal - outflowTotal - investingTotal;
+    const availableEl = document.getElementById("amountAvailableToSpend");
+    const availableLabelEl = document.getElementById("amountAvailableLabel");
+    if (availableEl) {
+        availableEl.textContent = formatMoney(Math.abs(amountAvailableToSpend));
+        availableEl.style.color = amountAvailableToSpend >= 0 ? "#22c55e" : "#ef4444";
+    }
+    if (availableLabelEl) {
+        availableLabelEl.textContent = amountAvailableToSpend >= 0 ? "Amount Available to Spend" : "Amount Overspent";
+    }
+
+    // Budget status banner — based on net cash flow across all incomes & outflows
     budgetStatus.className = "budget-status";
-    if (totalAvailable > 0) {
+    if (amountAvailableToSpend > 0) {
         budgetStatus.classList.add("positive");
-        budgetStatus.textContent = `Budget Positive: +${formatMoney(totalAvailable)} to spend`;
-    } else if (totalAvailable < 0) {
+        budgetStatus.textContent = `Budget Positive: +${formatMoney(amountAvailableToSpend)} surplus`;
+    } else if (amountAvailableToSpend < 0) {
         budgetStatus.classList.add("negative");
-        budgetStatus.textContent = `Budget Negative: ${formatMoney(Math.abs(totalAvailable))} overspent including unpaid credit card outstanding`;
+        budgetStatus.textContent = `Budget Negative: ${formatMoney(Math.abs(amountAvailableToSpend))} overspent`;
     } else {
         budgetStatus.classList.add("neutral");
-        budgetStatus.textContent = `Budget Neutral: ₹0 remaining`;
+        budgetStatus.textContent = `Budget Balanced: ₹0 remaining`;
     }
-    if (carriedCreditOutstanding > 0) {
-        budgetStatus.textContent += ` • Previous unpaid card outstanding: ${formatMoney(carriedCreditOutstanding)}`;
+    if (prevCreditCardOutstanding > 0) {
+        budgetStatus.textContent += ` • Prev month card outstanding: ${formatMoney(prevCreditCardOutstanding)}`;
     }
 
     // Fixed Expense Transfer section
-    const primaryIncome = Number(monthData.inflow.primaryIncome || 0);
-    const fixedExpenses = ((appData.tabData || {}).monthlyFixedExpense || [])
-        .reduce((s, e) => s + Number(e.amount || 0), 0);
-    const transferAmt = primaryIncome - fixedExpenses;
-
+    const transferAmt = primaryIncome - fixedLiabilities;
     document.getElementById("transferPrimaryIncome").textContent = formatMoney(primaryIncome);
-    document.getElementById("transferFixedExpenses").textContent = formatMoney(fixedExpenses);
+    document.getElementById("transferFixedExpenses").textContent = formatMoney(fixedLiabilities);
     const transferEl = document.getElementById("transferAmount");
     transferEl.textContent = formatMoney(Math.abs(transferAmt));
     transferEl.style.color = transferAmt >= 0 ? "#22c55e" : "#ef4444";
@@ -3535,14 +3599,13 @@ function renderPieChart(monthData) {
     const dist = getMonthlyDistribution(monthData);
     
     const data = {
-        labels: ["Investment", "Liability", "Saving", "Expenditure", "Insurance", "Other"],
+        labels: ["Investment", "Liability", "Saving", "Expenditure", "Other"],
         datasets: [{
             data: [
                 dist.investment,
                 dist.liability,
                 dist.saving,
                 dist.expenditure,
-                dist.insurance,
                 dist.other
             ],
             backgroundColor: [
@@ -3550,7 +3613,6 @@ function renderPieChart(monthData) {
                 "#ef4444", // Liability - red
                 "#22c55e", // Saving - green
                 "#f97316", // Expenditure - orange
-                "#eab308", // Insurance - yellow
                 "#a855f7"  // Other - purple
             ],
             borderWidth: 0
@@ -3741,7 +3803,11 @@ function deleteEntry(id) {
                 "Are you sure you want to delete this primary account?"
             );
             if (!confirmed) return;
+        } else {
+            if (!confirm("Delete this account? This cannot be undone.")) return;
         }
+    } else {
+        if (!confirm("Delete this entry? This cannot be undone.")) return;
     }
     setActiveEntries(activeEntries().filter(i => i.id !== id));
     Object.keys(editingEntryIds).forEach(tabId => {
@@ -3809,7 +3875,10 @@ function resetAllData() {
         tabData: {},
         monthlyBudgetData: {},
         customTabs: [],
-        userName: appData.userName || ""
+        userName: appData.userName || "",
+        fixedMonthlyIncome: 0,
+        dateOfBirth: "",
+        currentAge: 0
     };
     
     // Save the cleared data
@@ -3858,23 +3927,17 @@ toggleBudgetEdit.addEventListener("click", () => {
         prevMonthBtn.textContent = "← Previous";
         nextMonthBtn.textContent = "Next →";
     }
-    isBudgetEditMode = !isBudgetEditMode;
-    cancelBudgetEdit.hidden = !isBudgetEditMode;
-    toggleBudgetEdit.textContent = isBudgetEditMode ? "💾 Save" : "✎ Edit";
     if (!isBudgetEditMode) {
+        // Entering edit mode – snapshot current data so cancel can revert
+        const monthKey = getMonthKey(currentMonth);
+        const current = (appData.monthlyBudgetData || {})[monthKey];
+        budgetEditSnapshot = { monthKey, data: current ? JSON.parse(JSON.stringify(current)) : null };
+    } else {
+        // Leaving edit mode (Save)
         scheduleSave();
     }
-    renderMonthlyBudget();
-});
-cancelBudgetEdit.addEventListener("click", () => {
-    isBudgetEditMode = false;
-    cancelBudgetEdit.hidden = true;
-    renderMonthlyBudget();
-});
-
-saveMonthDataBtn.addEventListener("click", () => {
-    isBudgetEditMode = false;
-    scheduleSave();
+    isBudgetEditMode = !isBudgetEditMode;
+    toggleBudgetEdit.textContent = isBudgetEditMode ? "✓ Done" : "✎ Edit";
     renderMonthlyBudget();
 });
 
@@ -3914,13 +3977,6 @@ saveMonthDataBtn.addEventListener("click", () => {
 // Financial Goal event bindings
 toggleGoalEdit.addEventListener("click", () => {
     isGoalEditMode = !isGoalEditMode;
-    cancelGoalEdit.hidden = !isGoalEditMode;
-    renderFinancialGoal();
-});
-cancelGoalEdit.addEventListener("click", () => {
-    isGoalEditMode = false;
-    clearEditing("financialGoal");
-    cancelGoalEdit.hidden = true;
     renderFinancialGoal();
 });
 
@@ -3937,10 +3993,16 @@ toggleExpenseEdit.addEventListener("click", () => {
         renderMonthlyFixedExpense();
         monthlyIncomeInput.value = appData.fixedMonthlyIncome || "";
     } else {
-        appData.fixedMonthlyIncome = Number(monthlyIncomeInput.value || 0);
         scheduleSave();
         renderMonthlyFixedExpense();
     }
+});
+
+saveMonthlyIncome.addEventListener("click", () => {
+    appData.fixedMonthlyIncome = Number(monthlyIncomeInput.value || 0);
+    scheduleSave();
+    displayMonthlyIncome.textContent = formatMoney(appData.fixedMonthlyIncome);
+    renderMonthlyFixedExpense();
 });
 cancelExpenseEdit.addEventListener("click", () => {
     isExpenseEditMode = false;
@@ -3957,13 +4019,6 @@ expenseTableBody.addEventListener("click", e => {
 // Investments event bindings
 toggleInvestmentEdit.addEventListener("click", () => {
     isInvestmentEditMode = !isInvestmentEditMode;
-    cancelInvestmentEdit.hidden = !isInvestmentEditMode;
-    renderInvestments();
-});
-cancelInvestmentEdit.addEventListener("click", () => {
-    isInvestmentEditMode = false;
-    clearEditing("investments");
-    cancelInvestmentEdit.hidden = true;
     renderInvestments();
 });
 
@@ -3975,13 +4030,6 @@ investmentTableBody.addEventListener("click", e => {
 // Insurances event bindings
 toggleInsuranceEdit.addEventListener("click", () => {
     isInsuranceEditMode = !isInsuranceEditMode;
-    cancelInsuranceEdit.hidden = !isInsuranceEditMode;
-    renderInsurances();
-});
-cancelInsuranceEdit.addEventListener("click", () => {
-    isInsuranceEditMode = false;
-    clearEditing("insurances");
-    cancelInsuranceEdit.hidden = true;
     renderInsurances();
 });
 
@@ -3993,13 +4041,6 @@ insuranceTableBody.addEventListener("click", e => {
 // Cards event bindings
 toggleCardEdit.addEventListener("click", () => {
     isCardEditMode = !isCardEditMode;
-    cancelCardEdit.hidden = !isCardEditMode;
-    renderCards();
-});
-cancelCardEdit.addEventListener("click", () => {
-    isCardEditMode = false;
-    clearEditing("cards");
-    cancelCardEdit.hidden = true;
     renderCards();
 });
 
@@ -4011,13 +4052,6 @@ cardTableBody.addEventListener("click", e => {
 // Net Worth event bindings
 toggleNetWorthEdit.addEventListener("click", () => {
     isNetWorthEditMode = !isNetWorthEditMode;
-    cancelNetWorthEdit.hidden = !isNetWorthEditMode;
-    renderNetWorth();
-});
-cancelNetWorthEdit.addEventListener("click", () => {
-    isNetWorthEditMode = false;
-    clearEditing("netWorth");
-    cancelNetWorthEdit.hidden = true;
     renderNetWorth();
 });
 
@@ -4029,13 +4063,6 @@ netWorthTableBody.addEventListener("click", e => {
 // Tax Plan event bindings
 toggleTaxPlanEdit.addEventListener("click", () => {
     isTaxPlanEditMode = !isTaxPlanEditMode;
-    cancelTaxPlanEdit.hidden = !isTaxPlanEditMode;
-    renderTaxPlan();
-});
-cancelTaxPlanEdit.addEventListener("click", () => {
-    isTaxPlanEditMode = false;
-    clearEditing("taxPlan");
-    cancelTaxPlanEdit.hidden = true;
     renderTaxPlan();
 });
 
@@ -4056,13 +4083,6 @@ taxPlanTableBody.addEventListener("click", e => {
 // Gifts event bindings
 toggleGiftsEdit.addEventListener("click", () => {
     isGiftsEditMode = !isGiftsEditMode;
-    cancelGiftsEdit.hidden = !isGiftsEditMode;
-    renderGifts();
-});
-cancelGiftsEdit.addEventListener("click", () => {
-    isGiftsEditMode = false;
-    clearEditing("gifts");
-    cancelGiftsEdit.hidden = true;
     renderGifts();
 });
 
@@ -4074,12 +4094,6 @@ giftsTableBody.addEventListener("click", e => {
 // Emergency Fund event bindings
 toggleEmergencyFundEdit.addEventListener("click", () => {
     isEmergencyFundEditMode = !isEmergencyFundEditMode;
-    cancelEmergencyFundEdit.hidden = !isEmergencyFundEditMode;
-    renderEmergencyFund();
-});
-cancelEmergencyFundEdit.addEventListener("click", () => {
-    isEmergencyFundEditMode = false;
-    cancelEmergencyFundEdit.hidden = true;
     renderEmergencyFund();
 });
 
@@ -4089,11 +4103,10 @@ emergencyFundForm.addEventListener("submit", addEmergencyFundEntry);
 inflowFields.addEventListener("input", handleCategoryFieldChange);
 outflowFields.addEventListener("input", handleCategoryFieldChange);
 investingFields.addEventListener("input", handleCategoryFieldChange);
-monthEndBalance.addEventListener("input", handleCategoryFieldChange);
 
 function handleCategoryFieldChange(e) {
     if (e.target.disabled) return;
-    if (!e.target.dataset.fieldId && e.target.id !== "monthEndBalance") return;
+    if (!e.target.dataset.fieldId) return;
     
     const monthKey = getMonthKey(currentMonth);
     if (!appData.monthlyBudgetData) appData.monthlyBudgetData = {};
@@ -4108,19 +4121,14 @@ function handleCategoryFieldChange(e) {
     
     const monthData = appData.monthlyBudgetData[monthKey];
     
-    if (e.target.id === "monthEndBalance") {
-        monthData.monthEndBalance = Number(e.target.value) || 0;
-        scheduleSave();
-    } else {
-        const category = e.target.dataset.category
-            ? e.target.dataset.category.replace(/Fields$/, "")
-            : e.target.parentElement.parentElement.id;
-        const fieldId = e.target.dataset.fieldId;
-        if (!monthData[category]) {
-            monthData[category] = {};
-        }
-        monthData[category][fieldId] = Number(e.target.value) || 0;
+    const category = e.target.dataset.category
+        ? e.target.dataset.category.replace(/Fields$/, "")
+        : e.target.parentElement.parentElement.id;
+    const fieldId = e.target.dataset.fieldId;
+    if (!monthData[category]) {
+        monthData[category] = {};
     }
+    monthData[category][fieldId] = Number(e.target.value) || 0;
     
     // Update edit mode totals
     const inflowTotal = Object.values(monthData.inflow).reduce((s, v) => s + Number(v || 0), 0);
@@ -4131,7 +4139,7 @@ function handleCategoryFieldChange(e) {
     document.getElementById("investingTotalEdit").textContent = formatMoney(investingTotal);
     
     calculateAndDisplaySummary(monthData);
-    renderPieChart(monthData);
+    if (!isBudgetEditMode) renderPieChart(monthData);
     scheduleSave();
 }
 
@@ -4182,6 +4190,10 @@ function addCardEntry(event) {
     if (entry.isPrimary === "Yes" && entries.some(c => c.isPrimary === "Yes" && c.id !== editingId)) {
         alert("A primary account already exists.\nPlease edit the existing primary account or choose \"No\" for this account.");
         renderCardDynamicFields();
+        return;
+    }
+    if (entry.purpose === "Saving" && entries.some(c => c.purpose === "Saving" && c.id !== editingId)) {
+        alert("A Saving account already exists.\nOnly one Saving account is allowed.");
         return;
     }
 

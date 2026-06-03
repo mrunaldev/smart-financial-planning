@@ -166,7 +166,8 @@ The test suite is a standalone HTML file with no dependencies or build step.
 | Category | Tests |
 |----------|-------|
 | `DEFAULT_TABS` structure | 10 tabs, correct IDs, no removed tabs (`misc`, `oneTimeBudget`) |
-| `TAB_FIELDS` definitions | Field counts and required field presence |
+| `TAB_FIELDS` definitions | Field counts and required field presence including Frequency in Liabilities |
+| `MONTHLY_BUDGET_CATEGORIES` | Inflow, Outflow, On-Demand Outflow field definitions |
 | `formatMoney()` | Indian number format, null/undefined safety, negative values |
 | `esc()` | HTML entity escaping, XSS prevention |
 | `getMonthKey()` | Month key format `YYYY-MM`, zero-padding |
@@ -174,10 +175,11 @@ The test suite is a standalone HTML file with no dependencies or build step.
 | Annual summary totals | Income, expenses, investing, savings arithmetic |
 | Tax calculation | New regime slabs, 4% cess inclusion |
 | Custom tab ID generation | Slug format, special character stripping |
+| Card sort order | Primary → Saving → others by balance descending |
 
 ### Manual test checklist
 
-Open `test.html` in a browser — the **Manual Testing Checklist** section lists every critical user flow to verify by hand, including auth, cross-device sync, export, and reset.
+Open `test.html` in a browser — the **Manual Testing Checklist** section lists every critical user flow to verify by hand, including auth, cross-device sync, export, reset, Liabilities frequency field, Monthly Budget on-demand fields, Accounts purpose validation, and budget edit cancel.
 
 ---
 
@@ -211,26 +213,27 @@ Responsive breakpoints in order:
 All logic is in `assets/js/app.js`. Key sections:
 
 ```
-lines 1–94      TAB_FIELDS and DEFAULT_TABS config
-lines 96–125    MONTHLY_BUDGET_CATEGORIES config
-lines 127–304   DOM references
-lines 306–329   App state variables
-lines 336–449   Firebase Auth + Firestore listeners
+lines 1–94      TAB_FIELDS and DEFAULT_TABS config (includes Frequency in Liabilities, purposeOther in Cards)
+lines 96–125    MONTHLY_BUDGET_CATEGORIES config (On-Demand Outflow fields)
+lines 127–304   DOM references (removed monthEndBalance, added balanceToSpend/amountAvailableToSpend)
+lines 306–329   App state variables (added budgetEditSnapshot)
+lines 336–449   Firebase Auth + Firestore listeners (currentAge now restored)
 lines 451–494   Utility: formatMoney, esc, activeEntries, setActiveEntries
 lines 496–651   render() dispatch and renderTabs()
-lines 653–714   renderMonthlyBudget()
+lines 653–714   renderMonthlyBudget() (budget edit snapshot/restore, on-demand section hidden)
 lines 740–895   renderFinancialGoal()
-lines 897–1141  renderMonthlyFixedExpense() + charts
+lines 897–1141  renderMonthlyFixedExpense() + charts (Frequency in preview)
 lines 1142–1328 renderInvestments() + chart
 lines 1330–1474 renderInsurances()
-lines 1476–1622 renderCards()
+lines 1476–1622 renderCards() (sortCardEntries, purposeOther conditional)
 lines 1624–1886 renderNetWorth() + projection chart
 lines 1888–2119 renderTaxPlan() + tax breakdown
 lines 2120–2262 renderGifts()
 lines 2264–2390 renderEmergencyFund() + calculateEmergencyFundSummary()
 lines 2392–2470 calculateAnnualSummary()
-lines 2656–2820 exportToExcel(), resetAllData()
-lines 2828+     All event listeners
+lines 2472–2550 buildMonthlyAutoValues() (Frequency filter, no CC carryover)
+lines 2656–2820 exportToExcel(), resetAllData() (includes all fields)
+lines 2828+     All event listeners (delete confirmation for all entries)
 ```
 
 ### Adding a new tab
@@ -405,7 +408,9 @@ Run through this before considering any deployment complete.
 - [ ] Register a new user — account created, redirected to app
 - [ ] Sign out and sign back in — data persists
 - [ ] All 10 tabs render without errors
-- [ ] Monthly Budget: add data, switch months, toggle Annual view
+- [ ] Monthly Budget: add data, switch months, toggle Annual view, test Cancel edit, verify on-demand section hides when empty
+- [ ] Liabilities: add Monthly/Quarterly items, verify only Monthly auto-populates budget, verify Frequency shows in preview
+- [ ] Accounts: test Primary account enforcement, test Saving account limit, verify sort order (Primary → Saving → balance desc), test purposeOther field
 - [ ] Emergency Fund: shows correct status badge
 - [ ] Export Excel downloads `.xlsx` file
 - [ ] Reset All Data clears everything after typing `DELETE`
@@ -443,7 +448,7 @@ Run through this before considering any deployment complete.
 
 ### Test suite shows FAIL
 **Symptom:** One or more tests in `test.html` fail  
-**Fix:** The test file contains stub implementations that mirror `app.js` logic. If you changed `DEFAULT_TABS`, `TAB_FIELDS`, `formatMoney`, or the tax/emergency fund calculation, update the corresponding stubs and expected values in `test.html`.
+**Fix:** The test file contains stub implementations that mirror `app.js` logic. If you changed `DEFAULT_TABS`, `TAB_FIELDS`, `MONTHLY_BUDGET_CATEGORIES`, `formatMoney`, the card sort function, or the tax/emergency fund calculation, update the corresponding stubs and expected values in `test.html`.
 
 ### Chart not rendering
 **Symptom:** Canvas area is empty, console shows `Chart is not defined`  

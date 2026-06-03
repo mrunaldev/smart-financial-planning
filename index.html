@@ -8,9 +8,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SmartFin">
-<link rel="icon" type="image/png" href="assets/logo_light.png" media="(prefers-color-scheme: light)">
-<link rel="icon" type="image/png" href="assets/logo_dark.png"  media="(prefers-color-scheme: dark)">
-<link rel="apple-touch-icon" href="assets/logo.png">
+<link rel="icon" type="image/png" href="assets/logo_dark.png" id="favicon-icon">
+<link rel="icon" type="image/png" href="assets/logo_dark.png" id="favicon-icon-32" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/logo_dark.png" id="apple-touch-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
@@ -103,7 +103,6 @@
                 <button type="button" id="nextMonth" class="btn-nav">Next →</button>
                 <button type="button" id="toggleBudgetView" class="btn-nav">📊 Annual</button>
                 <button type="button" id="toggleBudgetEdit" class="btn-nav btn-icon">✎ Edit</button>
-                <button type="button" id="cancelBudgetEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Annual Summary Section (hidden by default) -->
@@ -130,10 +129,6 @@
                         <strong id="annualTotalLiability">₹0</strong>
                     </div>
                     <div class="annual-summary-item">
-                        <span class="annual-summary-label">Total Insurance</span>
-                        <strong id="annualTotalInsurance">₹0</strong>
-                    </div>
-                    <div class="annual-summary-item">
                         <span class="annual-summary-label">Total Other</span>
                         <strong id="annualTotalOther">₹0</strong>
                     </div>
@@ -156,10 +151,6 @@
                     <div class="annual-summary-item">
                         <span class="annual-summary-label">Avg Monthly Liability</span>
                         <strong id="avgMonthlyLiability">₹0</strong>
-                    </div>
-                    <div class="annual-summary-item">
-                        <span class="annual-summary-label">Avg Monthly Insurance</span>
-                        <strong id="avgMonthlyInsurance">₹0</strong>
                     </div>
                     <div class="annual-summary-item">
                         <span class="annual-summary-label">Avg Monthly Other</span>
@@ -201,8 +192,16 @@
                         <strong id="cashFlow">₹0</strong>
                     </div>
                     <div class="summary-item">
-                        <span class="summary-label">Initial Balance</span>
+                        <span class="summary-label">Primary Account Balance</span>
                         <strong id="initialBalance">₹0</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Balance to Spend This Month</span>
+                        <strong id="balanceToSpend">₹0</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span id="amountAvailableLabel" class="summary-label">Amount Available to Spend</span>
+                        <strong id="amountAvailableToSpend" style="color:#22c55e">₹0</strong>
                     </div>
                 </div>
 
@@ -214,13 +213,13 @@
                     </div>
 
                     <div class="category-preview-section">
-                        <h3>Outflow</h3>
+                        <h3>Cash Outflow</h3>
                         <div id="outflowPreview" class="category-preview-list"></div>
                         <div class="category-total">Total: <strong id="outflowTotal">₹0</strong></div>
                     </div>
 
-                    <div class="category-preview-section">
-                        <h3>Investing</h3>
+                    <div class="category-preview-section" id="investingPreviewSection">
+                        <h3>On-Demand Outflow</h3>
                         <div id="investingPreview" class="category-preview-list"></div>
                         <div class="category-total">Total: <strong id="investingTotal">₹0</strong></div>
                     </div>
@@ -261,26 +260,20 @@
                     </div>
 
                     <div class="category-section">
-                        <h3>Outflow</h3>
+                        <h3>Cash Outflow</h3>
                         <div id="outflowFields"></div>
                         <div class="category-total">Total: <strong id="outflowTotalEdit">₹0</strong></div>
                     </div>
 
                     <div class="category-section">
-                        <h3>Investing</h3>
+                        <h3>On-Demand Outflow</h3>
                         <div id="investingFields"></div>
                         <div class="category-total">Total: <strong id="investingTotalEdit">₹0</strong></div>
                     </div>
                 </div>
 
                 <div class="untracked-section">
-                    <h3>Month-End Reconciliation</h3>
-                    <div class="field">
-                        <label for="monthEndBalance">Balance on last day of month (₹)</label>
-                        <input id="monthEndBalance" type="number" min="0" step="1" placeholder="0">
-                    </div>
-                    <p class="reconciliation-note">Track untracked actual expenses and unpaid credit card outstanding in the Outflow section above.</p>
-                    <button type="button" id="saveMonthData" class="btn-add">Save</button>
+                    <p class="reconciliation-note">Update your primary account balance in the Accounts tab to keep the budget calculations current.</p>
                 </div>
             </div><!-- end budgetEdit -->
             </div><!-- end monthlyViewSection -->
@@ -291,7 +284,6 @@
             <div class="goal-header">
                 <h2>Financial Goals</h2>
                 <button type="button" id="toggleGoalEdit" class="btn-nav btn-icon">✎ Edit</button>
-                <button type="button" id="cancelGoalEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Goal Summary -->
@@ -338,7 +330,7 @@
         <div id="monthlyFixedExpenseUI" class="monthly-fixed-expense-ui" hidden>
             <div id="liabilitiesDependencyNotice"></div>
             <div class="goal-header">
-                <h2>Monthly Fixed Expenses</h2>
+                <h2>Liabilities</h2>
                 <button type="button" id="toggleExpenseEdit" class="btn-nav btn-icon">✎ Edit</button>
                 <button type="button" id="cancelExpenseEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
@@ -383,6 +375,7 @@
                 <div class="income-field-row">
                     <label class="income-field-label" for="monthlyIncomeInput">Fixed Monthly Income</label>
                     <input type="number" id="monthlyIncomeInput" class="income-field-input" min="0" step="1" placeholder="Enter your monthly income">
+                    <button type="button" id="saveMonthlyIncome" class="btn-save-income">Save Income</button>
                 </div>
                 <form class="entry-form" id="expenseForm" autocomplete="off">
                     <div id="expenseDynamicFields"></div>
@@ -406,7 +399,6 @@
             <div class="goal-header">
                 <h2>Investments</h2>
                 <button type="button" id="toggleInvestmentEdit" class="btn-nav btn-icon">✎ Edit</button>
-                <button type="button" id="cancelInvestmentEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Investment Summary -->
@@ -460,7 +452,6 @@
             <div class="goal-header">
                 <h2>Insurances</h2>
                 <button type="button" id="toggleInsuranceEdit" class="btn-nav btn-icon">✎ Edit</button>
-                <button type="button" id="cancelInsuranceEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Insurance Summary -->
@@ -508,7 +499,6 @@
             <div class="goal-header">
                 <h2>Accounts</h2>
                 <button type="button" id="toggleCardEdit" class="btn-nav btn-icon">✎ Edit</button>
-                <button type="button" id="cancelCardEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Card Summary -->
@@ -563,7 +553,6 @@
             <div class="goal-header">
                 <h2>Net Worth</h2>
                 <button type="button" id="toggleNetWorthEdit" class="btn-nav btn-icon">✎ Edit</button>
-                <button type="button" id="cancelNetWorthEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Current Age Display (view mode) -->
@@ -640,7 +629,6 @@
             <div class="goal-header">
                 <h2>Tax Plan</h2>
                 <button type="button" id="toggleTaxPlanEdit" class="btn-nav btn-icon">✎ Edit</button>
-                <button type="button" id="cancelTaxPlanEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Tax Regime Selection -->
@@ -725,7 +713,6 @@
             <div class="goal-header">
                 <h2>Gifts</h2>
                 <button type="button" id="toggleGiftsEdit" class="btn-nav btn-icon">✎ Edit</button>
-                <button type="button" id="cancelGiftsEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Gifts Summary -->
@@ -773,7 +760,6 @@
             <div class="goal-header">
                 <h2>Emergency Fund</h2>
                 <button type="button" id="toggleEmergencyFundEdit" class="btn-nav btn-icon">✎ Edit</button>
-                <button type="button" id="cancelEmergencyFundEdit" class="btn-cancel-edit" hidden>✕ Cancel</button>
             </div>
 
             <!-- Emergency Fund Summary -->

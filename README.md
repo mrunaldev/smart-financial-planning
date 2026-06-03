@@ -8,12 +8,14 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
 
 1. **Monthly Budget** - Track income and expenses with category-based fields
    - Inflow categories: Primary Income, Secondary Income, Borrowing, Interest, Other
-   - Outflow categories include loan EMI, insurance, untracked actual expense, credit card due/outstanding, utilities, family expenditure, and miscellaneous expenses
-   - Investment and liability fields can auto-populate from the Investments and Liabilities tabs for current/future months
-   - Month-to-month navigation
-   - Financial-year annual view with Apr-Mar calculations and matching monthly chart colors
-   - Budget status indicator turns negative when unpaid credit card outstanding pushes the month over budget
-   - Pie chart visualization for Investment, Liability, Saving, Expenditure, Insurance, and Other
+   - Cash Outflow categories: Auto-calculated Liabilities (from Liabilities tab), Credit Card Outstanding, Debt Repayment, Utility Bills, Family Expenditure, Miscellaneous Expenses
+   - On-Demand Outflow categories: On-Demand Saving, On-Demand Investment, On-Demand Expenditure, On-Demand Liability
+   - Auto-calculated Liabilities field auto-populates from Liabilities tab (Monthly frequency, type="Liability") with hover tooltip showing breakdown
+   - Month-to-month navigation with snapshot/restore on Cancel
+   - Financial-year annual view with Apr-Mar calculations
+   - Budget status indicator based on net cash flow across all incomes and outflows
+   - "Balance to Spend This Month" and "Amount Available to Spend" calculated from primary account balance
+   - Pie chart visualization (hidden during edit mode)
 
 2. **Financial Goal** - Set and track financial goals
    - Target amount, current amount, target date
@@ -22,10 +24,11 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
    - Preview/Edit mode
    - Summary calculations
 
-3. **Monthly Fixed Expense** - Track recurring monthly expenses
-   - Type, amount, bank name, end date, time remaining
-   - Summary by type (Insurance, Liability, Saving, Expenditure)
-   - Bar graphs: Amount by Bank, Amount by Type
+3. **Liabilities** - Track recurring monthly expenses
+   - Expense Name, Amount, Deduction Type (Insurance, Liability, Saving, Expenditure, Investment), Frequency (Monthly/Quarterly/Semi-Annual/Annual/One-Time), Bank Name, End Date
+   - Only Monthly frequency items auto-populate the monthly budget
+   - Summary by type with bar graphs (Amount by Bank, Amount by Type)
+   - Frequency displayed in expense preview cards
    - Preview/Edit mode
 
 4. **Investments** - Manage investment portfolio
@@ -43,8 +46,10 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
    - Summary calculations
 
 6. **Accounts** - Manage bank accounts and cards
-   - Bank/NBFC name, account present, balance, debit card, credit card, credit limit, purpose of use, address/KYC updated, nominee added
-   - Primary accounts automatically use `Expenditure` as purpose and disable manual purpose edits
+   - Bank/NBFC Name, Primary Account, Account Present, Balance, Debit Card Present, Credit Card Present, Credit Card Limit, Purpose of Use (Income, Expenditure, Saving, Investment, Loan, Others), Custom Purpose (for Others), Address/KYC Updated, Nominee Added
+   - Primary account is always Expenditure type (enforced)
+   - Only one Saving account allowed
+   - Default sort order: Primary → Saving → others by balance descending
    - Account cards show labeled balance and credit limit values
    - Summary: Total Banks, Total Balance, Total Credit Limit, Accounts with Credit Cards
    - Preview/Edit mode
@@ -79,12 +84,12 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
 
 ### Additional Features
 
-- **Add/Edit/Delete** - List rows include Edit and Delete actions. Edit populates the existing item into the form and the submit button becomes Save.
-- **Preview/Edit Toggle** - Switch between view and edit modes for custom tabs
+- **Add/Edit/Delete** - List rows include Edit and Delete actions. Delete requires confirmation for all entries. Edit populates the existing item into the form and the submit button becomes Save.
+- **Preview/Edit Toggle** - Switch between view and edit modes for custom tabs. Budget edit supports Cancel to restore previous state.
 - **Excel Export** - Export tab data to Excel format
-- **Data Reset** - Clear all local data with confirmation
+- **Data Reset** - Clear all local data with double confirmation (confirm dialog + type "DELETE")
 - **Cross-Device Sync** - Firebase Firestore synchronization
-- **Responsive Design** - Works on desktop and mobile
+- **Responsive Design** - Works on desktop and mobile with iOS safe-area support for fullscreen PWA mode
 
 ## Structure
 
@@ -123,7 +128,7 @@ Then open `http://localhost:8082`
 ### Reset Data
 - Click "Reset All Data" button to clear all data
 - Requires double confirmation (confirm dialog + type "DELETE")
-- Permanently deletes all budget entries, monthly budget data, goals, investments, insurances, cards, net worth data, tax plan, gifts, and emergency fund data
+- Permanently deletes all budget entries, monthly budget data, goals, investments, insurances, cards, net worth data, tax plan, gifts, emergency fund data, fixed monthly income, date of birth, and current age
 - **This action cannot be undone**
 
 ## Libraries Used
@@ -131,3 +136,10 @@ Then open `http://localhost:8082`
 - Firebase (Auth, Firestore) - Authentication and data sync
 - Chart.js - Data visualization (pie charts, bar charts, line charts)
 - SheetJS (XLSX) - Excel export functionality
+
+## Recent Changes
+
+- Liabilities tab renamed from "Monthly Fixed Expenses"; added Frequency field; Insurance Premium → Insurance. Monthly Budget: "Investing" → "On-Demand Outflow"; merged credit card fields; removed untrackedExpense and retirement; added on-demand fields; removed monthEndBalance; added "Balance to Spend" and "Amount Available to Spend"; budget edit supports Cancel with snapshot/restore; on-demand section hidden when empty; removed Insurance and Rent/Maintenance from Cash Outflow; removed SIP/Monthly Investment and Monthly Saving from On-Demand Outflow; renamed "Outflow" → "Cash Outflow"; added hover tooltips for auto-calculated fields showing breakdown; removed insurance from annual summary and pie charts; removed duplicate save button; changed UI pattern from Edit/Save/Cancel to Edit/Done for all tabs except Liability (which keeps Save button for fixed monthly income); removed Cancel buttons from all tabs except Liability; added theme-based favicon switching (logo_dark/logo_light).
+- Accounts: Only one Saving account allowed; default sort (Primary → Saving → others by balance); purposeOther field for custom purposes.
+- Delete confirmation for all entries. iOS safe-area support.
+- Bug fixes: currentAge restored; budget snapshot month key fix; CC carryover removed; removed insurance from annual summary and pie charts

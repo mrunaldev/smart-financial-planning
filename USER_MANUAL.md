@@ -25,12 +25,12 @@ A comprehensive guide to using SmartFin for personal financial planning.
 ## Overview
 
 SmartFin is a dark-themed personal finance application that helps you track:
-- Monthly budgets and expenses with category-based tracking
+- Monthly budgets and expenses with category-based tracking, auto-populated from Investments and Liabilities
 - Financial goals and savings with progress tracking
-- Monthly fixed expenses with graphs and time tracking
+- Liabilities with frequency-based tracking (Monthly/Quarterly/Semi-Annual/Annual/One-Time)
 - Investments and returns with growth projections
 - Insurance policies with nominee management
-- Credit/debit cards with credit limit tracking
+- Bank accounts and cards with primary/expenditure/saving designation
 - Net worth (assets & liabilities) with projection till age 70
 - Tax planning under new/old regimes with automatic income integration
 - Gifts and charitable giving with category tracking
@@ -187,17 +187,15 @@ graph TD
 
 | Tab ID | Name | Purpose | Key Fields |
 |--------|------|---------|------------|
-| `monthlyBudget` | Monthly Budget | Recurring monthly income & expenses | Item Name, Planned, Actual, Date, Note |
+| `monthlyBudget` | Monthly Budget | Recurring monthly income & expenses with auto-calculation | Inflow (Primary Income, Secondary Income, etc.), Cash Outflow (Auto-calculated Liabilities, Credit Card Outstanding, etc.), On-Demand Outflow (On-Demand Saving, On-Demand Investment, On-Demand Expenditure, On-Demand Liability) |
 | `financialGoal` | Financial Goal | Savings targets (emergency fund, down payment) | Goal Name, Amount Needed, Amount Accumulated, Target Date, Auto Status |
-| `monthlyFixedExpense` | Liabilities | Fixed bills, insurance premiums, savings, investments, liabilities | Expense Name, Amount, Deduction Type, Bank Name, End Date |
+| `monthlyFixedExpense` | Liabilities | Fixed bills, insurance premiums, savings, investments, liabilities | Expense Name, Amount, Deduction Type, Frequency, Bank Name, End Date |
 | `investments` | Investments | Stocks, mutual funds, SIPs | Investment Name, Initial Investment, Amount So Far, Annual Interest Rate, Frequency, Start/Maturity Date |
 | `insurances` | Insurances | Life, term, health, vehicle, and other policies | Policy Name, Policy Type, Premium, Premium Type, Sum Assured, Start/Maturity Date |
-| `cards` | Accounts | Bank accounts plus debit/credit card tracking | Bank/NBFC, Primary Account, Balance, Credit Limit, Purpose |
-| `netWorth` | Net Worth | Asset & liability summary | Asset/Liability Name, Value, Type (Asset/Liability), Date |
+| `cards` | Accounts | Bank accounts plus debit/credit card tracking | Bank/NBFC, Primary Account, Balance, Credit Limit, Purpose (Income/Expenditure/Saving/Investment/Loan/Others), Custom Purpose |
+| `netWorth` | Net Worth | Asset & liability summary | Asset/Liability Name, Value, Type (Asset/Liability), Growth Rate |
 | `taxPlan` | Tax Plan | Tax-saving investments, deductions | Tax Saving Item, Amount Invested, Tax Saved, Investment Date |
 | `gifts` | Gifts | Gifts given/received | Gift Description, Value, Given/Received, Date |
-| `misc` | Misc | Miscellaneous items | Item Name, Amount, Actual, Date, Note |
-| `oneTimeBudget` | One Time Budget | Special events (wedding, vacation) | Expense Name, Budgeted, Spent, Date, Note |
 
 ### Tab Bar UI
 
@@ -279,7 +277,8 @@ flowchart TD
 
 1. Locate the entry in the table
 2. Click the **Delete** button in the last column
-3. Entry is removed immediately (no confirmation)
+3. Confirm the deletion in the popup dialog (all entries require confirmation)
+4. Entry is removed
 
 ### Clearing Entire Tab
 
@@ -490,7 +489,7 @@ sequenceDiagram
 **A:** Use Firebase Console to reset your password, or re-register with a new account.
 
 ### Q: Can I edit an existing entry?
-**A:** Currently, you can delete and re-add entries. Edit functionality can be added in future updates.
+**A:** Yes. Click the Edit button in any row to populate the form with existing values, then click Save to update.
 
 ### Q: What currency does the app use?
 **A:** Indian Rupee (₹). All amounts are formatted with Indian number formatting (e.g., ₹12,34,567).
@@ -565,6 +564,9 @@ For issues or questions:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.2 | 2026-06-04 | Changed UI pattern from Edit/Save/Cancel to Edit/Done for all tabs except Liability; Liability page keeps Save button for fixed monthly income field; removed Cancel buttons from all tabs except Liability; added theme-based favicon switching (logo_dark/logo_light); fixed auto-calculated badge tooltip. |
+| 3.1 | 2026-06-04 | Monthly Budget: removed Insurance and Rent/Maintenance from Cash Outflow; removed SIP/Monthly Investment and Monthly Saving from On-Demand Outflow; renamed "Outflow" → "Cash Outflow"; added hover tooltips for auto-calculated fields showing breakdown; removed insurance from annual summary and pie charts; removed duplicate save button. |
+| 3.0 | 2026-06-04 | Liabilities tab renamed; added Frequency field; Insurance Premium → Insurance. Monthly Budget: "Investing" → "On-Demand Outflow"; merged credit card fields; removed untrackedExpense and retirement; added on-demand fields; removed monthEndBalance; added "Balance to Spend" and "Amount Available to Spend"; budget edit supports Cancel with snapshot/restore; on-demand section hidden when empty. Accounts: Only one Saving account allowed; default sort (Primary → Saving → others by balance); purposeOther field for custom purposes. Delete confirmation for all entries. iOS safe-area support. Bug fixes: currentAge restored; budget snapshot month key fix; CC carryover removed. |
 | 2.0 | 2026-05-28 | Added Net Worth, Tax Plan, Gifts, Emergency Fund tabs. Removed Misc and One-Time Budget tabs. Added Reset All Data feature with double confirmation. Updated all tabs with Preview/Edit modes and summary calculations. Added graphs and charts for Monthly Fixed Expense, Investments, and Net Worth. |
 | 1.0 | 2026-05-28 | Initial release with authentication, 11 tabs, Excel export |
 

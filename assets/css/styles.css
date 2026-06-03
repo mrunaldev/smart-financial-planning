@@ -310,6 +310,9 @@ body {
     letter-spacing: -0.3px;
     color: var(--white);
     line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .brand-text p {
@@ -367,7 +370,7 @@ body {
     background: var(--surf1);
     border-bottom: 1px solid var(--border);
     position: sticky;
-    top: 64px;
+    top: calc(64px + var(--safe-top));
     z-index: 90;
 }
 
@@ -411,7 +414,7 @@ body {
 /* Mobile responsive */
 @media (max-width: 768px) {
     .tab-bar {
-        top: 56px;
+        top: calc(56px + var(--safe-top));
     }
     .tab-mobile-row {
         display: flex;
@@ -668,6 +671,42 @@ td.amount {
 .btn-cancel-edit:hover {
     border-color: var(--red);
     color: var(--red);
+}
+
+.auto-badge {
+    display: inline-block;
+    background: var(--surf2);
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    border: 1px solid var(--border2);
+    cursor: help;
+    white-space: nowrap;
+}
+.auto-badge:hover {
+    background: var(--surf3);
+    color: var(--text);
+}
+.auto-badge[title] {
+    cursor: help;
+}
+
+.btn-save-income {
+    padding: 6px 12px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-save-income:hover {
+    background: var(--primary-hover);
 }
 
 .month-display {
@@ -1229,11 +1268,11 @@ td.amount {
     border-radius: 12px;
     margin-right: 8px;
 }
-.expense-card-type.insurance { background: rgba(239, 68, 68, .2); color: #ef4444; }
+.expense-card-type.insurance { background: rgba(168, 85, 247, .2); color: #a855f7; }
 .expense-card-type.investment { background: rgba(59, 130, 246, .2); color: #3b82f6; }
 .expense-card-type.saving { background: rgba(34, 197, 94, .2); color: #22c55e; }
 .expense-card-type.liability { background: rgba(249, 115, 22, .2); color: #f97316; }
-.expense-card-type.expenditure { background: rgba(168, 85, 247, .2); color: #a855f7; }
+.expense-card-type.expenditure { background: rgba(249, 115, 22, .2); color: #f97316; }
 
 .expense-card-amount {
     font-size: 1.3rem;

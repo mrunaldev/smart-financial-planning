@@ -693,6 +693,193 @@ td.amount {
 .auto-badge[title] {
     cursor: help;
 }
+.auto-badge-clickable {
+    cursor: pointer !important;
+    border-color: var(--primary) !important;
+}
+.auto-badge-clickable:hover {
+    background: rgba(59,130,246,0.18) !important;
+    color: #3b82f6 !important;
+}
+
+/* ── Auto-Calc Popup ────────────────────────────────── */
+.auto-calc-popup {
+    background: var(--surf2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    min-width: 260px;
+    max-width: 380px;
+    font-size: 0.85rem;
+    overflow: hidden;
+}
+.auto-calc-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--surf3);
+    border-bottom: 1px solid var(--border2);
+}
+.auto-calc-popup-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+}
+.auto-calc-popup-close:hover { color: var(--red); }
+.auto-calc-popup-body { padding: 10px 14px; }
+.auto-calc-popup-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border1);
+    gap: 8px;
+}
+.auto-calc-popup-name { flex: 1; color: var(--text); }
+.auto-calc-popup-amount { font-weight: 600; color: var(--white); white-space: nowrap; }
+.auto-calc-popup-source { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+.auto-calc-popup-total {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0 2px;
+    border-top: 2px solid var(--border2);
+    margin-top: 4px;
+    color: var(--white);
+}
+
+/* ── Transfer & Reconciliation ──────────────────────── */
+.transfer-action-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+.btn-do-transfer {
+    padding: 8px 18px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-do-transfer:hover { background: var(--primary-hover); }
+.transfer-note {
+    color: var(--muted);
+    font-size: 0.75rem;
+}
+.reconciliation-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+.reconciliation-input-row label {
+    font-size: 0.85rem;
+    color: var(--dim);
+    font-weight: 500;
+}
+.reconciliation-input-row input {
+    padding: 6px 10px;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    background: var(--surf1);
+    color: var(--white);
+    font-size: 0.85rem;
+    width: 160px;
+}
+.btn-reconcile {
+    padding: 6px 14px;
+    background: rgba(234,179,8,0.18);
+    color: #eab308;
+    border: 1px solid rgba(234,179,8,0.35);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-reconcile:hover {
+    background: rgba(234,179,8,0.3);
+}
+
+/* ── Auto-Debit Breakdown ──────────────────────────── */
+.auto-debit-breakdown-container {
+    padding: 6px 12px;
+    border-left: 3px solid var(--border2);
+    margin: 2px 0 2px 8px;
+}
+.auto-debit-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 4px;
+}
+.auto-debit-line {
+    font-size: 0.78rem;
+    color: var(--dim);
+    padding: 2px 0;
+}
+
+/* ── Mid-Month Quick Update ─────────────────────────── */
+.mid-month-update-section {
+    background: var(--surf1);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin-top: 16px;
+}
+.mid-month-update-section h3 {
+    margin: 0 0 12px;
+    font-size: 0.95rem;
+    color: var(--white);
+}
+.mid-month-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.mid-month-field {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.mid-month-field label {
+    font-size: 0.82rem;
+    color: var(--dim);
+    font-weight: 500;
+}
+.mid-month-field input {
+    padding: 6px 10px;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    background: var(--surf2);
+    color: var(--white);
+    font-size: 0.85rem;
+}
+.btn-mid-update {
+    padding: 6px 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    align-self: flex-start;
+}
+.btn-mid-update:hover { background: var(--primary-hover); }
 
 .btn-save-income {
     padding: 6px 12px;
@@ -707,6 +894,23 @@ td.amount {
 }
 .btn-save-income:hover {
     background: var(--primary-hover);
+}
+
+.btn-settle-saving {
+    margin-top: 6px;
+    padding: 5px 12px;
+    background: rgba(34,197,94,0.15);
+    color: #22c55e;
+    border: 1px solid rgba(34,197,94,0.35);
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.btn-settle-saving:hover {
+    background: rgba(34,197,94,0.28);
+    border-color: #22c55e;
 }
 
 .month-display {
@@ -1229,6 +1433,34 @@ td.amount {
     display: flex;
     flex-direction: column;
     gap: 14px;
+}
+
+/* ── Outflow Grouping ────────────────────────────────── */
+.outflow-group {
+    margin-bottom: 8px;
+}
+.outflow-group-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: var(--surf2);
+    border: 1px solid var(--border2);
+    border-radius: 10px 10px 0 0;
+    margin-bottom: -1px;
+}
+.outflow-group-count {
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+.outflow-group-total {
+    margin-left: auto;
+    font-size: 0.9rem;
+    color: var(--white);
+}
+.outflow-group .expense-card:first-of-type {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }
 
 .expense-card {
@@ -2223,6 +2455,13 @@ td.amount {
     margin: 8px 0 0;
 }
 
+.row-actions {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
 .edit-row,
 .delete-row {
     background: transparent;
@@ -2237,10 +2476,6 @@ td.amount {
     width: auto;
     line-height: 1;
     transition: background .15s, border-color .15s, color .15s;
-}
-
-.edit-row {
-    margin-right: 8px;
 }
 
 .edit-row:hover {
@@ -2448,7 +2683,8 @@ td.amount {
     /* Table */
     .table-wrap                  { border-radius: 10px; }
     tbody td, thead th           { padding: 10px 12px; font-size: 0.82rem; }
-    .delete-row                  { padding: 7px 10px; font-size: 0.7rem; }
+    .row-actions                 { flex-direction: column; gap: 4px; }
+    .edit-row, .delete-row       { padding: 5px 8px; font-size: 0.68rem; width: 100%; text-align: center; }
 
     /* Monthly Budget */
     .month-nav {
@@ -2722,6 +2958,16 @@ td.amount {
 .card-item-primary {
     border-color: rgba(234,179,8,0.45) !important;
     background: linear-gradient(135deg, var(--surf1) 80%, rgba(234,179,8,0.07)) !important;
+}
+.saving-badge {
+    background: rgba(34,197,94,0.18) !important;
+    color: #22c55e !important;
+    border: 1px solid rgba(34,197,94,0.35) !important;
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+    margin-left: 8px;
+    vertical-align: middle;
 }
 
 /* ── Sort/Filter Toolbar ─────────────────────────────── */

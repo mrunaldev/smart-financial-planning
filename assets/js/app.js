@@ -146,9 +146,12 @@ const MONTHLY_BUDGET_CATEGORIES = {
         { id: "debtRepayment", label: "Debt Repayment / Lending", type: "number" },
         { id: "utilityBills", label: "Utility Bills (electricity, water, gas, internet)", type: "number" },
         { id: "familyExpenditure", label: "Family Expenditure (groceries, household)", type: "number" },
-        { id: "miscExpenses", label: "Miscellaneous Expenses", type: "number" }
+        { id: "miscExpenses", label: "Miscellaneous Expenses", type: "number" },
+        { id: "fixedExpenditure", label: "Auto-calculated Fixed Expenditure", type: "number" }
     ],
     investing: [
+        { id: "fixedSaving", label: "Auto-calculated Fixed Saving", type: "number" },
+        { id: "fixedInvestment", label: "Auto-calculated Fixed Investment", type: "number" },
         { id: "onetimeSaving", label: "On-Demand Saving", type: "number" },
         { id: "onetimeInvestment", label: "On-Demand Investment", type: "number" },
         { id: "ondemandExpenditure", label: "On-Demand Expenditure", type: "number" },
@@ -1242,6 +1245,18 @@ function buildMonthlyAutoValues(monthKey) {
             values.outflow.insurancePremiums = (values.outflow.insurancePremiums || 0) + monthlyAmount;
             if (!breakdown.outflow.insurancePremiums) breakdown.outflow.insurancePremiums = [];
             breakdown.outflow.insurancePremiums.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
+        } else if (item.type === "Expenditure") {
+            values.outflow.fixedExpenditure = (values.outflow.fixedExpenditure || 0) + monthlyAmount;
+            if (!breakdown.outflow.fixedExpenditure) breakdown.outflow.fixedExpenditure = [];
+            breakdown.outflow.fixedExpenditure.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
+        } else if (item.type === "Saving") {
+            values.investing.fixedSaving = (values.investing.fixedSaving || 0) + monthlyAmount;
+            if (!breakdown.investing.fixedSaving) breakdown.investing.fixedSaving = [];
+            breakdown.investing.fixedSaving.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
+        } else if (item.type === "Investment") {
+            values.investing.fixedInvestment = (values.investing.fixedInvestment || 0) + monthlyAmount;
+            if (!breakdown.investing.fixedInvestment) breakdown.investing.fixedInvestment = [];
+            breakdown.investing.fixedInvestment.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
         }
     });
 
@@ -1486,8 +1501,9 @@ function getMonthlyDistribution(monthData) {
     const debtRepayment = Number(monthData.outflow?.debtRepayment || 0);
     const liability = loanEMI + insurancePremiums + debtRepayment;
 
-    // Expenditure = manual outflow items + CC spending + on-demand spending items
-    const expenditure = Number(monthData.outflow?.utilityBills || 0)
+    // Expenditure = fixed recurring + manual outflow items + CC spending + on-demand spending
+    const expenditure = Number(monthData.outflow?.fixedExpenditure || 0)
+        + Number(monthData.outflow?.utilityBills || 0)
         + Number(monthData.outflow?.familyExpenditure || 0)
         + Number(monthData.outflow?.miscExpenses || 0)
         + Number(monthData.outflow?.creditCardOutstanding || 0)
@@ -1495,9 +1511,12 @@ function getMonthlyDistribution(monthData) {
         + Number(monthData.investing?.ondemandExpenditure || 0)
         + Number(monthData.investing?.ondemandLiability || 0);
 
-    // Saving and Investment from on-demand outflow
-    const saving = Number(monthData.investing?.onetimeSaving || 0);
-    const investment = Number(monthData.investing?.onetimeInvestment || 0);
+    // Saving = fixed recurring + on-demand
+    const saving = Number(monthData.investing?.fixedSaving || 0)
+        + Number(monthData.investing?.onetimeSaving || 0);
+    // Investment = fixed recurring + on-demand
+    const investment = Number(monthData.investing?.fixedInvestment || 0)
+        + Number(monthData.investing?.onetimeInvestment || 0);
 
     // Other = total outflow + total investing - all categorised items
     const allCategorised = liability + expenditure + saving + investment;
@@ -3786,8 +3805,8 @@ function calculateAndDisplaySummary(monthData) {
     }
 
     // Tracked expenses = recorded outflow + on-demand outflow
-    // Note: loanEMI and insurancePremiums are auto-deducted from salary (not from expenditure account)
-    // so they are NOT included in tracked expenses for expenditure balance calculations
+    // Note: loanEMI, insurancePremiums, fixedSaving, fixedInvestment are auto-deducted from salary
+    // (not from expenditure account) so they are NOT included in tracked expenses
     const trackedExpenses = Number(monthData.outflow?.creditCardOutstanding || 0)
         + Number(monthData.outflow?.midMonthCCOutstanding || 0)
         + Number(monthData.outflow?.debtRepayment || 0)

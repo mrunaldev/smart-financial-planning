@@ -26,8 +26,9 @@ function getChartThemeColors() {
 
 const DEFAULT_TABS = [
     { id: "cards",               label: "Accounts",              color: "#444", text: "#fff", core: true },
-    { id: "inflow",              label: "Inflow",                color: "#444", text: "#fff", core: true },
-    { id: "outflow",             label: "Outflow",               color: "#444", text: "#fff", core: true },
+    { id: "inflow",              label: "Investments",           color: "#444", text: "#fff", core: true },
+    { id: "outflow",             label: "Fixed Outflow",          color: "#444", text: "#fff", core: true },
+    { id: "insurance",           label: "Insurance",             color: "#444", text: "#fff", core: true },
     { id: "monthlyBudget",       label: "Budget",                color: "#444", text: "#fff", core: true },
     { id: "financialGoal",       label: "Goals",                 color: "#444", text: "#fff", core: true },
     { id: "netWorth",            label: "Net Worth",             color: "#444", text: "#fff" },
@@ -55,15 +56,16 @@ const TAB_FIELDS = {
         { id: "status", label: "Status", type: "select", options: ["Planned", "Ongoing", "Achieved", "Missed"] }
     ],
     inflow: [
-        { id: "name",         label: "Name",               type: "text",   placeholder: "e.g. SIP, FD, Stocks", required: true },
-        { id: "type",         label: "Type",               type: "select", options: ["Investment", "Saving", "SIP", "FD", "RD", "Stocks", "Mutual Fund", "PPF", "NPS", "Other"] },
-        { id: "amount",       label: "Amount (₹)",         type: "number", placeholder: "0", required: true },
-        { id: "currentValue", label: "Current Value (₹)",  type: "number", placeholder: "0" },
-        { id: "interestRate", label: "Interest Rate (%)",   type: "number", placeholder: "0" },
+        { id: "name",         label: "Investment Name",     type: "text",   placeholder: "e.g. HDFC SIP, Axis FD", required: true },
+        { id: "type",         label: "Type",               type: "select", options: ["Mutual Fund", "SIP", "FD", "RD", "Stocks", "PPF", "EPF", "NPS", "Bonds", "Gold", "Real Estate", "Saving", "Other"] },
+        { id: "category",     label: "Category",           type: "select", options: ["Existing", "Monthly"] },
+        { id: "amount",       label: "Invested Amount (₹)", type: "number", placeholder: "Total amount invested", required: true },
+        { id: "currentValue", label: "Current Value (₹)",  type: "number", placeholder: "Market value today" },
+        { id: "interestRate", label: "Expected Return (%)", type: "number", placeholder: "Annual return rate" },
         { id: "frequency",    label: "Frequency",           type: "select", options: ["Monthly", "Quarterly", "Semi-Annual", "Annual", "One-Time"] },
         { id: "startDate",    label: "Start Date",          type: "date",   placeholder: "" },
-        { id: "endDate",      label: "End Date",            type: "date",   placeholder: "" },
-        { id: "details",      label: "Details",             type: "text",   placeholder: "Optional" }
+        { id: "endDate",      label: "Maturity Date",       type: "date",   placeholder: "" },
+        { id: "details",      label: "Notes",               type: "text",   placeholder: "Optional notes" }
     ],
     outflow: [
         { id: "name",      label: "Name",           type: "text",   placeholder: "e.g. Rent, LIC Premium", required: true },
@@ -111,24 +113,39 @@ const TAB_FIELDS = {
     emergencyFund: [
         { id: "currentFund", label: "Current Emergency Fund (₹)", type: "number", placeholder: "0", required: true },
         { id: "details",     label: "Details",               type: "text",   placeholder: "Optional" }
+    ],
+    insurance: [
+        { id: "name",          label: "Policy Name",          type: "text",   placeholder: "e.g. LIC Term Plan, Star Health", required: true },
+        { id: "policyType",    label: "Policy Type",          type: "select", options: ["Term Life", "Whole Life", "Health", "Vehicle", "Home", "Travel", "Critical Illness", "Personal Accident", "Other"] },
+        { id: "provider",      label: "Insurance Provider",   type: "text",   placeholder: "e.g. LIC, HDFC Life, Star Health" },
+        { id: "policyNumber",  label: "Policy Number",        type: "text",   placeholder: "Policy/Certificate number" },
+        { id: "sumAssured",    label: "Sum Assured (₹)",      type: "number", placeholder: "Coverage amount" },
+        { id: "premiumAmount", label: "Premium Amount (₹)",   type: "number", placeholder: "0 if no current premium" },
+        { id: "premiumFrequency", label: "Premium Frequency", type: "select", options: ["Monthly", "Quarterly", "Half-Yearly", "Annual", "None (Paid Up)"] },
+        { id: "startDate",     label: "Policy Start Date",    type: "date",   placeholder: "" },
+        { id: "endDate",       label: "Policy End Date",      type: "date",   placeholder: "" },
+        { id: "nominee",       label: "Nominee",              type: "text",   placeholder: "Nominee name" },
+        { id: "details",       label: "Notes",                type: "text",   placeholder: "Optional notes" }
     ]
 };
 
 // ── Monthly Budget Category Fields ───────────────────────────────────────────
 const MONTHLY_BUDGET_CATEGORIES = {
     inflow: [
-        { id: "primaryIncome", label: "Primary Income", type: "number" },
+        { id: "primaryIncome", label: "Primary Income (Salary credited this month)", type: "number" },
         { id: "secondaryIncome", label: "Secondary Income", type: "number" },
         { id: "borrowing", label: "Borrowing/Money Back", type: "number" },
         { id: "interest", label: "Interest/Dividend", type: "number" },
         { id: "othersInflow", label: "Others", type: "number" }
     ],
     outflow: [
-        { id: "loanEMI", label: "Auto-calculated Liabilities", type: "number" },
-        { id: "creditCardOutstanding", label: "Outstanding Credit Card Bill", type: "number" },
-        { id: "debtRepayment", label: "Debt Repayment/Lending", type: "number" },
-        { id: "utilityBills", label: "Utility Bills", type: "number" },
-        { id: "familyExpenditure", label: "Family Expenditure", type: "number" },
+        { id: "loanEMI", label: "Auto-calculated Liabilities (EMIs)", type: "number" },
+        { id: "insurancePremiums", label: "Auto-calculated Insurance Premiums", type: "number" },
+        { id: "creditCardOutstanding", label: "Previous Month CC Bill (unpaid)", type: "number" },
+        { id: "midMonthCCOutstanding", label: "Current Month CC Spending", type: "number" },
+        { id: "debtRepayment", label: "Debt Repayment / Lending", type: "number" },
+        { id: "utilityBills", label: "Utility Bills (electricity, water, gas, internet)", type: "number" },
+        { id: "familyExpenditure", label: "Family Expenditure (groceries, household)", type: "number" },
         { id: "miscExpenses", label: "Miscellaneous Expenses", type: "number" }
     ],
     investing: [
@@ -332,9 +349,22 @@ const giftsEmptyState  = document.getElementById("giftsEmptyState");
 const emergencyFundUI          = document.getElementById("emergencyFundUI");
 const toggleEmergencyFundEdit = document.getElementById("toggleEmergencyFundEdit");
 const currentEmergencyFundDisplay = document.getElementById("currentEmergencyFundDisplay");
+const emergencyFundPreview      = document.getElementById("emergencyFundPreview");
 const emergencyFundEdit         = document.getElementById("emergencyFundEdit");
 const emergencyFundForm        = document.getElementById("emergencyFundForm");
 const emergencyFundDynamicFields = document.getElementById("emergencyFundDynamicFields");
+
+// Insurance refs
+const insuranceUI             = document.getElementById("insuranceUI");
+const toggleInsuranceEdit     = document.getElementById("toggleInsuranceEdit");
+const insuranceTabPreview     = document.getElementById("insuranceTabPreview");
+const insuranceTabEdit        = document.getElementById("insuranceTabEdit");
+const insuranceList           = document.getElementById("insuranceList");
+const insuranceForm           = document.getElementById("insuranceForm");
+const insuranceDynamicFields  = document.getElementById("insuranceDynamicFields");
+const insuranceTableHead      = document.getElementById("insuranceTableHead");
+const insuranceTableBody      = document.getElementById("insuranceTableBody");
+const insuranceEmptyState     = document.getElementById("insuranceEmptyState");
 
 const fieldInputs = {};
 
@@ -358,6 +388,8 @@ let isNetWorthEditMode = false;
 let isTaxPlanEditMode = false;
 let isGiftsEditMode = false;
 let isEmergencyFundEditMode = false;
+let isInsuranceEditMode = false;
+let activeInvestmentView = "all"; // all | existing | monthly | portfolio
 let outflowBankChart = null;
 let outflowTypeChart = null;
 let inflowBarChart   = null;
@@ -371,6 +403,7 @@ const listSortFilter = {
     inflow:        { sortBy: "", sortDir: "asc", filters: {} },
     outflow:       { sortBy: "", sortDir: "asc", filters: {} },
     gifts:         { sortBy: "", sortDir: "asc", filters: {} },
+    insurance:     { sortBy: "", sortDir: "asc", filters: {} },
 };
 
 const editingEntryIds = {
@@ -382,6 +415,7 @@ const editingEntryIds = {
     taxPlan: null,
     gifts: null,
     standard: null,
+    insurance: null,
 };
 
 const sectionConfig = {
@@ -392,6 +426,7 @@ const sectionConfig = {
     netWorth: { prefix: "netWorth", form: () => netWorthForm, submitText: "Save Asset/Liability", addText: "Add Asset/Liability", render: () => renderNetWorth() },
     taxPlan: { prefix: "taxPlan", form: () => taxPlanForm, submitText: "Save Tax Item", addText: "Add Tax Saving Item", render: () => renderTaxPlan() },
     gifts: { prefix: "gifts", form: () => giftsForm, submitText: "Save Gift", addText: "Add Gift", render: () => renderGifts() },
+    insurance: { prefix: "insurance", form: () => insuranceForm, submitText: "Save Policy", addText: "Add Policy", render: () => renderInsurance() },
     standard: { prefix: "field", form: () => entryForm, submitText: "Save", addText: "Add", render: () => render() },
 };
 
@@ -1180,18 +1215,33 @@ function buildMonthlyAutoValues(monthKey) {
     const values = { inflow: {}, outflow: {}, investing: {} };
     const breakdown = { inflow: {}, outflow: {}, investing: {} };
 
-    // Outflow tab items with type=Liability and freq=Monthly → auto-populate budget outflow
+    // Outflow tab items with type=Liability → auto-populate budget outflow (all frequencies as monthly equivalent)
     const outflowItems = (appData.tabData || {}).outflow || [];
     outflowItems.forEach(item => {
         const amount = Number(item.amount || 0);
         if (amount <= 0) return;
         if (item.endDate && monthKey > item.endDate.slice(0, 7)) return;
         const freq = item.frequency || "Monthly";
-        if (freq !== "Monthly") return;
+        // Convert to monthly equivalent
+        let monthlyAmount = 0;
+        if (freq === "Monthly")      monthlyAmount = amount;
+        else if (freq === "Quarterly")   monthlyAmount = amount / 3;
+        else if (freq === "Semi-Annual") monthlyAmount = amount / 6;
+        else if (freq === "Annual")      monthlyAmount = amount / 12;
+        else if (freq === "One-Time") {
+            // One-time: only include in the start month
+            if (item.startDate && monthKey === item.startDate.slice(0, 7)) monthlyAmount = amount;
+        }
+        if (monthlyAmount <= 0) return;
+        const freqLabel = freq !== "Monthly" ? ` (${freq} ÷ ${freq === "Quarterly" ? 3 : freq === "Semi-Annual" ? 6 : freq === "Annual" ? 12 : 1})` : "";
         if (item.type === "Liability") {
-            values.outflow.loanEMI = (values.outflow.loanEMI || 0) + amount;
+            values.outflow.loanEMI = (values.outflow.loanEMI || 0) + monthlyAmount;
             if (!breakdown.outflow.loanEMI) breakdown.outflow.loanEMI = [];
-            breakdown.outflow.loanEMI.push({ name: item.name, amount, source: "Outflow" });
+            breakdown.outflow.loanEMI.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
+        } else if (item.type === "Insurance") {
+            values.outflow.insurancePremiums = (values.outflow.insurancePremiums || 0) + monthlyAmount;
+            if (!breakdown.outflow.insurancePremiums) breakdown.outflow.insurancePremiums = [];
+            breakdown.outflow.insurancePremiums.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
         }
     });
 
@@ -1242,7 +1292,7 @@ function render() {
     renderTabs();
 
     // All UI panels
-    const allPanels = { monthlyBudgetUI, standardUI, financialGoalUI, inflowUI, outflowUI, cardsUI, netWorthUI, taxPlanUI, giftsUI, emergencyFundUI };
+    const allPanels = { monthlyBudgetUI, standardUI, financialGoalUI, inflowUI, outflowUI, insuranceUI, cardsUI, netWorthUI, taxPlanUI, giftsUI, emergencyFundUI };
     // Hide all panels first
     Object.values(allPanels).forEach(p => { if (p) p.hidden = true; });
 
@@ -1256,6 +1306,7 @@ function render() {
         taxPlan:       { panel: taxPlanUI,        render: renderTaxPlan },
         gifts:         { panel: giftsUI,          render: renderGifts },
         emergencyFund: { panel: emergencyFundUI,  render: renderEmergencyFund },
+        insurance:     { panel: insuranceUI,       render: renderInsurance },
     };
 
     const entry = panelMap[activeTabId];
@@ -1298,6 +1349,32 @@ function renderMonthlyBudget() {
     };
     appData.monthlyBudgetData[monthKey] = monthData;
     const autoLinkedFields = applyMonthlyAutoValues(monthKey, monthData);
+
+    // Month-end carry forward banner: detect if previous month has unclosed balance
+    const prevMonth = new Date(currentMonth);
+    prevMonth.setMonth(prevMonth.getMonth() - 1);
+    const prevMonthKey = getMonthKey(prevMonth);
+    const prevMonthData = (appData.monthlyBudgetData || {})[prevMonthKey];
+    const prevExpBalance = Number(window._budgetExpAccount?.balance || 0);
+    const prevCarryDone = prevMonthData?._carryForwardDone;
+    const prevTransferDone = prevMonthData?._transferDone;
+    const budgetStatusEl = document.getElementById("budgetStatus");
+    if (budgetStatusEl) {
+        // If prev month had a transfer but no carry forward, suggest carry forward
+        if (prevTransferDone && !prevCarryDone && prevExpBalance > 0) {
+            budgetStatusEl.innerHTML = `<div class="month-end-banner">
+                <span>Previous month (${prevMonth.toLocaleDateString("en-IN", { month: "short", year: "numeric" })}) has \u20b9${prevExpBalance.toLocaleString("en-IN")} remaining. Carry forward?</span>
+                <button type="button" id="bannerCarryForward">Carry Forward</button>
+            </div>`;
+            const bannerBtn = document.getElementById("bannerCarryForward");
+            if (bannerBtn) bannerBtn.addEventListener("click", () => {
+                if (!appData.monthlyBudgetData[prevMonthKey]) appData.monthlyBudgetData[prevMonthKey] = { inflow: {}, outflow: {}, investing: {} };
+                appData.monthlyBudgetData[prevMonthKey]._carryForwardDone = prevExpBalance;
+                scheduleSave();
+                renderMonthlyBudget();
+            });
+        }
+    }
     
     // Update toggle button text
     toggleBudgetEdit.textContent = isBudgetEditMode ? "✓ Done" : "✎ Edit";
@@ -1403,16 +1480,18 @@ function getMonthlyDistribution(monthData) {
     const outflowTotal = Object.values(monthData.outflow || {}).reduce((s, v) => s + Number(v || 0), 0);
     const investingTotal = Object.values(monthData.investing || {}).reduce((s, v) => s + Number(v || 0), 0);
 
-    // Liability = auto-calc loan EMIs + manual debt repayment
+    // Liability = auto-calc loan EMIs + insurance premiums + manual debt repayment
     const loanEMI = Number(monthData.outflow?.loanEMI || 0);
+    const insurancePremiums = Number(monthData.outflow?.insurancePremiums || 0);
     const debtRepayment = Number(monthData.outflow?.debtRepayment || 0);
-    const liability = loanEMI + debtRepayment;
+    const liability = loanEMI + insurancePremiums + debtRepayment;
 
-    // Expenditure = manual outflow items + on-demand spending items
+    // Expenditure = manual outflow items + CC spending + on-demand spending items
     const expenditure = Number(monthData.outflow?.utilityBills || 0)
         + Number(monthData.outflow?.familyExpenditure || 0)
         + Number(monthData.outflow?.miscExpenses || 0)
         + Number(monthData.outflow?.creditCardOutstanding || 0)
+        + Number(monthData.outflow?.midMonthCCOutstanding || 0)
         + Number(monthData.investing?.ondemandExpenditure || 0)
         + Number(monthData.investing?.ondemandLiability || 0);
 
@@ -1617,11 +1696,15 @@ function calculateGoalSummary(entries) {
     document.getElementById("amountMoreNeeded").textContent = formatMoney(amountMoreNeeded);
 }
 
-// ── Inflow Tab (replaces Investments) ─────────────────────────────────────────
+// ── Investments Tab (was Inflow) ──────────────────────────────────────────────
 function renderInflow() {
     const entries = (appData.tabData || {}).inflow || [];
 
     if (toggleInflowEdit) toggleInflowEdit.textContent = isInflowEditMode ? "✓ Done" : "✎ Edit";
+
+    // Show/hide sub-section tabs only in preview
+    const subTabs = document.getElementById("investmentSubTabs");
+    if (subTabs) subTabs.hidden = isInflowEditMode;
 
     if (isInflowEditMode) {
         if (inflowTabPreview) inflowTabPreview.hidden = true;
@@ -1632,10 +1715,87 @@ function renderInflow() {
     } else {
         if (inflowTabPreview) inflowTabPreview.hidden = false;
         if (inflowTabEdit) inflowTabEdit.hidden = true;
-        renderInflowPreviewCards(entries);
+
+        // Filter based on active investment view
+        let displayEntries = entries;
+        const portfolioEl = document.getElementById("portfolioSummary");
+        const chartSection = inflowTabPreview?.querySelector(".chart-section");
+        const sortFilterEl = document.getElementById("inflowSortFilter");
+
+        if (activeInvestmentView === "existing") {
+            displayEntries = entries.filter(e => (e.category || "Existing") === "Existing" && e.frequency !== "Monthly");
+            if (portfolioEl) portfolioEl.hidden = true;
+            if (chartSection) chartSection.hidden = false;
+            if (inflowList) inflowList.hidden = false;
+        } else if (activeInvestmentView === "monthly") {
+            displayEntries = entries.filter(e => e.category === "Monthly" || e.frequency === "Monthly");
+            if (portfolioEl) portfolioEl.hidden = true;
+            if (chartSection) chartSection.hidden = false;
+            if (inflowList) inflowList.hidden = false;
+        } else if (activeInvestmentView === "portfolio") {
+            if (portfolioEl) portfolioEl.hidden = false;
+            if (chartSection) chartSection.hidden = true;
+            if (inflowList) inflowList.hidden = true;
+            if (sortFilterEl) sortFilterEl.innerHTML = "";
+            renderPortfolioSummary(entries);
+            calculateInflowSummary(entries);
+            return;
+        } else {
+            if (portfolioEl) portfolioEl.hidden = true;
+            if (chartSection) chartSection.hidden = false;
+            if (inflowList) inflowList.hidden = false;
+        }
+
+        renderInflowPreviewCards(displayEntries);
         calculateInflowSummary(entries);
-        renderInflowChart(entries);
+        renderInflowChart(displayEntries);
     }
+}
+
+function renderPortfolioSummary(entries) {
+    const existingEntries = entries.filter(e => (e.category || "Existing") === "Existing" && e.frequency !== "Monthly");
+    const monthlyEntries = entries.filter(e => e.category === "Monthly" || e.frequency === "Monthly");
+
+    // One-time investments from budget
+    const budgetData = appData.monthlyBudgetData || {};
+    const oneTimeInvestments = [];
+    Object.entries(budgetData).forEach(([monthKey, md]) => {
+        const amt = Number(md?.investing?.onetimeInvestment || 0);
+        if (amt > 0) oneTimeInvestments.push({ name: `Budget Investment (${monthKey})`, amount: amt, currentValue: amt });
+    });
+
+    function renderList(containerEl, items) {
+        if (!containerEl) return;
+        containerEl.innerHTML = "";
+        if (items.length === 0) {
+            containerEl.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;">None</div>`;
+            return;
+        }
+        items.forEach(item => {
+            const div = document.createElement("div");
+            div.className = "portfolio-item";
+            div.innerHTML = `<span>${esc(item.name)} <span style="color:var(--muted);font-size:0.75rem;">${esc(item.type || "")}</span></span><span>${formatMoney(Number(item.currentValue || item.amount || 0))}</span>`;
+            containerEl.appendChild(div);
+        });
+    }
+
+    renderList(document.getElementById("portfolioExisting"), existingEntries);
+    renderList(document.getElementById("portfolioMonthly"), monthlyEntries);
+    renderList(document.getElementById("portfolioOneTime"), oneTimeInvestments);
+
+    const existingTotal = existingEntries.reduce((s, e) => s + Number(e.currentValue || e.amount || 0), 0);
+    const monthlyTotal = monthlyEntries.reduce((s, e) => s + Number(e.currentValue || e.amount || 0), 0);
+    const oneTimeTotal = oneTimeInvestments.reduce((s, e) => s + Number(e.currentValue || e.amount || 0), 0);
+    const grandTotal = existingTotal + monthlyTotal + oneTimeTotal;
+
+    const el1 = document.getElementById("portfolioExistingTotal");
+    const el2 = document.getElementById("portfolioMonthlyTotal");
+    const el3 = document.getElementById("portfolioOneTimeTotal");
+    const el4 = document.getElementById("portfolioGrandTotal");
+    if (el1) el1.textContent = formatMoney(existingTotal);
+    if (el2) el2.textContent = formatMoney(monthlyTotal);
+    if (el3) el3.textContent = formatMoney(oneTimeTotal);
+    if (el4) el4.textContent = formatMoney(grandTotal);
 }
 
 function renderInflowDynamicFields() {
@@ -1739,6 +1899,16 @@ function calculateInflowSummary(entries) {
     if (el1) el1.textContent = formatMoney(totalAmount);
     if (el2) el2.textContent = formatMoney(totalCurrent);
     if (el3) el3.textContent = entries.length;
+
+    // Monthly vs Existing breakdown
+    const monthlyEntries = entries.filter(e => e.category === "Monthly" || e.frequency === "Monthly");
+    const existingEntries = entries.filter(e => (e.category || "Existing") === "Existing" && e.frequency !== "Monthly");
+    const monthlyTotal = monthlyEntries.reduce((s, i) => s + Number(i.amount || 0), 0);
+    const existingTotal = existingEntries.reduce((s, i) => s + getInflowCurrentValue(i), 0);
+    const el4 = document.getElementById("totalMonthlyInvestments");
+    const el5 = document.getElementById("totalExistingInvestments");
+    if (el4) el4.textContent = formatMoney(monthlyTotal);
+    if (el5) el5.textContent = formatMoney(existingTotal);
 }
 
 function renderInflowChart(entries) {
@@ -2948,6 +3118,7 @@ function renderEmergencyFund() {
     
     // Show/hide preview/edit modes
     if (isEmergencyFundEditMode) {
+        if (emergencyFundPreview) emergencyFundPreview.hidden = true;
         emergencyFundEdit.hidden = false;
         
         // Render form fields
@@ -2961,6 +3132,7 @@ function renderEmergencyFund() {
             }
         }
     } else {
+        if (emergencyFundPreview) emergencyFundPreview.hidden = false;
         emergencyFundEdit.hidden = true;
         
         // Calculate and display emergency fund summary
@@ -3004,6 +3176,144 @@ function renderEmergencyFundDynamicFields() {
         
         emergencyFundDynamicFields.appendChild(div);
     });
+}
+
+// ── Insurance Tab ─────────────────────────────────────────────────────────────
+function renderInsurance() {
+    const entries = (appData.tabData || {}).insurance || [];
+
+    if (toggleInsuranceEdit) toggleInsuranceEdit.textContent = isInsuranceEditMode ? "✓ Done" : "✎ Edit";
+
+    if (isInsuranceEditMode) {
+        if (insuranceTabPreview) insuranceTabPreview.hidden = true;
+        if (insuranceTabEdit) insuranceTabEdit.hidden = false;
+        renderInsuranceDynamicFields();
+        updateSectionSubmitButton("insurance");
+        renderInsuranceTable(entries);
+    } else {
+        if (insuranceTabPreview) insuranceTabPreview.hidden = false;
+        if (insuranceTabEdit) insuranceTabEdit.hidden = true;
+        renderInsurancePreviewCards(entries);
+        calculateInsuranceSummary(entries);
+    }
+}
+
+function renderInsuranceDynamicFields() {
+    if (!insuranceDynamicFields) return;
+    insuranceDynamicFields.innerHTML = "";
+    const fields = TAB_FIELDS.insurance;
+    fields.forEach(field => {
+        const div = document.createElement("div");
+        div.className = "field";
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        div.appendChild(label);
+        let input;
+        if (field.type === "select") {
+            input = document.createElement("select");
+            field.options.forEach(opt => {
+                const option = document.createElement("option");
+                option.value = opt;
+                option.textContent = opt;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement("input");
+            input.type = field.type;
+            input.placeholder = field.placeholder || "";
+            if (field.type === "number") { input.min = "0"; input.step = "1"; }
+        }
+        input.id = `insurance_${field.id}`;
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        insuranceDynamicFields.appendChild(div);
+    });
+}
+
+function renderInsuranceTable(entries) {
+    if (!insuranceTableHead || !insuranceTableBody) return;
+    const fields = TAB_FIELDS.insurance;
+    insuranceTableHead.innerHTML = "";
+    const tr = document.createElement("tr");
+    fields.forEach(f => { const th = document.createElement("th"); th.textContent = f.label; tr.appendChild(th); });
+    const actTh = document.createElement("th"); actTh.textContent = ""; tr.appendChild(actTh);
+    insuranceTableHead.appendChild(tr);
+    insuranceTableBody.innerHTML = "";
+    if (insuranceEmptyState) insuranceEmptyState.classList.toggle("visible", entries.length === 0);
+    entries.forEach(item => {
+        const row = document.createElement("tr");
+        fields.forEach(f => {
+            const td = document.createElement("td");
+            if (f.type === "number") { td.textContent = formatMoney(Number(item[f.id] || 0)); td.className = "amount"; }
+            else { td.textContent = esc(item[f.id] || "—"); }
+            row.appendChild(td);
+        });
+        const actTd = document.createElement("td"); actTd.innerHTML = renderRowActions(item.id); row.appendChild(actTd);
+        insuranceTableBody.appendChild(row);
+    });
+}
+
+function getInsuranceAnnualPremium(item) {
+    const amt = Number(item.premiumAmount || 0);
+    const freq = (item.premiumFrequency || "").toLowerCase();
+    if (freq === "monthly") return amt * 12;
+    if (freq === "quarterly") return amt * 4;
+    if (freq === "half-yearly") return amt * 2;
+    if (freq === "annual") return amt;
+    return 0; // None (Paid Up)
+}
+
+function renderInsurancePreviewCards(entries) {
+    const toolbarEl = document.getElementById("insuranceSortFilter");
+    if (toolbarEl) toolbarEl.innerHTML = buildSortFilterToolbar("insurance");
+    const displayEntries = applyListSortFilter("insurance", entries);
+    if (!insuranceList) return;
+    insuranceList.innerHTML = "";
+    if (displayEntries.length === 0) {
+        insuranceList.innerHTML = entries.length === 0
+            ? `<div class="empty-state visible" style="background:var(--surf1);border:1px solid var(--border2);border-radius:12px;">No insurance policies yet. Click Edit to add.</div>`
+            : `<div class="empty-state visible" style="background:var(--surf1);border:1px solid var(--border2);border-radius:12px;">No results match the current filters.</div>`;
+        return;
+    }
+    displayEntries.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "insurance-card";
+        const annualPremium = getInsuranceAnnualPremium(item);
+        const hasPremium = annualPremium > 0;
+        card.innerHTML = `
+            <div class="insurance-card-info">
+                <div class="insurance-card-title">${esc(item.name)}</div>
+                <div class="insurance-card-details">
+                    <span class="policy-badge">${esc(item.policyType || "Other")}</span>
+                    ${hasPremium ? `<span class="premium-badge">${esc(item.premiumFrequency)} Premium</span>` : `<span class="no-premium-badge">No Active Premium</span>`}
+                    <br>Provider: ${esc(item.provider || "—")}
+                    | Policy #: ${esc(item.policyNumber || "—")}
+                    <br>Sum Assured: ${formatMoney(Number(item.sumAssured || 0))}
+                    ${hasPremium ? `| Premium: ${formatMoney(Number(item.premiumAmount || 0))} (${esc(item.premiumFrequency)})` : ""}
+                    <br>Period: ${esc(item.startDate || "—")} to ${esc(item.endDate || "—")}
+                    | Nominee: ${esc(item.nominee || "—")}
+                    ${item.details ? `<br>${esc(item.details)}` : ""}
+                </div>
+            </div>
+            <div class="insurance-card-amount">${hasPremium ? formatMoney(annualPremium) + "/yr" : "Paid Up"}</div>`;
+        insuranceList.appendChild(card);
+    });
+}
+
+function calculateInsuranceSummary(entries) {
+    const totalPolicies = entries.length;
+    const totalAnnualPremium = entries.reduce((s, e) => s + getInsuranceAnnualPremium(e), 0);
+    const monthlyPremiumLoad = totalAnnualPremium / 12;
+    const totalSumAssured = entries.reduce((s, e) => s + Number(e.sumAssured || 0), 0);
+
+    const el1 = document.getElementById("totalPolicies");
+    const el2 = document.getElementById("totalAnnualPremium");
+    const el3 = document.getElementById("monthlyPremiumLoad");
+    const el4 = document.getElementById("totalSumAssured");
+    if (el1) el1.textContent = totalPolicies;
+    if (el2) el2.textContent = formatMoney(totalAnnualPremium);
+    if (el3) el3.textContent = formatMoney(monthlyPremiumLoad);
+    if (el4) el4.textContent = formatMoney(totalSumAssured);
 }
 
 function calculateEmergencyFundSummary(entries) {
@@ -3100,9 +3410,16 @@ function calculateAnnualSummary() {
             other: 0,
         };
         const monthDataList = [];
+
+        // Determine earliest month (onboarding date)
+        const onboardingMonth = appData.onboardingDate ? appData.onboardingDate.slice(0, 7) : null;
         
         monthKeys.forEach(monthKey => {
-            const monthData = monthlyBudgetData[monthKey] || {};
+            // Skip months before onboarding
+            if (onboardingMonth && monthKey < onboardingMonth) return;
+            const monthData = monthlyBudgetData[monthKey] || { inflow: {}, outflow: {}, investing: {} };
+            // Apply auto-values so loanEMI, insurancePremiums etc. are populated
+            applyMonthlyAutoValues(monthKey, monthData);
             const dist = getMonthlyDistribution(monthData);
             Object.keys(totals).forEach(key => { totals[key] += Number(dist[key] || 0); });
             monthDataList.push({ month: monthKey, ...dist });
@@ -3171,7 +3488,7 @@ function renderAnnualPieChart(totals) {
             labels: ["Investment", "Liability", "Saving", "Expenditure", "Other"],
             datasets: [{
                 data: values,
-                backgroundColor: ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#eab308", "#a855f7"],
+                backgroundColor: ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"],
                 borderWidth: 0
             }]
         },
@@ -3374,12 +3691,22 @@ function calculateAndDisplaySummary(monthData) {
     const rawSalaryBalance = Number(salaryAccount?.balance || 0);
     const expBalance = Number(expenditureAccount?.balance || 0);
 
-    // Fixed monthly outflows auto-debited from salary at month start — grouped by destination
-    const monthlyOutflows = ((appData.tabData || {}).outflow || []).filter(e => e.frequency === "Monthly");
+    // Fixed outflows auto-debited from salary — all frequencies converted to monthly equivalent
+    const allOutflows = ((appData.tabData || {}).outflow || []);
     const autoDebitByType = { Liability: 0, Insurance: 0, Saving: 0, Expenditure: 0, Investment: 0 };
-    monthlyOutflows.forEach(e => {
+    allOutflows.forEach(e => {
+        const amount = Number(e.amount || 0);
+        if (amount <= 0) return;
+        const freq = e.frequency || "Monthly";
+        let monthlyAmt = 0;
+        if (freq === "Monthly")      monthlyAmt = amount;
+        else if (freq === "Quarterly")   monthlyAmt = amount / 3;
+        else if (freq === "Semi-Annual") monthlyAmt = amount / 6;
+        else if (freq === "Annual")      monthlyAmt = amount / 12;
+        // One-Time excluded from recurring auto-debit
+        if (monthlyAmt <= 0) return;
         const t = e.type || "Expenditure";
-        autoDebitByType[t] = (autoDebitByType[t] || 0) + Number(e.amount || 0);
+        autoDebitByType[t] = (autoDebitByType[t] || 0) + monthlyAmt;
     });
     const fixedMonthlyOutflow = Object.values(autoDebitByType).reduce((s, v) => s + v, 0);
 
@@ -3401,30 +3728,82 @@ function calculateAndDisplaySummary(monthData) {
     const cashFlowEl = document.getElementById("cashFlow");
     if (cashFlowEl) cashFlowEl.style.color = cashFlow >= 0 ? "#22c55e" : "#ef4444";
 
-    // Account balances — show salary balance after auto-debits
-    const salaryAfterAutoDebit = rawSalaryBalance - fixedMonthlyOutflow;
-    document.getElementById("initialBalance").textContent = formatMoney(salaryAfterAutoDebit);
-    const salaryLabelEl = document.getElementById("initialBalance")?.previousElementSibling;
-    if (salaryLabelEl) salaryLabelEl.textContent = `Salary Balance (after ₹${fixedMonthlyOutflow.toLocaleString("en-IN")} auto-debit)`;
+    // Account balances — show actual salary balance (auto-debits already reflected in real balance)
+    document.getElementById("initialBalance").textContent = formatMoney(rawSalaryBalance);
+    const salaryLabelEl = document.getElementById("salaryBalanceLabel");
+    const salaryHintEl = document.getElementById("salaryBalanceHint");
+    if (salaryLabelEl) salaryLabelEl.textContent = "Salary A/c Balance";
+    if (salaryHintEl) salaryHintEl.textContent = fixedMonthlyOutflow > 0
+        ? `₹${fixedMonthlyOutflow.toLocaleString("en-IN")}/mo in fixed outflows from this account`
+        : `Current balance in your salary account`;
     const expBalEl = document.getElementById("expenditureAccountBalance");
     if (expBalEl) expBalEl.textContent = formatMoney(expBalance);
 
-    // Auto-debit breakdown by destination
+    // Auto-debit breakdown by destination (with individual items)
     const breakdownEl = document.getElementById("autoDebitBreakdown");
     if (breakdownEl) {
         const lines = [];
-        if (autoDebitByType.Liability > 0)   lines.push(`Liability (EMIs): ${formatMoney(autoDebitByType.Liability)}`);
-        if (autoDebitByType.Insurance > 0)   lines.push(`Insurance: ${formatMoney(autoDebitByType.Insurance)}`);
-        if (autoDebitByType.Saving > 0)      lines.push(`→ Saving A/c: ${formatMoney(autoDebitByType.Saving)}${savingAccount ? ` (${savingAccount.bankName})` : ""}`);
-        if (autoDebitByType.Investment > 0)  lines.push(`→ Investment A/c: ${formatMoney(autoDebitByType.Investment)}${investmentAccount ? ` (${investmentAccount.bankName})` : ""}`);
-        if (autoDebitByType.Expenditure > 0) lines.push(`→ Primary A/c: ${formatMoney(autoDebitByType.Expenditure)}`);
+        // Show individual outflow items grouped by type
+        const itemsByType = {};
+        allOutflows.forEach(e => {
+            const amount = Number(e.amount || 0);
+            if (amount <= 0) return;
+            const freq = e.frequency || "Monthly";
+            let monthlyAmt = 0;
+            if (freq === "Monthly")      monthlyAmt = amount;
+            else if (freq === "Quarterly")   monthlyAmt = amount / 3;
+            else if (freq === "Semi-Annual") monthlyAmt = amount / 6;
+            else if (freq === "Annual")      monthlyAmt = amount / 12;
+            if (monthlyAmt <= 0) return;
+            const t = e.type || "Expenditure";
+            if (!itemsByType[t]) itemsByType[t] = [];
+            const freqNote = freq !== "Monthly" ? ` <span style="color:var(--muted);font-size:0.7rem">(${freq} ÷${freq === "Quarterly" ? 3 : freq === "Semi-Annual" ? 6 : 12})</span>` : "";
+            itemsByType[t].push(`${esc(e.name)}${freqNote}: ${formatMoney(monthlyAmt)}`);
+        });
+        if (autoDebitByType.Liability > 0) {
+            lines.push(`<strong>Liability (EMIs): ${formatMoney(autoDebitByType.Liability)}</strong>`);
+            (itemsByType.Liability || []).forEach(l => lines.push(`&nbsp;&nbsp;${l}`));
+        }
+        if (autoDebitByType.Insurance > 0) {
+            lines.push(`<strong>Insurance: ${formatMoney(autoDebitByType.Insurance)}</strong>`);
+            (itemsByType.Insurance || []).forEach(l => lines.push(`&nbsp;&nbsp;${l}`));
+        }
+        if (autoDebitByType.Saving > 0) {
+            lines.push(`<strong>→ Saving A/c: ${formatMoney(autoDebitByType.Saving)}</strong>${savingAccount ? ` (${savingAccount.bankName})` : ""}`);
+            (itemsByType.Saving || []).forEach(l => lines.push(`&nbsp;&nbsp;${l}`));
+        }
+        if (autoDebitByType.Investment > 0) {
+            lines.push(`<strong>→ Investment A/c: ${formatMoney(autoDebitByType.Investment)}</strong>${investmentAccount ? ` (${investmentAccount.bankName})` : ""}`);
+            (itemsByType.Investment || []).forEach(l => lines.push(`&nbsp;&nbsp;${l}`));
+        }
+        if (autoDebitByType.Expenditure > 0) {
+            lines.push(`<strong>→ Primary A/c: ${formatMoney(autoDebitByType.Expenditure)}</strong>`);
+            (itemsByType.Expenditure || []).forEach(l => lines.push(`&nbsp;&nbsp;${l}`));
+        }
         breakdownEl.innerHTML = lines.length > 0
             ? lines.map(l => `<div class="auto-debit-line">${l}</div>`).join("")
-            : `<div class="auto-debit-line" style="color:var(--dim)">No fixed monthly outflows</div>`;
+            : `<div class="auto-debit-line" style="color:var(--dim)">No fixed outflows</div>`;
     }
 
-    // Total spendable = cashFlow (income - all outflows)
-    const spendable = inflowTotal - totalOutAll;
+    // Tracked expenses = recorded outflow + on-demand outflow
+    // Note: loanEMI and insurancePremiums are auto-deducted from salary (not from expenditure account)
+    // so they are NOT included in tracked expenses for expenditure balance calculations
+    const trackedExpenses = Number(monthData.outflow?.creditCardOutstanding || 0)
+        + Number(monthData.outflow?.midMonthCCOutstanding || 0)
+        + Number(monthData.outflow?.debtRepayment || 0)
+        + Number(monthData.outflow?.utilityBills || 0)
+        + Number(monthData.outflow?.familyExpenditure || 0)
+        + Number(monthData.outflow?.miscExpenses || 0)
+        + Number(monthData.investing?.ondemandExpenditure || 0)
+        + Number(monthData.investing?.ondemandLiability || 0);
+    // Store globally for Quick Update calculations
+    window._budgetTrackedExpenses = trackedExpenses;
+
+    // Total Spendable = Expenditure Account Balance + pending transfer − tracked expenses − mid-month CC
+    const transferDoneForSpendable = Number(monthData._transferDone || 0);
+    const hasPendingTransfer = !monthData._transferDone && (inflowTotal - fixedMonthlyOutflow) > 0;
+    const pendingTransferAmt = hasPendingTransfer ? Math.max(0, Number(monthData.inflow?.primaryIncome || 0) - fixedMonthlyOutflow) : 0;
+    const spendable = expBalance + pendingTransferAmt - trackedExpenses;
     const availableEl = document.getElementById("amountAvailableToSpend");
     const availableLabelEl = document.getElementById("amountAvailableLabel");
     if (availableEl) {
@@ -3434,26 +3813,22 @@ function calculateAndDisplaySummary(monthData) {
     if (availableLabelEl) {
         availableLabelEl.textContent = spendable >= 0 ? "Total Spendable This Month" : "Amount Overspent";
     }
-
-    // Tracked expenses = recorded outflow + on-demand outflow (minus auto-calc liabilities since those are deducted at source)
-    const trackedExpenses = Number(monthData.outflow?.creditCardOutstanding || 0)
-        + Number(monthData.outflow?.debtRepayment || 0)
-        + Number(monthData.outflow?.utilityBills || 0)
-        + Number(monthData.outflow?.familyExpenditure || 0)
-        + Number(monthData.outflow?.miscExpenses || 0)
-        + Number(monthData.investing?.ondemandExpenditure || 0)
-        + Number(monthData.investing?.ondemandLiability || 0);
     const trackedEl = document.getElementById("trackedExpenses");
     if (trackedEl) trackedEl.textContent = formatMoney(trackedExpenses);
 
-    // Untracked expenses = (carryforward + transfers) - tracked expenses - current expenditure balance
+    // Untracked expenses = money put into expenditure account - tracked expenses - current balance
+    // totalFunded = transfer done this month + carryforward from prev month
+    // If no transfer yet, use the pending transfer amount as estimate
     const monthKey = getMonthKey(currentMonth);
-    const transferDone = Number((monthData._transferDone || 0));
+    const transferDone = Number(monthData._transferDone || 0);
     const prevMonthForCarry = new Date(currentMonth);
     prevMonthForCarry.setMonth(prevMonthForCarry.getMonth() - 1);
     const prevMonthCarry = (appData.monthlyBudgetData || {})[getMonthKey(prevMonthForCarry)];
     const prevCarryForward = Number(prevMonthCarry?._carryForwardDone || 0);
-    const totalFunded = prevCarryForward + transferDone;
+    const effectiveFunded = transferDone > 0 ? transferDone : pendingTransferAmt;
+    const totalFunded = prevCarryForward + effectiveFunded;
+    // Untracked = what went in - what you recorded - what's still in the account
+    // midMonthCC is included in trackedExpenses but will be paid from this account, so it reduces available balance
     const untracked = totalFunded > 0 ? Math.max(0, totalFunded - trackedExpenses - expBalance) : 0;
     const untrackedEl = document.getElementById("untrackedExpenses");
     if (untrackedEl) {
@@ -3851,6 +4226,51 @@ function resetAllData() {
     alert("✅ All data has been permanently deleted.");
 }
 
+// ── Delete Account ────────────────────────────────────────────────────────────
+function deleteAccount() {
+    const confirmation = confirm(
+        "⚠️ DANGER: DELETE ACCOUNT\n\n" +
+        "This will permanently:\n" +
+        "• Delete ALL your financial data from our servers\n" +
+        "• Delete your Firebase Authentication account\n" +
+        "• Log you out immediately\n\n" +
+        "This action CANNOT be undone. Your data CANNOT be recovered.\n\n" +
+        "Are you sure you want to delete your account?"
+    );
+    if (!confirmation) return;
+
+    const deleteConfirmation = prompt("Type 'DELETE ACCOUNT' to confirm permanent account deletion:");
+    if (deleteConfirmation !== "DELETE ACCOUNT") {
+        alert("Account deletion cancelled. Your data remains intact.");
+        return;
+    }
+
+    const user = firebase.auth().currentUser;
+    if (!user) { alert("No user signed in."); return; }
+
+    // Step 1: Delete Firestore data
+    db.collection("users").doc(user.uid).delete()
+        .then(() => {
+            // Step 2: Delete Firebase Auth user
+            return user.delete();
+        })
+        .then(() => {
+            alert("Your account and all data have been permanently deleted.");
+            // Auth state listener will handle redirect to login
+        })
+        .catch(err => {
+            if (err.code === "auth/requires-recent-login") {
+                alert("For security, you need to sign in again before deleting your account. Please log out, log back in, and try again.");
+            } else {
+                alert("Error deleting account: " + err.message);
+                console.error("Delete account error:", err);
+            }
+        });
+}
+
+const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+if (deleteAccountBtn) deleteAccountBtn.addEventListener("click", deleteAccount);
+
 // ── Event bindings ────────────────────────────────────────────────────────────
 entryForm.addEventListener("submit", addEntry);
 searchInput.addEventListener("input", render);
@@ -3866,9 +4286,8 @@ function getBudgetEarliestDate() {
     const od = appData.onboardingDate;
     if (!od) return null;
     const d = new Date(od);
-    // April of the onboarding year (FY start)
-    const fy = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1;
-    return new Date(fy, 3, 1); // April 1
+    // Block navigation before the onboarding month (not just FY start)
+    return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
 prevMonthBtn.addEventListener("click", () => {
@@ -3876,7 +4295,7 @@ prevMonthBtn.addEventListener("click", () => {
     const proposed = new Date(currentMonth);
     proposed.setMonth(proposed.getMonth() + step);
     const earliest = getBudgetEarliestDate();
-    if (earliest && proposed < earliest) return; // Block navigation before FY start
+    if (earliest && proposed < earliest) return; // Block navigation before onboarding month
     currentMonth.setMonth(currentMonth.getMonth() + step);
     renderMonthlyBudget();
 });
@@ -4031,19 +4450,52 @@ if (btnUpdateSalaryBalance) btnUpdateSalaryBalance.addEventListener("click", () 
     alert(`Salary account balance updated to ${formatMoney(newBalance)}`);
 });
 
+// Quick Update: Expenditure Account Balance
+const btnUpdateExpBalance = document.getElementById("btnUpdateExpBalance");
+if (btnUpdateExpBalance) btnUpdateExpBalance.addEventListener("click", () => {
+    const input = document.getElementById("midMonthExpBalance");
+    const newBalance = Number(input?.value);
+    if (isNaN(newBalance) || newBalance < 0) { alert("Enter a valid expenditure balance."); return; }
+    const cards = (appData.tabData || {}).cards || [];
+    const exp = cards.find(c => c.isPrimary === "Yes");
+    if (!exp) { alert("No Primary (Expenditure) account found."); return; }
+    exp.balance = newBalance;
+    appData.tabData.cards = cards.map(c => c.id === exp.id ? exp : c);
+    scheduleSave();
+    input.value = "";
+    // Calculate and show untracked expenses
+    const monthKey = getMonthKey(currentMonth);
+    const monthData = (appData.monthlyBudgetData || {})[monthKey] || {};
+    const transferDone = Number(monthData._transferDone || 0);
+    const prevMonthForCarry = new Date(currentMonth);
+    prevMonthForCarry.setMonth(prevMonthForCarry.getMonth() - 1);
+    const prevMonthCarry = (appData.monthlyBudgetData || {})[getMonthKey(prevMonthForCarry)];
+    const prevCarryForward = Number(prevMonthCarry?._carryForwardDone || 0);
+    const trackedExp = window._budgetTrackedExpenses || 0;
+    const totalFunded = prevCarryForward + transferDone;
+    const untracked = totalFunded > 0 ? Math.max(0, totalFunded - trackedExp - newBalance) : 0;
+    const resultEl = document.getElementById("quickUpdateResult");
+    const untrackedEl = document.getElementById("quickUpdateUntracked");
+    if (resultEl) resultEl.hidden = false;
+    if (untrackedEl) { untrackedEl.textContent = formatMoney(untracked); untrackedEl.style.color = untracked > 0 ? "#eab308" : "#22c55e"; }
+    if (!isBudgetEditMode) renderMonthlyBudget();
+    alert(`Expenditure account balance updated to ${formatMoney(newBalance)}`);
+});
+
+// Quick Update: Current Month CC Spending (stored as midMonthCCOutstanding)
 const btnUpdateCCOutstanding = document.getElementById("btnUpdateCCOutstanding");
 if (btnUpdateCCOutstanding) btnUpdateCCOutstanding.addEventListener("click", () => {
     const input = document.getElementById("midMonthCCOutstanding");
     const newCC = Number(input?.value);
-    if (isNaN(newCC) || newCC < 0) { alert("Enter a valid CC outstanding amount."); return; }
+    if (isNaN(newCC) || newCC < 0) { alert("Enter a valid CC spending amount."); return; }
     const monthKey = getMonthKey(currentMonth);
     if (!appData.monthlyBudgetData) appData.monthlyBudgetData = {};
     if (!appData.monthlyBudgetData[monthKey]) appData.monthlyBudgetData[monthKey] = { inflow: {}, outflow: {}, investing: {} };
-    appData.monthlyBudgetData[monthKey].outflow.creditCardOutstanding = newCC;
+    appData.monthlyBudgetData[monthKey].outflow.midMonthCCOutstanding = newCC;
     scheduleSave();
     input.value = "";
     renderMonthlyBudget();
-    alert(`Credit Card Outstanding for ${currentMonth.toLocaleDateString("en-IN", { month: "long", year: "numeric" })} updated to ${formatMoney(newCC)}`);
+    alert(`Current month CC spending for ${currentMonth.toLocaleDateString("en-IN", { month: "long", year: "numeric" })} updated to ${formatMoney(newCC)}`);
 });
 
 // ── Sort/Filter toolbar event delegation ─────────────────────────────────────
@@ -4053,6 +4505,7 @@ if (btnUpdateCCOutstanding) btnUpdateCCOutstanding.addEventListener("click", () 
         inflowTabPreview:   { tabId: "inflow",        render: () => renderInflow() },
         outflowTabPreview:  { tabId: "outflow",       render: () => renderOutflow() },
         giftsPreview:       { tabId: "gifts",         render: () => renderGifts() },
+        insuranceTabPreview:{ tabId: "insurance",     render: () => renderInsurance() },
     };
 
     Object.entries(previewMap).forEach(([containerId, { tabId, render }]) => {
@@ -4174,6 +4627,25 @@ toggleEmergencyFundEdit.addEventListener("click", () => {
 
 emergencyFundForm.addEventListener("submit", addEmergencyFundEntry);
 
+// Insurance event bindings
+if (toggleInsuranceEdit) toggleInsuranceEdit.addEventListener("click", () => {
+    isInsuranceEditMode = !isInsuranceEditMode;
+    if (!isInsuranceEditMode) scheduleSave();
+    renderInsurance();
+});
+if (insuranceForm) insuranceForm.addEventListener("submit", addInsuranceEntry);
+if (insuranceTableBody) insuranceTableBody.addEventListener("click", e => handleTableAction("insurance", e));
+
+// Investment sub-tab bindings
+const investmentSubTabs = document.getElementById("investmentSubTabs");
+if (investmentSubTabs) investmentSubTabs.addEventListener("click", e => {
+    if (!e.target.matches("[data-inv-view]")) return;
+    activeInvestmentView = e.target.dataset.invView;
+    investmentSubTabs.querySelectorAll(".inv-sub-tab").forEach(btn => btn.classList.remove("active"));
+    e.target.classList.add("active");
+    renderInflow();
+});
+
 // Auto-save on category field changes
 inflowFields.addEventListener("input", handleCategoryFieldChange);
 outflowFields.addEventListener("input", handleCategoryFieldChange);
@@ -4243,6 +4715,15 @@ function addOutflowEntry(event) {
     upsertSectionEntry("outflow", entry);
     resetSectionForm("outflow");
     renderOutflow();
+}
+
+function addInsuranceEntry(event) {
+    event.preventDefault();
+    const entry = readSectionFormEntry("insurance");
+    if (!entry.name) return;
+    upsertSectionEntry("insurance", entry);
+    resetSectionForm("insurance");
+    renderInsurance();
 }
 
 function addCardEntry(event) {

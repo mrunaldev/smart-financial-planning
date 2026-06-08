@@ -181,34 +181,42 @@
                 <div class="summary-grid">
                     <div class="summary-item">
                         <span class="summary-label">Total Inflow</span>
+                        <span class="summary-hint">All income sources this month</span>
                         <strong id="totalIncome">₹0</strong>
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">Total Outflow</span>
+                        <span class="summary-hint">Fixed obligations + on-demand spending</span>
                         <strong id="totalExpenses">₹0</strong>
                     </div>
                     <div class="summary-item">
-                        <span class="summary-label">Cash Flow (Inflow - Outflow)</span>
+                        <span class="summary-label">Cash Flow</span>
+                        <span class="summary-hint">Inflow minus all outflows (planning metric)</span>
                         <strong id="cashFlow">₹0</strong>
                     </div>
                     <div class="summary-item">
-                        <span class="summary-label">Salary Account Balance</span>
+                        <span class="summary-label" id="salaryBalanceLabel">Salary A/c Balance</span>
+                        <span class="summary-hint" id="salaryBalanceHint">Current balance in your salary account</span>
                         <strong id="initialBalance">₹0</strong>
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">Expenditure Account Balance</span>
+                        <span class="summary-hint">Current balance in your spending account</span>
                         <strong id="expenditureAccountBalance">₹0</strong>
                     </div>
                     <div class="summary-item">
                         <span id="amountAvailableLabel" class="summary-label">Total Spendable This Month</span>
+                        <span class="summary-hint">Expenditure balance + pending transfers − tracked spend</span>
                         <strong id="amountAvailableToSpend" style="color:#22c55e">₹0</strong>
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">Tracked Expenses</span>
+                        <span class="summary-hint">Bills, family expenses, misc, CC spending entered by you</span>
                         <strong id="trackedExpenses">₹0</strong>
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">Untracked Expenses</span>
+                        <span class="summary-hint">Difference between expected and actual balance (cash/unrecorded)</span>
                         <strong id="untrackedExpenses" style="color:#eab308">₹0</strong>
                     </div>
                 </div>
@@ -260,29 +268,7 @@
                     </div>
                 </div>
 
-                <!-- Expenditure Reconciliation -->
-                <div class="expense-transfer-section">
-                    <h3>Expenditure Reconciliation</h3>
-                    <div class="reconciliation-input-row">
-                        <label for="currentExpAccBalanceInput">Current Expenditure Account Balance</label>
-                        <input type="number" id="currentExpAccBalanceInput" min="0" step="1" placeholder="Enter current balance">
-                        <button type="button" id="btnReconcile" class="btn-reconcile">Reconcile</button>
-                    </div>
-                    <div class="expense-transfer-grid" id="reconciliationGrid" hidden>
-                        <div class="expense-transfer-item">
-                            <span class="expense-transfer-label">Expected Balance (after tracked spend)</span>
-                            <strong id="expectedExpBalance">₹0</strong>
-                        </div>
-                        <div class="expense-transfer-item">
-                            <span class="expense-transfer-label">Actual Balance (entered)</span>
-                            <strong id="actualExpBalance">₹0</strong>
-                        </div>
-                        <div class="expense-transfer-item highlight-transfer">
-                            <span class="expense-transfer-label">Untracked/Cash Expenses</span>
-                            <strong id="reconciledUntracked" style="color:#eab308">₹0</strong>
-                        </div>
-                    </div>
-                </div>
+                <!-- Reconciliation merged into Quick Update above -->
 
                 <!-- Month-End Carryforward -->
                 <div class="expense-transfer-section" id="carryforwardSection" hidden>
@@ -331,20 +317,36 @@
                     </div>
                 </div>
 
-                <!-- Mid-Month Quick Update -->
+                <!-- Mid-Month Quick Update (consolidated) -->
                 <div class="mid-month-update-section">
                     <h3>Quick Update (Mid-Month)</h3>
+                    <p class="section-description">Update these values periodically to keep your budget accurate. Only change what has changed.</p>
                     <div class="mid-month-row">
                         <div class="mid-month-field">
                             <label for="midMonthSalaryBalance">Salary Account Balance</label>
+                            <span class="field-hint">Current balance in your salary account today</span>
                             <input type="number" id="midMonthSalaryBalance" min="0" step="1" placeholder="Current salary balance">
                             <button type="button" id="btnUpdateSalaryBalance" class="btn-mid-update">Update</button>
                         </div>
                         <div class="mid-month-field">
-                            <label for="midMonthCCOutstanding">Credit Card Outstanding</label>
-                            <input type="number" id="midMonthCCOutstanding" min="0" step="1" placeholder="Current CC outstanding">
+                            <label for="midMonthExpBalance">Expenditure Account Balance</label>
+                            <span class="field-hint">Current balance in your spending account today</span>
+                            <input type="number" id="midMonthExpBalance" min="0" step="1" placeholder="Current expenditure balance">
+                            <button type="button" id="btnUpdateExpBalance" class="btn-mid-update">Update</button>
+                        </div>
+                        <div class="mid-month-field">
+                            <label for="midMonthCCOutstanding">Current Month Credit Card Spending</label>
+                            <span class="field-hint">Total credit card purchases made this month so far</span>
+                            <input type="number" id="midMonthCCOutstanding" min="0" step="1" placeholder="This month's CC spending">
                             <button type="button" id="btnUpdateCCOutstanding" class="btn-mid-update">Update</button>
                         </div>
+                    </div>
+                    <div id="quickUpdateResult" class="quick-update-result" hidden>
+                        <div class="quick-update-result-item">
+                            <span>Untracked/Cash Expenses</span>
+                            <strong id="quickUpdateUntracked" style="color:#eab308">₹0</strong>
+                        </div>
+                        <span class="field-hint">Calculated from: (transfers + carryforward) − tracked expenses − current balance</span>
                     </div>
                 </div>
             </div><!-- end budgetEdit -->
@@ -398,39 +400,81 @@
             </div>
         </div>
 
-        <!-- Inflow Tab UI (replaces Investments) -->
+        <!-- Investments Tab UI (was Inflow) -->
         <div id="inflowUI" class="investments-ui" hidden>
             <div class="goal-header">
-                <h2>Inflow</h2>
+                <h2>Investments</h2>
                 <button type="button" id="toggleInflowEdit" class="btn-nav btn-icon">✎ Edit</button>
             </div>
 
-            <!-- Inflow Summary -->
+            <!-- Investment Summary -->
             <div class="investment-summary">
                 <div class="investment-summary-item">
-                    <span class="investment-summary-label">Total Amount</span>
+                    <span class="investment-summary-label">Total Invested</span>
+                    <span class="summary-hint">Sum of all investment amounts</span>
                     <strong id="totalInflowAmount">₹0</strong>
                 </div>
                 <div class="investment-summary-item">
-                    <span class="investment-summary-label">Total Current Value</span>
+                    <span class="investment-summary-label">Current Portfolio Value</span>
+                    <span class="summary-hint">Estimated value including growth</span>
                     <strong id="totalInflowCurrentValue">₹0</strong>
                 </div>
                 <div class="investment-summary-item">
                     <span class="investment-summary-label">Total Items</span>
                     <strong id="totalInflowItems">0</strong>
                 </div>
+                <div class="investment-summary-item">
+                    <span class="investment-summary-label">Monthly Investments</span>
+                    <span class="summary-hint">Recurring SIPs, RDs, etc.</span>
+                    <strong id="totalMonthlyInvestments">₹0</strong>
+                </div>
+                <div class="investment-summary-item">
+                    <span class="investment-summary-label">Existing (Lump Sum)</span>
+                    <span class="summary-hint">FDs, PPF, Stocks, Bonds, etc.</span>
+                    <strong id="totalExistingInvestments">₹0</strong>
+                </div>
+            </div>
+
+            <!-- Sub-section toggle -->
+            <div class="investment-subsection-tabs" id="investmentSubTabs">
+                <button type="button" class="inv-sub-tab active" data-inv-view="all">All</button>
+                <button type="button" class="inv-sub-tab" data-inv-view="existing">Existing</button>
+                <button type="button" class="inv-sub-tab" data-inv-view="monthly">Monthly</button>
+                <button type="button" class="inv-sub-tab" data-inv-view="portfolio">Portfolio Summary</button>
             </div>
 
             <!-- Preview Mode -->
             <div id="inflowTabPreview" class="investment-preview">
                 <div class="chart-section">
-                    <h3>Inflow Amounts</h3>
+                    <h3>Investment Values</h3>
                     <div class="chart-wrapper">
                         <canvas id="inflowBarChart"></canvas>
                     </div>
                 </div>
                 <div id="inflowSortFilter"></div>
                 <div id="inflowList" class="investments-list"></div>
+                <!-- Portfolio Summary (shown when Portfolio tab selected) -->
+                <div id="portfolioSummary" class="portfolio-summary" hidden>
+                    <div class="portfolio-group">
+                        <h4>Existing Investments</h4>
+                        <div id="portfolioExisting" class="portfolio-list"></div>
+                        <div class="portfolio-subtotal">Subtotal: <strong id="portfolioExistingTotal">₹0</strong></div>
+                    </div>
+                    <div class="portfolio-group">
+                        <h4>Monthly Investments (SIP/RD)</h4>
+                        <div id="portfolioMonthly" class="portfolio-list"></div>
+                        <div class="portfolio-subtotal">Subtotal: <strong id="portfolioMonthlyTotal">₹0</strong></div>
+                    </div>
+                    <div class="portfolio-group">
+                        <h4>One-Time Investments (from Budget)</h4>
+                        <div id="portfolioOneTime" class="portfolio-list"></div>
+                        <div class="portfolio-subtotal">Subtotal: <strong id="portfolioOneTimeTotal">₹0</strong></div>
+                    </div>
+                    <div class="portfolio-grand-total">
+                        <span>Total Portfolio Value</span>
+                        <strong id="portfolioGrandTotal">₹0</strong>
+                    </div>
+                </div>
             </div>
 
             <!-- Edit Mode -->
@@ -438,7 +482,7 @@
                 <form class="entry-form" id="inflowForm" autocomplete="off">
                     <div id="inflowDynamicFields"></div>
                     <div class="field field-btn">
-                        <button type="submit" class="btn-add">Add Inflow</button>
+                        <button type="submit" class="btn-add">Add Investment</button>
                     </div>
                 </form>
                 <div class="table-wrap">
@@ -446,12 +490,12 @@
                         <thead id="inflowTableHead"></thead>
                         <tbody id="inflowTableBody"></tbody>
                     </table>
-                    <p class="empty-state" id="inflowEmptyState">No inflow items yet. Add one above.</p>
+                    <p class="empty-state" id="inflowEmptyState">No investments yet. Add one above.</p>
                 </div>
             </div>
         </div>
 
-        <!-- Outflow Tab UI (replaces Liabilities + Insurances) -->
+        <!-- Outflow Tab UI (Liabilities + recurring deductions) -->
         <div id="outflowUI" class="monthly-fixed-expense-ui" hidden>
             <div class="goal-header">
                 <h2>Outflow</h2>
@@ -462,14 +506,17 @@
             <div class="expense-summary expense-summary-grid">
                 <div class="expense-summary-item">
                     <span class="expense-summary-label">Fixed Monthly Income</span>
+                    <span class="summary-hint">Your salary / primary income</span>
                     <strong id="outflowDisplayIncome">₹0</strong>
                 </div>
                 <div class="expense-summary-item">
                     <span class="expense-summary-label">Monthly Deductions</span>
+                    <span class="summary-hint">Total of all monthly frequency outflows</span>
                     <strong id="totalOutflowDeductions">₹0</strong>
                 </div>
                 <div class="expense-summary-item">
-                    <span class="expense-summary-label">Remaining to Spend</span>
+                    <span class="expense-summary-label">Remaining After Deductions</span>
+                    <span class="summary-hint">Income minus monthly deductions</span>
                     <strong id="outflowRemainingToSpend" class="remaining-amount">₹0</strong>
                 </div>
                 <div class="expense-summary-item">
@@ -517,6 +564,59 @@
                         <tbody id="outflowTableBody"></tbody>
                     </table>
                     <p class="empty-state" id="outflowEmptyState">No outflow items yet. Add one above.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Insurance Tab UI -->
+        <div id="insuranceUI" class="insurance-ui" hidden>
+            <div class="goal-header">
+                <h2>Insurance</h2>
+                <button type="button" id="toggleInsuranceEdit" class="btn-nav btn-icon">✎ Edit</button>
+            </div>
+
+            <!-- Insurance Summary -->
+            <div class="insurance-summary">
+                <div class="insurance-summary-item">
+                    <span class="insurance-summary-label">Total Policies</span>
+                    <strong id="totalPolicies">0</strong>
+                </div>
+                <div class="insurance-summary-item">
+                    <span class="insurance-summary-label">Annual Premium Total</span>
+                    <span class="summary-hint">Sum of all premiums annualized</span>
+                    <strong id="totalAnnualPremium">₹0</strong>
+                </div>
+                <div class="insurance-summary-item">
+                    <span class="insurance-summary-label">Monthly Premium Load</span>
+                    <span class="summary-hint">Annual premiums ÷ 12</span>
+                    <strong id="monthlyPremiumLoad">₹0</strong>
+                </div>
+                <div class="insurance-summary-item">
+                    <span class="insurance-summary-label">Total Sum Assured</span>
+                    <strong id="totalSumAssured">₹0</strong>
+                </div>
+            </div>
+
+            <!-- Preview Mode -->
+            <div id="insuranceTabPreview" class="insurance-preview">
+                <div id="insuranceSortFilter"></div>
+                <div id="insuranceList" class="insurance-list"></div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="insuranceTabEdit" class="insurance-edit" hidden>
+                <form class="entry-form" id="insuranceForm" autocomplete="off">
+                    <div id="insuranceDynamicFields"></div>
+                    <div class="field field-btn">
+                        <button type="submit" class="btn-add">Add Policy</button>
+                    </div>
+                </form>
+                <div class="table-wrap">
+                    <table>
+                        <thead id="insuranceTableHead"></thead>
+                        <tbody id="insuranceTableBody"></tbody>
+                    </table>
+                    <p class="empty-state" id="insuranceEmptyState">No insurance policies yet. Add one above.</p>
                 </div>
             </div>
         </div>
@@ -789,37 +889,40 @@
                 <button type="button" id="toggleEmergencyFundEdit" class="btn-nav btn-icon">✎ Edit</button>
             </div>
 
-            <!-- Emergency Fund Summary -->
-            <div class="emergency-fund-summary">
-                <div class="emergency-fund-summary-item">
-                    <span class="emergency-fund-summary-label">Current Emergency Fund</span>
-                    <strong id="currentEmergencyFundDisplay">₹0</strong>
-                </div>
-                <div class="emergency-fund-summary-item">
-                    <span class="emergency-fund-summary-label">Average Monthly Expenses</span>
-                    <strong id="averageMonthlyExpenses">₹0</strong>
-                </div>
-                <div class="emergency-fund-summary-item">
-                    <span class="emergency-fund-summary-label">6 Months Needed</span>
-                    <strong id="sixMonthsNeeded">₹0</strong>
-                </div>
-                <div class="emergency-fund-summary-item">
-                    <span class="emergency-fund-summary-label">12 Months Needed</span>
-                    <strong id="twelveMonthsNeeded">₹0</strong>
-                </div>
-            </div>
-
-            <!-- Status Display -->
-            <div class="emergency-fund-status" id="emergencyFundStatus">
-                <div class="status-badge" id="statusBadge">-</div>
-                <div class="status-details">
-                    <div class="status-detail">
-                        <span class="status-detail-label">Amount Needed</span>
-                        <strong id="amountNeeded">₹0</strong>
+            <!-- Preview Mode -->
+            <div id="emergencyFundPreview">
+                <!-- Emergency Fund Summary -->
+                <div class="emergency-fund-summary">
+                    <div class="emergency-fund-summary-item">
+                        <span class="emergency-fund-summary-label">Current Emergency Fund</span>
+                        <strong id="currentEmergencyFundDisplay">₹0</strong>
                     </div>
-                    <div class="status-detail">
-                        <span class="status-detail-label">Months Covered</span>
-                        <strong id="monthsCovered">0</strong>
+                    <div class="emergency-fund-summary-item">
+                        <span class="emergency-fund-summary-label">Average Monthly Expenses</span>
+                        <strong id="averageMonthlyExpenses">₹0</strong>
+                    </div>
+                    <div class="emergency-fund-summary-item">
+                        <span class="emergency-fund-summary-label">6 Months Needed</span>
+                        <strong id="sixMonthsNeeded">₹0</strong>
+                    </div>
+                    <div class="emergency-fund-summary-item">
+                        <span class="emergency-fund-summary-label">12 Months Needed</span>
+                        <strong id="twelveMonthsNeeded">₹0</strong>
+                    </div>
+                </div>
+
+                <!-- Status Display -->
+                <div class="emergency-fund-status" id="emergencyFundStatus">
+                    <div class="status-badge" id="statusBadge">-</div>
+                    <div class="status-details">
+                        <div class="status-detail">
+                            <span class="status-detail-label">Amount Needed</span>
+                            <strong id="amountNeeded">₹0</strong>
+                        </div>
+                        <div class="status-detail">
+                            <span class="status-detail-label">Months Covered</span>
+                            <strong id="monthsCovered">0</strong>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -926,6 +1029,13 @@
                 <div class="settings-row-sub">Permanently delete all your data and start fresh</div>
             </div>
             <button type="button" id="resetDataBtn" class="btn-danger-action">Reset</button>
+        </div>
+        <div class="settings-action-row" style="margin-top:12px;">
+            <div>
+                <div class="settings-row-label">Delete Account</div>
+                <div class="settings-row-sub">Permanently delete your account, all financial data, and sign out. This cannot be recovered.</div>
+            </div>
+            <button type="button" id="deleteAccountBtn" class="btn-danger-action" style="background:#7f1d1d;">Delete Account</button>
         </div>
     </div>
 </div>

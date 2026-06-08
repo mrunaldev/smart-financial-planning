@@ -9,34 +9,40 @@ A comprehensive guide to using SmartFin for personal financial planning.
 1. [Overview](#overview)
 2. [Getting Started](#getting-started)
 3. [Authentication](#authentication)
-4. [Dashboard UI](#dashboard-ui)
-5. [Tabs & Categories](#tabs--categories)
-6. [Adding Entries](#adding-entries)
-7. [Managing Entries](#managing-entries)
-8. [Search & Filter](#search--filter)
-9. [Export to Excel](#export-to-excel)
-10. [Reset All Data](#reset-all-data)
-11. [Custom Tabs](#custom-tabs)
-12. [Cross-Device Sync](#cross-device-sync)
-13. [FAQ](#faq)
+4. [Dashboard & Navigation](#dashboard--navigation)
+5. [Accounts (Setup)](#accounts-setup)
+6. [Monthly Budget](#monthly-budget)
+7. [Investments](#investments)
+8. [Outflow (Fixed Deductions)](#outflow-fixed-deductions)
+9. [Insurance](#insurance)
+10. [Financial Goals](#financial-goals)
+11. [Net Worth](#net-worth)
+12. [Tax Plan](#tax-plan)
+13. [Gifts](#gifts)
+14. [Emergency Fund](#emergency-fund)
+15. [Settings & Danger Zone](#settings--danger-zone)
+16. [Export to Excel](#export-to-excel)
+17. [Cross-Device Sync](#cross-device-sync)
+18. [FAQ](#faq)
 
 ---
 
 ## Overview
 
-SmartFin is a dark-themed personal finance application that helps you track:
-- Monthly budgets and expenses with category-based tracking, auto-populated from Investments and Liabilities
-- Financial goals and savings with progress tracking
-- Liabilities with frequency-based tracking (Monthly/Quarterly/Semi-Annual/Annual/One-Time)
-- Investments and returns with growth projections
-- Insurance policies with nominee management
-- Bank accounts and cards with primary/expenditure/saving designation
-- Net worth (assets & liabilities) with projection till age 70
-- Tax planning under new/old regimes with automatic income integration
-- Gifts and charitable giving with category tracking
-- Emergency fund requirements with status indicators
+SmartFin is a personal finance web application (dark/light theme) that helps you manage:
 
-All data syncs across devices via Firebase, so you can access your financial data from anywhere.
+- **Monthly Budget** — Track inflows, outflows, on-demand spending with account-balance-aware calculations
+- **Investments** — Existing (lump sum), Monthly (SIPs/RDs), Portfolio Summary, with sub-section views
+- **Outflow** — Fixed monthly deductions (EMIs, insurance premiums, savings, investments) auto-debited from Salary
+- **Insurance** — Dedicated policy tracker with premium frequency, sum assured, nominees
+- **Accounts** — Bank/NBFC accounts with Primary (Expenditure), Salary, Saving, Investment designations
+- **Financial Goals** — Target-based savings goals with progress tracking
+- **Net Worth** — Assets & liabilities with 70-year projection
+- **Tax Plan** — Old/New regime comparison with auto-calculated deductions from budget
+- **Gifts** — Gift tracking with yearly/on-demand categories
+- **Emergency Fund** — Fund adequacy calculator based on average monthly expenses
+
+All data syncs in real-time across devices via Firebase Firestore.
 
 ---
 
@@ -45,518 +51,436 @@ All data syncs across devices via Firebase, so you can access your financial dat
 ### Prerequisites
 
 - Modern web browser (Chrome, Firefox, Safari, Edge)
-- Firebase project configured (see README.md for setup)
-- Internet connection for Firebase sync
+- Firebase project configured (see README.md)
+- Internet connection
 
-### Opening the App
+### First-Time Setup
 
-Simply open `index.html` in your browser. No server required.
+1. Open `index.html` in your browser
+2. **Register** with name, email, and password
+3. Go to **Accounts** tab → Add a **Primary (Expenditure)** account and a **Salary** account
+4. This unlocks all other tabs
 
 ---
 
 ## Authentication
 
-### UI Structure
-
-```mermaid
-flowchart TD
-    A[Auth Screen] --> B{User Mode}
-    B -->|Sign In| C[Email + Password]
-    B -->|Register| D[Name + Email + Password]
-    C --> E[Login Success]
-    D --> F[Create Account]
-    F --> E
-    E --> G[Dashboard]
-```
-
 ### Sign In
+1. Enter email + password → Click **Sign In**
 
-1. Enter your registered email address
-2. Enter your password (minimum 6 characters)
-3. Click **Sign In**
-
-### Register (New Account)
-
-1. Click **Register** link below the form
-2. Enter your **name** (displayed in header after login)
-3. Enter your email address
-4. Create a password (minimum 6 characters)
-5. Click **Create Account**
-
-### Auth Screen Layout
-
-```
-┌─────────────────────────────────┐
-│         [₹ Logo]                │
-│         SmartFin                 │
-│   Smart Financial Planning      │
-├─────────────────────────────────┤
-│                                 │
-│  Your name: [______________]    │
-│  Email address: [___________]   │
-│  Password:      [**********]   │
-│                                 │
-│  [ Sign In ]                    │
-│                                 │
-│  Don't have an account? Register│
-└─────────────────────────────────┘
-```
+### Register
+1. Click **Register** → Enter name, email, password → Click **Create Account**
 
 ---
 
-## Dashboard UI
+## Dashboard & Navigation
 
-### Main Dashboard Layout
+### Tab Bar
 
-```mermaid
-flowchart LR
-    subgraph Header
-        A[Logo + Brand]
-        B[User Name]
-        C[Sign Out]
-    end
-    
-    subgraph Tabs
-        D[Monthly Budget]
-        E[Financial Goal]
-        F[Investments]
-        G[...]
-        H[+ Add Tab]
-    end
-    
-    subgraph Metrics
-        I[Planned]
-        J[Actual]
-        K[Balance]
-        L[Items]
-    end
-    
-    subgraph WorkArea
-        M[Entry Form]
-        N[Toolbar: Search | Export | Clear]
-        O[Data Table]
-    end
-    
-    Header --> Tabs
-    Tabs --> Metrics
-    Metrics --> WorkArea
+```
+[Accounts] [Investments] [Outflow] [Insurance] [Budget] [Goals] [Net Worth] [Tax Plan] [Gifts] [Emergency Fund] [+]
 ```
 
-### Header Section
+- **Core tabs** (always visible): Accounts, Investments, Outflow, Insurance, Budget, Goals
+- **Additional tabs**: Net Worth, Tax Plan, Gifts, Emergency Fund
+- **Custom tabs**: Add with the **+** button
+- **Mobile**: Horizontally scrollable, with hamburger menu
 
-| Element | Description |
-|---------|-------------|
-| **₹ Logo** | SmartFin branding with rupee symbol |
-| **SmartFin** | Application name |
-| **Subtitle** | Current active tab name |
-| **User Name** | Your registered name (from registration) |
-| **Sign Out** | Logout button |
+### Edit/Preview Pattern
+
+All tabs use the **Edit/Done toggle** pattern:
+- **Preview mode** (default): Shows summary cards, charts, and read-only data
+- **Edit mode** (click ✎ Edit): Shows the entry form and editable data table
+- Click **✓ Done** to return to preview mode
+
+---
+
+## Accounts (Setup)
+
+### Purpose
+
+Manage your bank/NBFC accounts. The account system is the foundation — other tabs depend on it.
+
+### Account Types
+
+| Account | Badge | Rules |
+|---------|-------|-------|
+| **Primary (Expenditure)** | ⭐ PRIMARY | Exactly one. isPrimary=Yes auto-sets purpose to Expenditure |
+| **Salary** | 💼 SALARY | Exactly one. Purpose=Salary, isPrimary=No |
+| **Saving** | 💰 SAVING | At most one. Purpose=Saving |
+| **Investment** | — | Purpose=Investment |
+| **Loan** | — | Purpose=Loan |
+| **Others** | — | Purpose=Others (custom purpose field) |
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| Bank/NBFC Name | Text | e.g. HDFC, ICICI |
+| Primary Account | Select | Yes / No |
+| Account Present | Select | Yes / No |
+| Balance (₹) | Number | Current account balance |
+| Debit Card Present | Select | Yes / No |
+| Credit Card Present | Select | Yes / No |
+| Credit Card Limit (₹) | Number | Credit limit |
+| Purpose of Use | Select | Salary, Expenditure, Saving, Investment, Loan, Others |
+| Specify Purpose | Text | Custom purpose (when Others selected) |
+| Address/KYC Updated | Select | Yes / No |
+| Nominee Added | Select | Yes / No |
+
+### Onboarding
+
+The app marks onboarding complete when **both** Primary and Salary accounts exist. Until then, other tabs are hidden.
+
+---
+
+## Monthly Budget
+
+### Overview
+
+The Budget tab is the central financial cockpit. It shows monthly income vs. expenses with account-balance-aware calculations.
+
+### Views
+
+- **Monthly view** — Current month's budget (navigate with ◀ ▶)
+- **Annual view** — Financial year summary with pie chart (toggle with 📊 button)
+
+### Budget Summary Grid
+
+| Metric | Hint | Formula |
+|--------|------|---------|
+| **Total Inflow** | All income sources this month | Sum of Cash Inflow fields |
+| **Total Outflow** | Fixed obligations + on-demand spending | Sum of Cash Outflow + On-Demand Outflow |
+| **Cash Flow** | Planning metric | Inflow − Outflow |
+| **Salary Account Balance** | After auto-debit of fixed outflows | Salary balance − fixed monthly outflows |
+| **Expenditure Account Balance** | Current spending account balance | From Accounts tab |
+| **Total Spendable This Month** | What you can still spend | Expenditure balance + pending transfers − tracked expenses |
+| **Tracked Expenses** | Bills, CC spending you entered | Sum of all manually entered outflow/on-demand items |
+| **Untracked Expenses** | Cash/unrecorded spending | (carryforward + transfers) − tracked − current balance |
+
+### Budget Categories
+
+**Cash Inflow:**
+- Primary Income (auto-calculated from Salary account)
+- Secondary Income
+- Borrowing/Money Back
+- Interest/Dividend
+- Others
+
+**Cash Outflow:**
+- Auto-calculated Liabilities (EMIs) — auto-linked from Outflow tab
+- Previous Month CC Bill (unpaid) — last month's credit card balance
+- Current Month CC Spending — this month's credit card purchases
+- Debt Repayment / Lending
+- Utility Bills (electricity, water, gas, internet)
+- Family Expenditure (groceries, household)
+- Miscellaneous Expenses
+
+**On-Demand Outflow:**
+- On-Demand Saving
+- On-Demand Investment
+- On-Demand Expenditure
+- On-Demand Liability
+
+### Monthly Transfer Flow
+
+1. Salary received → Auto-debit fixed outflows (EMIs, insurance, etc.)
+2. Remaining → **Execute Transfer** to Primary (Expenditure) account
+3. Track daily spending in Cash Outflow / On-Demand Outflow
+4. Month-end → **Carry Forward** remaining balance
+
+### Quick Update (Mid-Month)
+
+Update account balances and CC spending without editing the full budget:
+
+| Field | What it does |
+|-------|-------------|
+| **Salary Account Balance** | Updates the Salary account balance in Accounts |
+| **Expenditure Account Balance** | Updates the Primary account balance + auto-calculates untracked expenses |
+| **Current Month CC Spending** | Stores as `midMonthCCOutstanding` (separate from previous month's CC bill) |
+
+When you update Expenditure Balance, the system calculates untracked expenses:
+`Untracked = (transfers + carryforward) − tracked expenses − actual balance`
+
+### Month-End Carry Forward Banner
+
+When navigating to a new month, if the previous month has an unclosed balance, a banner appears:
+> "Previous month (May 2026) has ₹X remaining. Carry forward?"
+
+Click **Carry Forward** to record it.
+
+---
+
+## Investments
+
+### Overview
+
+Track all your investments in one place with sub-section views.
+
+### Sub-sections (Preview Mode)
+
+| Tab | Shows |
+|-----|-------|
+| **All** | Every investment entry |
+| **Existing** | Lump sum: FDs, PPF, Stocks, Bonds, Real Estate (category=Existing, frequency≠Monthly) |
+| **Monthly** | Recurring: SIPs, RDs (category=Monthly or frequency=Monthly) |
+| **Portfolio Summary** | Consolidated view with Existing + Monthly + One-Time (from Budget) |
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| Investment Name | Text | e.g. HDFC SIP, Axis FD |
+| Type | Select | Mutual Fund, SIP, FD, RD, Stocks, PPF, EPF, NPS, Bonds, Gold, Real Estate, Saving, Other |
+| Category | Select | **Existing** or **Monthly** |
+| Invested Amount (₹) | Number | Total amount invested |
+| Current Value (₹) | Number | Market value today |
+| Expected Return (%) | Number | Annual return rate |
+| Frequency | Select | Monthly, Quarterly, Semi-Annual, Annual, One-Time |
+| Start Date | Date | Investment start |
+| Maturity Date | Date | Maturity / end date |
+| Notes | Text | Optional |
 
 ### Summary Metrics
 
-| Metric | Description |
-|--------|-------------|
-| **Planned** | Total planned/budgeted amount for current tab |
-| **Actual** | Total actual spent/achieved amount |
-| **Balance** | Difference (Planned - Actual) |
-| **Items** | Total number of entries in current tab |
+- Total Invested, Current Portfolio Value, Total Items
+- Monthly Investments total, Existing (Lump Sum) total
+
+### Portfolio Summary View
+
+Groups investments into three sections:
+1. **Existing Investments** — FDs, PPF, Stocks, etc.
+2. **Monthly Investments** — SIPs, RDs
+3. **One-Time Investments (from Budget)** — On-Demand Investment amounts from monthly budget data
 
 ---
 
-## Tabs & Categories
+## Outflow (Fixed Deductions)
 
-### Available Tabs
+### Overview
 
-```mermaid
-graph TD
-    A[SmartFin Tabs] --> B[Monthly Budget]
-    A --> C[Financial Goal]
-    A --> D[Monthly Fixed Expense]
-    A --> E[Investments]
-    A --> F[Insurances]
-    A --> G[Cards]
-    A --> H[Net Worth]
-    A --> I[Tax Plan]
-    A --> J[Gifts]
-    A --> K[Misc]
-    A --> L[One Time Budget]
-    A --> M[Custom Tabs +]
-```
+Recurring monthly deductions auto-debited from your Salary account at month start.
 
-### Tab Details
+### Fields
 
-| Tab ID | Name | Purpose | Key Fields |
-|--------|------|---------|------------|
-| `monthlyBudget` | Monthly Budget | Recurring monthly income & expenses with auto-calculation | Inflow (Primary Income, Secondary Income, etc.), Cash Outflow (Auto-calculated Liabilities, Credit Card Outstanding, etc.), On-Demand Outflow (On-Demand Saving, On-Demand Investment, On-Demand Expenditure, On-Demand Liability) |
-| `financialGoal` | Financial Goal | Savings targets (emergency fund, down payment) | Goal Name, Amount Needed, Amount Accumulated, Target Date, Auto Status |
-| `monthlyFixedExpense` | Liabilities | Fixed bills, insurance premiums, savings, investments, liabilities | Expense Name, Amount, Deduction Type, Frequency, Bank Name, End Date |
-| `investments` | Investments | Stocks, mutual funds, SIPs | Investment Name, Initial Investment, Amount So Far, Annual Interest Rate, Frequency, Start/Maturity Date |
-| `insurances` | Insurances | Life, term, health, vehicle, and other policies | Policy Name, Policy Type, Premium, Premium Type, Sum Assured, Start/Maturity Date |
-| `cards` | Accounts | Bank accounts plus debit/credit card tracking | Bank/NBFC, Primary Account, Balance, Credit Limit, Purpose (Income/Expenditure/Saving/Investment/Loan/Others), Custom Purpose |
-| `netWorth` | Net Worth | Asset & liability summary | Asset/Liability Name, Value, Type (Asset/Liability), Growth Rate |
-| `taxPlan` | Tax Plan | Tax-saving investments, deductions | Tax Saving Item, Amount Invested, Tax Saved, Investment Date |
-| `gifts` | Gifts | Gifts given/received | Gift Description, Value, Given/Received, Date |
+| Field | Type | Description |
+|-------|------|-------------|
+| Name | Text | e.g. Rent, LIC Premium |
+| Type | Select | Insurance, Liability, Saving, Expenditure, Investment |
+| Amount (₹) | Number | Monthly deduction amount |
+| Frequency | Select | Monthly, Quarterly, Semi-Annual, Annual, One-Time |
+| Bank Name | Text | Associated bank |
+| End Date | Date | When deduction ends |
+| Details | Text | Optional |
 
-### Tab Bar UI
+### Auto-Debit Routing
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│ [Monthly Budget] [Financial Goal] [Investments] ... [+]      │
-└────────────────────────────────────────────────────────────────┘
-```
+Monthly-frequency outflows are auto-debited from Salary and routed by type:
 
-- **Colored pills** for each tab
-- **Active tab** highlighted with shadow
-- **Scrollable** horizontally on smaller screens
-- **+ button** to add custom tabs
+| Outflow Type | Destination |
+|-------------|-------------|
+| Liability | Leaves system (paid to lender) |
+| Insurance | Leaves system (paid to insurer) |
+| Saving | Credited to Saving account |
+| Investment | Credited to Investment account |
+| Expenditure | Credited to Primary (Expenditure) account |
+
+The **Monthly Transfer Breakdown** section in Budget shows this routing.
+
+### Summary
+
+- Fixed Monthly Income (editable)
+- Monthly Deductions total
+- Remaining After Deductions
 
 ---
 
-## Adding Entries
+## Insurance
 
-### Entry Form Layout
+### Overview
 
-```mermaid
-flowchart TD
-    A[Entry Form] --> B[Field 1]
-    A --> C[Field 2]
-    A --> D[Field 3]
-    A --> E[Field 4]
-    A --> F[Field 5]
-    A --> G[Add Button]
-```
+Dedicated tab for tracking insurance policies — separate from Outflow premium payments.
 
-### Step-by-Step
+### Fields
 
-1. **Select a tab** from the tab bar
-2. **Fill in the form fields** (fields change based on tab)
-3. **Click Add** to save a new entry
-4. To update an existing entry, click **Edit** in the list/table. The form is populated with the existing values and the button changes to **Save**.
+| Field | Type | Description |
+|-------|------|-------------|
+| Policy Name | Text | e.g. LIC Term Plan, Star Health |
+| Policy Type | Select | Term Life, Whole Life, Health, Vehicle, Home, Travel, Critical Illness, Personal Accident, Other |
+| Insurance Provider | Text | e.g. LIC, HDFC Life |
+| Policy Number | Text | Policy/certificate number |
+| Sum Assured (₹) | Number | Coverage amount |
+| Premium Amount (₹) | Number | 0 if no active premium (paid up) |
+| Premium Frequency | Select | Monthly, Quarterly, Half-Yearly, Annual, None (Paid Up) |
+| Policy Start Date | Date | When policy started |
+| Policy End Date | Date | When policy expires |
+| Nominee | Text | Nominee name |
+| Notes | Text | Optional |
 
-### Example: Adding a Monthly Budget Entry
+### Summary
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Item Name:       [Rent                         ]            │
-│ Planned Amount:  [15000                        ]            │
-│ Actual Amount:   [15000                        ]            │
-│ Date:            [2024-01-01                   ]            │
-│ Note:            [Monthly house rent           ]            │
-│                                                             │
-│ [ Add ]                                                     │
-└─────────────────────────────────────────────────────────────┘
-```
+- Total Policies count
+- Annual Premium Total (all premiums annualized)
+- Monthly Premium Load (annual ÷ 12)
+- Total Sum Assured
 
-### Form Field Types
+### Relationship to Outflow
 
-| Type | Description | Example |
-|------|-------------|---------|
-| **Text** | Free-form text input | "Rent", "HDFC SIP" |
-| **Number** | Numeric value (₹) | 15000, 50000 |
-| **Date** | Date picker | 2024-01-15 |
-| **Select** | Dropdown options | "Asset", "Liability" |
+- Policies **with** active premiums should also have a corresponding entry in Outflow (type=Insurance) for budget auto-debit
+- Policies **without** premiums (Paid Up) only appear in Insurance tab
 
 ---
 
-## Managing Entries
+## Financial Goals
 
-### Data Table Layout
+### Fields
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Name        | Planned    | Actual     | Date       | Note        │
-├─────────────────────────────────────────────────────────────────┤
-│ Rent        | ₹15,000    | ₹15,000    | 2024-01-01 | House rent │
-│ Groceries   | ₹8,000     | ₹7,500     | 2024-01-02 | Weekly     │
-│ Electricity | ₹3,000     | ₹3,200     | 2024-01-03 |            │
-│ ...         | ...        | ...        | ...        | ...        │
-└─────────────────────────────────────────────────────────────────┘
-```
+| Field | Description |
+|-------|-------------|
+| Goal Name | e.g. Emergency Fund, Down Payment |
+| Amount Needed (₹) | Target amount |
+| Amount Accumulated (₹) | Saved so far |
+| Target Date | Deadline |
+| Details | Optional notes |
+| Goal Type | Short Term, Mid Term, Long Term |
+| Status | Planned, Ongoing, Achieved, Missed |
 
-### Deleting an Entry
+### Preview Cards
 
-1. Locate the entry in the table
-2. Click the **Delete** button in the last column
-3. Confirm the deletion in the popup dialog (all entries require confirmation)
-4. Entry is removed
-
-### Clearing Entire Tab
-
-1. Click **Clear Tab** button in toolbar
-2. Confirm the action in the popup dialog
-3. All entries in current tab are deleted
+Each goal shows a progress bar with percentage and status badge.
 
 ---
 
-## Search & Filter
+## Net Worth
 
-### Search Box
+### Fields
 
-```
-┌─────────────────────────────────────────────────────┐
-│ 🔍 Search items…                     [Export][Clear]│
-└─────────────────────────────────────────────────────┘
-```
+| Field | Description |
+|-------|-------------|
+| Asset/Liability Name | e.g. House, Car Loan |
+| Type | Asset or Liability |
+| Value Today (₹) | Current value |
+| Expected Annual Growth (%) | For projection |
+| Details | Optional |
 
-### How to Search
+### Features
 
-1. Type in the **Search** box
-2. Results filter in real-time
-3. Searches across **all fields** (name, date, note, etc.)
+- Auto-imports account balances and outflow liabilities as net worth entries
+- Assets vs. Liabilities breakdown
+- **Projection chart** — Projects net worth growth until age 70
 
-### Example
+---
 
-- Search: "rent" → Shows entries containing "rent" in any field
-- Search: "2024-01" → Shows entries from January 2024
-- Search: "HDFC" → Shows HDFC-related entries
+## Tax Plan
+
+### Features
+
+- **Regime selection**: Old or New tax regime
+- **Financial year selection**: Choose which FY to plan for
+- **Auto-calculated deductions**: Pulls EPF, PPF, NPS, insurance premiums from Outflow and Investments
+- **Manual deductions**: Add additional 80C, 80D, 80CCD, etc.
+- **Tax breakdown**: Shows taxable income, slab-wise tax, cess
+
+---
+
+## Gifts
+
+### Fields
+
+| Field | Description |
+|-------|-------------|
+| Gift Name | e.g. Birthday gift to friend |
+| Category | Fixed Every Year, On Demand |
+| Relative Name | Recipient |
+| Occasion | e.g. Birthday, Wedding |
+| Amount (₹) | Gift value |
+| Details | Optional |
+
+---
+
+## Emergency Fund
+
+### How It Works
+
+- Enter your current emergency fund amount
+- System auto-calculates average monthly expenses from budget data
+- Shows how many months your fund covers
+- Target: 6–12 months of expenses
+
+---
+
+## Settings & Danger Zone
+
+Access via the ⚙️ Settings button in the header.
+
+### Settings Options
+
+- **Theme**: Toggle Dark/Light mode
+- **User info**: Display name, email
+
+### Danger Zone
+
+| Action | Description | Confirmation |
+|--------|-------------|-------------|
+| **Reset All Data** | Deletes all financial data, preserves account | Type "DELETE" |
+| **Delete Account** | Deletes all data + Firebase Auth account permanently | Type "DELETE ACCOUNT" |
+
+**Delete Account** is irreversible — it removes your Firestore data and Firebase Authentication record. You'll need to re-register if you want to use the app again.
 
 ---
 
 ## Export to Excel
 
-### Export Button
-
-```
-┌─────────────────────────────────────────────────────┐
-│ 🔍 Search items…           [Export][Clear][Reset]   │
-└─────────────────────────────────────────────────────┘
-```
-
-### Export Flow
-
-```mermaid
-flowchart LR
-    A[Click Export Excel] --> B{Has Data?}
-    B -->|No| C[Alert: No data]
-    B -->|Yes| D[Generate XLSX]
-    D --> E[Download File]
-    E --> F[Tab_Name_export.xlsx]
-```
-
-### Export Features
-
-- **Format**: `.xlsx` (Excel)
-- **Filename**: `{Tab_Name}_export.xlsx`
-- **Content**: All entries from current tab with headers
-- **Columns**: Same as table headers for the tab
-
-### Example Export
-
-For "Monthly Budget" tab, the Excel file contains:
-
-| Item Name | Planned Amount | Actual Amount | Date | Note |
-|-----------|----------------|---------------|------|------|
-| Rent | 15000 | 15000 | 2024-01-01 | House rent |
-| Groceries | 8000 | 7500 | 2024-01-02 | Weekly |
-
----
-
-## Reset All Data
-
-### Reset Button
-
-The "Reset All Data" button allows you to permanently delete all your financial data.
-
-### Reset Flow
-
-```mermaid
-flowchart LR
-    A[Click Reset All Data] --> B{Confirm?}
-    B -->|No| C[Cancelled]
-    B -->|Yes| D{Type DELETE?}
-    D -->|No| C
-    D -->|Yes| E[Delete All Data]
-    E --> F[Clear appData]
-    F --> G[Save to Firestore]
-    G --> H[Re-render]
-    H --> I[Success Alert]
-```
-
-### What Gets Deleted
-
-When you reset all data, the following is permanently deleted:
-
-- All budget entries
-- All monthly budget data
-- All financial goals
-- All investments
-- All insurances
-- All cards
-- Net worth data
-- Tax plan data
-- Gifts
-- Emergency fund data
-
-### Confirmation Required
-
-For your protection, the reset requires double confirmation:
-
-1. **First confirmation**: A dialog warning you about what will be deleted
-2. **Second confirmation**: You must type "DELETE" to confirm
-
-### ⚠️ Important
-
-**This action cannot be undone.** Use with caution.
-
----
-
-## Custom Tabs
-
-### Adding a Custom Tab
-
-1. Click the **+** button in the tab bar
-2. Enter a name for your custom tab (e.g., "Wedding Expenses")
-3. Click OK
-
-### Custom Tab Features
-
-- **Same fields** as "Misc" tab
-- **Dark gray color** by default
-- **Saved to Firestore** with your data
-- **Syncs across devices**
-
-### Example Use Cases
-
-- Wedding expenses
-- Vacation budget
-- Home renovation
-- Education fund
-- Emergency fund tracking
+- Click **Export** on any tab
+- Downloads `{Tab_Name}_export.xlsx`
+- Contains all entries with column headers
+- Uses SheetJS (XLSX) library
 
 ---
 
 ## Cross-Device Sync
 
-### How Sync Works
-
-```mermaid
-sequenceDiagram
-    participant User1 as User (Phone)
-    participant Firestore as Firebase Firestore
-    participant User2 as User (Laptop)
-    
-    User1->>Firestore: Add entry
-    Firestore->>Firestore: Save data
-    Firestore->>User2: Real-time update
-    User2->>User2: Refresh UI
-```
-
-### Sync Features
-
-- **Real-time sync** via Firebase Firestore
-- **Works across all devices** (phone, tablet, laptop)
-- **Automatic** - no manual sync required
-- **Same data everywhere** - consistent view
-
-### Requirements for Sync
-
-- Firebase project configured
-- Internet connection
-- Same user account signed in on all devices
-
-### Data Storage
-
-- **Location**: Firebase Firestore → `users/{uid}/tabData`
-- **Structure**: 
-  ```json
-  {
-    "tabData": {
-      "monthlyBudget": [...entries],
-      "investments": [...entries]
-    },
-    "customTabs": [...],
-    "userName": "Your Name"
-  }
-  ```
+- **Real-time** via Firebase Firestore
+- **Automatic** — no manual sync needed
+- **Same data** on all devices with same account
+- **Data location**: `users/{uid}` in Firestore
 
 ---
 
 ## FAQ
 
+### Q: How do I delete my account?
+**A:** Go to Settings → Danger Zone → Delete Account. Type "DELETE ACCOUNT" to confirm.
+
+### Q: What's the difference between Outflow and Insurance tabs?
+**A:** Outflow tracks **premium payments** (monthly deductions from salary). Insurance tracks **policy details** (coverage, nominees, dates). Policies with premiums should appear in both.
+
+### Q: What does "Previous Month CC Bill" vs "Current Month CC Spending" mean?
+**A:** Previous Month CC Bill is the unpaid credit card balance from last month (a fixed obligation). Current Month CC Spending is what you've charged to your credit card this month (ongoing, updated via Quick Update).
+
+### Q: How is "Total Spendable" calculated?
+**A:** `Expenditure Account Balance + Pending Transfers − Tracked Expenses`. This reflects actual money available, not a theoretical budget.
+
+### Q: What's the Portfolio Summary view in Investments?
+**A:** It consolidates your investments from three sources: Existing (lump sum), Monthly (SIPs/RDs), and One-Time (from Budget on-demand investments).
+
 ### Q: Is my data secure?
-**A:** Yes. Data is stored in Firebase Firestore with authentication. Only you can access your data.
-
-### Q: Can I use this offline?
-**A:** The app requires an internet connection for Firebase sync. Offline mode is not currently supported.
-
-### Q: What happens if I delete my browser data?
-**A:** Your data is stored in Firebase, not in your browser. Clearing browser data won't delete your financial data.
-
-### Q: Can I export all tabs at once?
-**A:** Currently, you can export one tab at a time. Click the tab you want, then click Export Excel.
-
-### Q: How do I change my password?
-**A:** Use Firebase Console to reset your password, or re-register with a new account.
-
-### Q: Can I edit an existing entry?
-**A:** Yes. Click the Edit button in any row to populate the form with existing values, then click Save to update.
+**A:** Yes. Data is in Firebase Firestore with authentication. Only you can access it.
 
 ### Q: What currency does the app use?
-**A:** Indian Rupee (₹). All amounts are formatted with Indian number formatting (e.g., ₹12,34,567).
-
-### Q: Is there a mobile app?
-**A:** This is a web application that works on mobile browsers. A native app is not currently available.
-
-### Q: How do I delete my account?
-**A:** Delete your user from Firebase Console, or contact support for account deletion assistance.
-
-### Q: Can I share my data with others?
-**A:** Currently, data is private to your account. Sharing features can be added in future updates.
-
----
-
-## Keyboard Shortcuts
-
-| Action | Shortcut |
-|--------|----------|
-| Focus search box | `/` (not implemented yet) |
-| Submit form | `Enter` in form |
-| Clear tab | Click button |
+**A:** Indian Rupee (₹) with Indian number formatting (₹12,34,567).
 
 ---
 
 ## Tips & Best Practices
 
-1. **Use consistent naming** for entries (e.g., "Rent" instead of "House Rent Jan")
-2. **Update actual amounts regularly** to track your progress
-3. **Use the Notes field** for additional context
-4. **Export monthly** to keep offline backups
-5. **Use custom tabs** for special projects (wedding, vacation)
-6. **Check Balance metric** to see if you're over/under budget
-7. **Use Date field** to track payment due dates
-
----
-
-## Troubleshooting
-
-### Issue: Data not syncing
-- **Check internet connection**
-- **Verify Firebase config is correct**
-- **Sign out and sign back in**
-
-### Issue: Export not working
-- **Ensure SheetJS library loaded** (check browser console)
-- **Verify you have data in the tab**
-- **Try a different browser**
-
-### Issue: Can't sign in
-- **Verify email and password are correct**
-- **Check if account was created**
-- **Check Firebase Auth is enabled**
-
-### Issue: Tabs not showing
-- **Refresh the page**
-- **Check browser console for errors**
-- **Verify app.js loaded correctly**
-
----
-
-## Support
-
-For issues or questions:
-- Check the README.md for Firebase setup
-- Review this user manual
-- Check browser console for error messages
+1. **Set up Accounts first** — Primary + Salary accounts unlock all features
+2. **Add Outflow items** before budgeting — they auto-populate budget deductions
+3. **Use Quick Update** mid-month to keep balances accurate
+4. **Check Portfolio Summary** for a consolidated investment view
+5. **Export monthly** for offline backups
+6. **Use the carry forward banner** when switching months
+7. **Keep Insurance tab updated** separately from Outflow premiums
 
 ---
 
@@ -564,6 +488,7 @@ For issues or questions:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 4.0 | 2026-06-08 | **Major restructure**: Inflow→Investments with sub-sections (Existing/Monthly/Portfolio Summary); new Insurance tab (policy tracking with premium frequency, sum assured, nominees); Budget engine rewrite (account-balance-aware "Total Spendable" formula); separated CC fields (Previous Month CC Bill vs Current Month CC Spending); Quick Update consolidation (added Expenditure Balance field, removed standalone Reconciliation, shows untracked expenses inline); Delete Account feature (Settings→Danger Zone, deletes Firestore data + Firebase Auth); month-end carry forward banner (auto-detects unclosed months); improved UI with summary hints/descriptions on all fields; investment category field (Existing/Monthly) for sub-section filtering. |
 | 3.2 | 2026-06-04 | Changed UI pattern from Edit/Save/Cancel to Edit/Done for all tabs except Liability; Liability page keeps Save button for fixed monthly income field; removed Cancel buttons from all tabs except Liability; added theme-based favicon switching (logo_dark/logo_light); fixed auto-calculated badge tooltip. |
 | 3.1 | 2026-06-04 | Monthly Budget: removed Insurance and Rent/Maintenance from Cash Outflow; removed SIP/Monthly Investment and Monthly Saving from On-Demand Outflow; renamed "Outflow" → "Cash Outflow"; added hover tooltips for auto-calculated fields showing breakdown; removed insurance from annual summary and pie charts; removed duplicate save button. |
 | 3.0 | 2026-06-04 | Liabilities tab renamed; added Frequency field; Insurance Premium → Insurance. Monthly Budget: "Investing" → "On-Demand Outflow"; merged credit card fields; removed untrackedExpense and retirement; added on-demand fields; removed monthEndBalance; added "Balance to Spend" and "Amount Available to Spend"; budget edit supports Cancel with snapshot/restore; on-demand section hidden when empty. Accounts: Only one Saving account allowed; default sort (Primary → Saving → others by balance); purposeOther field for custom purposes. Delete confirmation for all entries. iOS safe-area support. Bug fixes: currentAge restored; budget snapshot month key fix; CC carryover removed. |

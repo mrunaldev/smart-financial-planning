@@ -139,19 +139,20 @@ const MONTHLY_BUDGET_CATEGORIES = {
         { id: "othersInflow", label: "Others", type: "number" }
     ],
     outflow: [
-        { id: "loanEMI", label: "Auto-calculated Liabilities (EMIs)", type: "number" },
+        { id: "loanEMI", label: "Auto-calculated Liabilities", type: "number" },
         { id: "insurancePremiums", label: "Auto-calculated Insurance Premiums", type: "number" },
-        { id: "creditCardOutstanding", label: "Previous Month CC Bill (unpaid)", type: "number" },
+        { id: "fixedSaving", label: "Auto-calculated Fixed Saving", type: "number" },
+        { id: "fixedInvestment", label: "Auto-calculated Fixed Investment", type: "number" },
+        { id: "fixedExpenditure", label: "Auto-calculated Fixed Expenditure", type: "number" },
+        { id: "variableExpenditure", label: "Auto-calculated Variable Expenditure", type: "number" },
+        { id: "creditCardOutstanding", label: "Previous Month CC Bill (Unpaid)", type: "number" },
         { id: "midMonthCCOutstanding", label: "Current Month CC Spending", type: "number" },
         { id: "debtRepayment", label: "Debt Repayment / Lending", type: "number" },
         { id: "utilityBills", label: "Utility Bills (electricity, water, gas, internet)", type: "number" },
         { id: "familyExpenditure", label: "Family Expenditure (groceries, household)", type: "number" },
-        { id: "miscExpenses", label: "Miscellaneous Expenses", type: "number" },
-        { id: "fixedExpenditure", label: "Auto-calculated Fixed Expenditure", type: "number" }
+        { id: "miscExpenses", label: "Miscellaneous Expenses", type: "number" }
     ],
     investing: [
-        { id: "fixedSaving", label: "Auto-calculated Fixed Saving", type: "number" },
-        { id: "fixedInvestment", label: "Auto-calculated Fixed Investment", type: "number" },
         { id: "onetimeSaving", label: "On-Demand Saving", type: "number" },
         { id: "onetimeInvestment", label: "On-Demand Investment", type: "number" },
         { id: "ondemandExpenditure", label: "On-Demand Expenditure", type: "number" },
@@ -1250,13 +1251,13 @@ function buildMonthlyAutoValues(monthKey) {
             if (!breakdown.outflow.fixedExpenditure) breakdown.outflow.fixedExpenditure = [];
             breakdown.outflow.fixedExpenditure.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
         } else if (item.type === "Saving") {
-            values.investing.fixedSaving = (values.investing.fixedSaving || 0) + monthlyAmount;
-            if (!breakdown.investing.fixedSaving) breakdown.investing.fixedSaving = [];
-            breakdown.investing.fixedSaving.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
+            values.outflow.fixedSaving = (values.outflow.fixedSaving || 0) + monthlyAmount;
+            if (!breakdown.outflow.fixedSaving) breakdown.outflow.fixedSaving = [];
+            breakdown.outflow.fixedSaving.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
         } else if (item.type === "Investment") {
-            values.investing.fixedInvestment = (values.investing.fixedInvestment || 0) + monthlyAmount;
-            if (!breakdown.investing.fixedInvestment) breakdown.investing.fixedInvestment = [];
-            breakdown.investing.fixedInvestment.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
+            values.outflow.fixedInvestment = (values.outflow.fixedInvestment || 0) + monthlyAmount;
+            if (!breakdown.outflow.fixedInvestment) breakdown.outflow.fixedInvestment = [];
+            breakdown.outflow.fixedInvestment.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
         }
     });
 
@@ -1297,6 +1298,45 @@ function applyMonthlyAutoValues(monthKey, monthData) {
             monthData.autoLinkedBreakdown[`${category}.${fieldId}`] = breakdown[category][fieldId] || [];
         });
     });
+
+    // Auto-calculate Previous Month CC Bill (Unpaid) from previous month closing
+    const prevDate = new Date(monthKey + "-15");
+    prevDate.setMonth(prevDate.getMonth() - 1);
+    const prevKey = getMonthKey(prevDate);
+    const prevData = (appData.monthlyBudgetData || {})[prevKey];
+    if (prevData && prevData._monthClosed) {
+        const prevCC = Number(prevData.outflow?.midMonthCCOutstanding || 0);
+        if (prevCC > 0) {
+            if (!monthData.outflow) monthData.outflow = {};
+            monthData.outflow.creditCardOutstanding = prevCC;
+            monthData.autoLinkedFields["outflow.creditCardOutstanding"] = true;
+            monthData.autoLinkedBreakdown["outflow.creditCardOutstanding"] = [
+                { name: "CC Outstanding from " + prevDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" }), amount: prevCC, source: "Previous Month Close" }
+            ];
+        }
+    }
+
+    // Auto-calculate Variable Expenditure (amount spent from expenditure account)
+    const cards = (appData.tabData || {}).cards || [];
+    const expAccount = cards.find(c => c.isPrimary === "Yes");
+    const expBalance = Number(expAccount?.balance || 0);
+    const transferDone = Number(monthData._transferDone || 0);
+    const prevMonthCarryData = (appData.monthlyBudgetData || {})[prevKey];
+    const prevCarryForward = Number(prevMonthCarryData?._carryForwardDone || 0);
+    const initialBalance = Number(monthData._initialBalance || 0);
+    const totalFunded = initialBalance + prevCarryForward + transferDone;
+    const varExp = totalFunded > 0 ? Math.max(0, totalFunded - expBalance) : 0;
+    if (!monthData.outflow) monthData.outflow = {};
+    monthData.outflow.variableExpenditure = varExp;
+    monthData.autoLinkedFields["outflow.variableExpenditure"] = true;
+    monthData.autoLinkedBreakdown["outflow.variableExpenditure"] = totalFunded > 0
+        ? [
+            { name: "Initial Balance", amount: initialBalance + prevCarryForward, source: "Carry Forward" },
+            { name: "Transfer Done", amount: transferDone, source: "Execute Transfer" },
+            { name: "Current Exp Balance", amount: -expBalance, source: "Account Balance" }
+        ].filter(b => b.amount !== 0)
+        : [{ name: "No transfer done yet", amount: 0, source: "Pending" }];
+
     return monthData.autoLinkedFields;
 }
 
@@ -1365,37 +1405,39 @@ function renderMonthlyBudget() {
     appData.monthlyBudgetData[monthKey] = monthData;
     const autoLinkedFields = applyMonthlyAutoValues(monthKey, monthData);
 
-    // Month-end carry forward banner: detect if previous month has unclosed balance
+    // Check if this month is closed (read-only)
+    const isMonthClosed = Boolean(monthData._monthClosed);
+
+    // Month-end banner: show if previous month not closed yet
     const prevMonth = new Date(currentMonth);
     prevMonth.setMonth(prevMonth.getMonth() - 1);
     const prevMonthKey = getMonthKey(prevMonth);
     const prevMonthData = (appData.monthlyBudgetData || {})[prevMonthKey];
-    const prevExpBalance = Number(window._budgetExpAccount?.balance || 0);
-    const prevCarryDone = prevMonthData?._carryForwardDone;
-    const prevTransferDone = prevMonthData?._transferDone;
     const budgetStatusEl = document.getElementById("budgetStatus");
     if (budgetStatusEl) {
-        // If prev month had a transfer but no carry forward, suggest carry forward
-        if (prevTransferDone && !prevCarryDone && prevExpBalance > 0) {
-            budgetStatusEl.innerHTML = `<div class="month-end-banner">
-                <span>Previous month (${prevMonth.toLocaleDateString("en-IN", { month: "short", year: "numeric" })}) has \u20b9${prevExpBalance.toLocaleString("en-IN")} remaining. Carry forward?</span>
-                <button type="button" id="bannerCarryForward">Carry Forward</button>
+        if (isMonthClosed) {
+            budgetStatusEl.innerHTML = `<div class="month-end-banner" style="background:rgba(34,197,94,0.08);border-color:rgba(34,197,94,0.3);">
+                <span>🔒 This month's budget is closed and read-only.</span>
             </div>`;
-            const bannerBtn = document.getElementById("bannerCarryForward");
-            if (bannerBtn) bannerBtn.addEventListener("click", () => {
-                if (!appData.monthlyBudgetData[prevMonthKey]) appData.monthlyBudgetData[prevMonthKey] = { inflow: {}, outflow: {}, investing: {} };
-                appData.monthlyBudgetData[prevMonthKey]._carryForwardDone = prevExpBalance;
-                scheduleSave();
-                renderMonthlyBudget();
-            });
+        } else {
+            budgetStatusEl.innerHTML = "";
         }
     }
     
-    // Update toggle button text
-    toggleBudgetEdit.textContent = isBudgetEditMode ? "✓ Done" : "✎ Edit";
+    // Update toggle button text — disable edit for closed months
+    if (isMonthClosed) {
+        toggleBudgetEdit.textContent = "🔒 Closed";
+        toggleBudgetEdit.disabled = true;
+        toggleBudgetEdit.title = "This month's budget is closed";
+        if (isBudgetEditMode) isBudgetEditMode = false;
+    } else {
+        toggleBudgetEdit.textContent = isBudgetEditMode ? "✓ Done" : "✎ Edit";
+        toggleBudgetEdit.disabled = false;
+        toggleBudgetEdit.title = "";
+    }
     
     // Show/hide preview/edit modes
-    if (isBudgetEditMode) {
+    if (isBudgetEditMode && !isMonthClosed) {
         budgetPreview.hidden = true;
         budgetEdit.hidden = false;
         
@@ -1438,11 +1480,12 @@ function renderCategoryPreview(container, fields, data, autoLinkedFields, autoLi
     const alb = autoLinkedBreakdown || {};
     fields.forEach(field => {
         const value = Number(data[field.id] || 0);
-        if (value > 0) {
+        const fieldKey = `${categoryName}.${field.id}`;
+        const isAutoField = Boolean(alf[fieldKey]);
+        if (value > 0 || isAutoField) {
             const item = document.createElement("div");
             item.className = "category-preview-item";
-            const fieldKey = `${categoryName}.${field.id}`;
-            const isAuto = Boolean(alf[fieldKey]);
+            const isAuto = isAutoField;
             const breakdown = (alb[fieldKey]) || [];
             let badgeHtml = "";
             if (isAuto) {
@@ -1501,8 +1544,9 @@ function getMonthlyDistribution(monthData) {
     const debtRepayment = Number(monthData.outflow?.debtRepayment || 0);
     const liability = loanEMI + insurancePremiums + debtRepayment;
 
-    // Expenditure = fixed recurring + manual outflow items + CC spending + on-demand spending
+    // Expenditure = fixed recurring + variable + manual outflow items + CC spending + on-demand spending
     const expenditure = Number(monthData.outflow?.fixedExpenditure || 0)
+        + Number(monthData.outflow?.variableExpenditure || 0)
         + Number(monthData.outflow?.utilityBills || 0)
         + Number(monthData.outflow?.familyExpenditure || 0)
         + Number(monthData.outflow?.miscExpenses || 0)
@@ -1511,11 +1555,11 @@ function getMonthlyDistribution(monthData) {
         + Number(monthData.investing?.ondemandExpenditure || 0)
         + Number(monthData.investing?.ondemandLiability || 0);
 
-    // Saving = fixed recurring + on-demand
-    const saving = Number(monthData.investing?.fixedSaving || 0)
+    // Saving = fixed recurring (now in outflow) + on-demand
+    const saving = Number(monthData.outflow?.fixedSaving || 0)
         + Number(monthData.investing?.onetimeSaving || 0);
-    // Investment = fixed recurring + on-demand
-    const investment = Number(monthData.investing?.fixedInvestment || 0)
+    // Investment = fixed recurring (now in outflow) + on-demand
+    const investment = Number(monthData.outflow?.fixedInvestment || 0)
         + Number(monthData.investing?.onetimeInvestment || 0);
 
     // Other = total outflow + total investing - all categorised items
@@ -3336,70 +3380,122 @@ function calculateInsuranceSummary(entries) {
 }
 
 function calculateEmergencyFundSummary(entries) {
-    // Calculate average monthly expenses from monthly budget data
-    let averageMonthlyExpenses = 0;
+    // ── 1. Fixed monthly obligations (from Outflow tab — can't stop these) ──
+    const allOutflows = ((appData.tabData || {}).outflow || []);
+    let fixedLiabilities = 0;
+    let fixedExpenditure = 0;
+
+    allOutflows.forEach(e => {
+        const amount = Number(e.amount || 0);
+        if (amount <= 0) return;
+        const freq = e.frequency || "Monthly";
+        let monthlyAmt = 0;
+        if (freq === "Monthly")          monthlyAmt = amount;
+        else if (freq === "Quarterly")   monthlyAmt = amount / 3;
+        else if (freq === "Semi-Annual") monthlyAmt = amount / 6;
+        else if (freq === "Annual")      monthlyAmt = amount / 12;
+        if (monthlyAmt <= 0) return;
+
+        const t = e.type || "Expenditure";
+        if (t === "Liability" || t === "Insurance") {
+            fixedLiabilities += monthlyAmt;
+        } else if (t === "Expenditure") {
+            fixedExpenditure += monthlyAmt;
+        }
+        // Saving & Investment types excluded — can stop in emergency
+    });
+
+    // ── 2. Average variable monthly expenditure from budget history ──
+    // Variable = utilityBills + familyExpenditure + miscExpenses + debtRepayment
+    //          + creditCardOutstanding + midMonthCCOutstanding
+    //          + ondemandExpenditure + ondemandLiability
     const monthlyBudgetData = appData.monthlyBudgetData || {};
     const availableMonths = Object.keys(monthlyBudgetData);
-    
-    if (availableMonths.length > 0) {
-        let totalExpenses = 0;
-        let monthCount = 0;
-        
-        availableMonths.forEach(monthKey => {
-            const monthData = monthlyBudgetData[monthKey] || {};
-            const outflowData = monthData.outflow || {};
-            const monthExpenses = Object.values(outflowData).reduce((sum, val) => sum + (Number(val) || 0), 0);
-            totalExpenses += monthExpenses;
-            monthCount++;
-        });
-        
-        averageMonthlyExpenses = monthCount > 0 ? totalExpenses / monthCount : 0;
-    }
-    
-    const sixMonthsNeeded = averageMonthlyExpenses * 6;
-    const twelveMonthsNeeded = averageMonthlyExpenses * 12;
-    
+    let totalVariable = 0;
+    let monthsWithData = 0;
+
+    availableMonths.forEach(monthKey => {
+        const md = monthlyBudgetData[monthKey] || {};
+        const o = md.outflow || {};
+        const inv = md.investing || {};
+        const varExp = Number(o.utilityBills || 0)
+            + Number(o.familyExpenditure || 0)
+            + Number(o.miscExpenses || 0)
+            + Number(o.debtRepayment || 0)
+            + Number(o.creditCardOutstanding || 0)
+            + Number(o.midMonthCCOutstanding || 0)
+            + Number(inv.ondemandExpenditure || 0)
+            + Number(inv.ondemandLiability || 0);
+        if (varExp > 0) {
+            totalVariable += varExp;
+            monthsWithData++;
+        }
+    });
+
+    const avgVariableExpenses = monthsWithData > 0 ? totalVariable / monthsWithData : 0;
+
+    // ── 3. Minimum monthly survival amount ──
+    const minMonthlyNeed = fixedLiabilities + fixedExpenditure + avgVariableExpenses;
+
+    // ── 4. Practical scenarios ──
+    const threeMonthsNeeded = minMonthlyNeed * 3;
+    const sixMonthsNeeded = minMonthlyNeed * 6;
+    const twelveMonthsNeeded = minMonthlyNeed * 12;
+
     // Get current emergency fund from saved entries
     let currentFund = 0;
     if (entries.length > 0) {
         currentFund = Number(entries[0].currentFund || 0);
     }
     currentEmergencyFundDisplay.textContent = formatMoney(currentFund);
-    
+
     // Update summary display
-    document.getElementById("averageMonthlyExpenses").textContent = formatMoney(averageMonthlyExpenses);
+    const breakdownEl = document.getElementById("emergencyFundBreakdown");
+    if (breakdownEl) {
+        breakdownEl.innerHTML = `
+            <div class="ef-breakdown-row"><span>Fixed Liabilities & Insurance</span><strong>${formatMoney(fixedLiabilities)}</strong></div>
+            <div class="ef-breakdown-row"><span>Fixed Expenditure (rent, etc.)</span><strong>${formatMoney(fixedExpenditure)}</strong></div>
+            <div class="ef-breakdown-row"><span>Avg Variable Expenses (${monthsWithData} mo)</span><strong>${formatMoney(avgVariableExpenses)}</strong></div>
+            <div class="ef-breakdown-row ef-total"><span>Minimum Monthly Need</span><strong>${formatMoney(minMonthlyNeed)}</strong></div>
+        `;
+    }
+    document.getElementById("averageMonthlyExpenses").textContent = formatMoney(minMonthlyNeed);
+    document.getElementById("threeMonthsNeeded").textContent = formatMoney(threeMonthsNeeded);
     document.getElementById("sixMonthsNeeded").textContent = formatMoney(sixMonthsNeeded);
     document.getElementById("twelveMonthsNeeded").textContent = formatMoney(twelveMonthsNeeded);
-    
+
     // Calculate status
-    const monthsCovered = averageMonthlyExpenses > 0 ? currentFund / averageMonthlyExpenses : 0;
+    const monthsCovered = minMonthlyNeed > 0 ? currentFund / minMonthlyNeed : 0;
     const amountNeeded = Math.max(0, sixMonthsNeeded - currentFund);
-    
+
     // Determine status color
     const statusBadge = document.getElementById("statusBadge");
     statusBadge.className = "status-badge";
-    
+
     let statusText = "";
-    if (averageMonthlyExpenses === 0) {
+    if (minMonthlyNeed === 0) {
         statusBadge.classList.add("yellow");
         statusText = "NO DATA";
-        document.getElementById("amountNeeded").textContent = "Add monthly expenses first";
+        document.getElementById("amountNeeded").textContent = "Add outflow entries & budget data first";
         document.getElementById("monthsCovered").textContent = "—";
         statusBadge.textContent = statusText;
         return;
     }
-    
+
     if (monthsCovered >= 12) {
         statusBadge.classList.add("green");
-        statusText = "READY";
+        statusText = "EXCELLENT";
     } else if (monthsCovered >= 6) {
+        statusBadge.classList.add("green");
+        statusText = "READY";
+    } else if (monthsCovered >= 3) {
         statusBadge.classList.add("yellow");
-        statusText = "GOOD";
+        statusText = "ADEQUATE";
     } else {
         statusBadge.classList.add("red");
         statusText = "LOW";
     }
-    
+
     statusBadge.textContent = statusText;
     document.getElementById("amountNeeded").textContent = formatMoney(amountNeeded);
     document.getElementById("monthsCovered").textContent = monthsCovered.toFixed(1);
@@ -3722,7 +3818,6 @@ function calculateAndDisplaySummary(monthData) {
         else if (freq === "Quarterly")   monthlyAmt = amount / 3;
         else if (freq === "Semi-Annual") monthlyAmt = amount / 6;
         else if (freq === "Annual")      monthlyAmt = amount / 12;
-        // One-Time excluded from recurring auto-debit
         if (monthlyAmt <= 0) return;
         const t = e.type || "Expenditure";
         autoDebitByType[t] = (autoDebitByType[t] || 0) + monthlyAmt;
@@ -3740,14 +3835,10 @@ function calculateAndDisplaySummary(monthData) {
     document.getElementById("investingTotal").textContent = formatMoney(investingTotal);
 
     // Summary grid
-    const cashFlow = inflowTotal - totalOutAll;
     document.getElementById("totalIncome").textContent = formatMoney(inflowTotal);
     document.getElementById("totalExpenses").textContent = formatMoney(totalOutAll);
-    document.getElementById("cashFlow").textContent = formatMoney(cashFlow);
-    const cashFlowEl = document.getElementById("cashFlow");
-    if (cashFlowEl) cashFlowEl.style.color = cashFlow >= 0 ? "#22c55e" : "#ef4444";
 
-    // Account balances — show actual salary balance (auto-debits already reflected in real balance)
+    // Account balances
     document.getElementById("initialBalance").textContent = formatMoney(rawSalaryBalance);
     const salaryLabelEl = document.getElementById("salaryBalanceLabel");
     const salaryHintEl = document.getElementById("salaryBalanceHint");
@@ -3762,7 +3853,6 @@ function calculateAndDisplaySummary(monthData) {
     const breakdownEl = document.getElementById("autoDebitBreakdown");
     if (breakdownEl) {
         const lines = [];
-        // Show individual outflow items grouped by type
         const itemsByType = {};
         allOutflows.forEach(e => {
             const amount = Number(e.amount || 0);
@@ -3780,7 +3870,7 @@ function calculateAndDisplaySummary(monthData) {
             itemsByType[t].push(`${esc(e.name)}${freqNote}: ${formatMoney(monthlyAmt)}`);
         });
         if (autoDebitByType.Liability > 0) {
-            lines.push(`<strong>Liability (EMIs): ${formatMoney(autoDebitByType.Liability)}</strong>`);
+            lines.push(`<strong>Liability: ${formatMoney(autoDebitByType.Liability)}</strong>`);
             (itemsByType.Liability || []).forEach(l => lines.push(`&nbsp;&nbsp;${l}`));
         }
         if (autoDebitByType.Insurance > 0) {
@@ -3804,25 +3894,8 @@ function calculateAndDisplaySummary(monthData) {
             : `<div class="auto-debit-line" style="color:var(--dim)">No fixed outflows</div>`;
     }
 
-    // Tracked expenses = recorded outflow + on-demand outflow
-    // Note: loanEMI, insurancePremiums, fixedSaving, fixedInvestment are auto-deducted from salary
-    // (not from expenditure account) so they are NOT included in tracked expenses
-    const trackedExpenses = Number(monthData.outflow?.creditCardOutstanding || 0)
-        + Number(monthData.outflow?.midMonthCCOutstanding || 0)
-        + Number(monthData.outflow?.debtRepayment || 0)
-        + Number(monthData.outflow?.utilityBills || 0)
-        + Number(monthData.outflow?.familyExpenditure || 0)
-        + Number(monthData.outflow?.miscExpenses || 0)
-        + Number(monthData.investing?.ondemandExpenditure || 0)
-        + Number(monthData.investing?.ondemandLiability || 0);
-    // Store globally for Quick Update calculations
-    window._budgetTrackedExpenses = trackedExpenses;
-
-    // Total Spendable = Expenditure Account Balance + pending transfer − tracked expenses − mid-month CC
-    const transferDoneForSpendable = Number(monthData._transferDone || 0);
-    const hasPendingTransfer = !monthData._transferDone && (inflowTotal - fixedMonthlyOutflow) > 0;
-    const pendingTransferAmt = hasPendingTransfer ? Math.max(0, Number(monthData.inflow?.primaryIncome || 0) - fixedMonthlyOutflow) : 0;
-    const spendable = expBalance + pendingTransferAmt - trackedExpenses;
+    // TOTAL SPENDABLE = total cash inflow - all fixed obligations/outflows
+    const spendable = inflowTotal - fixedMonthlyOutflow;
     const availableEl = document.getElementById("amountAvailableToSpend");
     const availableLabelEl = document.getElementById("amountAvailableLabel");
     if (availableEl) {
@@ -3832,49 +3905,49 @@ function calculateAndDisplaySummary(monthData) {
     if (availableLabelEl) {
         availableLabelEl.textContent = spendable >= 0 ? "Total Spendable This Month" : "Amount Overspent";
     }
-    const trackedEl = document.getElementById("trackedExpenses");
-    if (trackedEl) trackedEl.textContent = formatMoney(trackedExpenses);
 
-    // Untracked expenses = money put into expenditure account - tracked expenses - current balance
-    // totalFunded = transfer done this month + carryforward from prev month
-    // If no transfer yet, use the pending transfer amount as estimate
-    const monthKey = getMonthKey(currentMonth);
-    const transferDone = Number(monthData._transferDone || 0);
-    const prevMonthForCarry = new Date(currentMonth);
-    prevMonthForCarry.setMonth(prevMonthForCarry.getMonth() - 1);
-    const prevMonthCarry = (appData.monthlyBudgetData || {})[getMonthKey(prevMonthForCarry)];
-    const prevCarryForward = Number(prevMonthCarry?._carryForwardDone || 0);
-    const effectiveFunded = transferDone > 0 ? transferDone : pendingTransferAmt;
-    const totalFunded = prevCarryForward + effectiveFunded;
-    // Untracked = what went in - what you recorded - what's still in the account
-    // midMonthCC is included in trackedExpenses but will be paid from this account, so it reduces available balance
-    const untracked = totalFunded > 0 ? Math.max(0, totalFunded - trackedExpenses - expBalance) : 0;
+    // UNTRACKED EXPENSES = variable expenditure (spent from exp account) + CC outstanding this month
+    const variableExp = Number(monthData.outflow?.variableExpenditure || 0);
+    const midMonthCC = Number(monthData.outflow?.midMonthCCOutstanding || 0);
+    const untracked = variableExp + midMonthCC;
     const untrackedEl = document.getElementById("untrackedExpenses");
     if (untrackedEl) {
         untrackedEl.textContent = formatMoney(untracked);
         untrackedEl.style.color = untracked > 0 ? "#eab308" : "#22c55e";
     }
 
-    // Budget status banner
-    budgetStatus.className = "budget-status";
-    if (spendable > 0) {
-        budgetStatus.classList.add("positive");
-        budgetStatus.textContent = `Budget Positive: +${formatMoney(spendable)} surplus`;
-    } else if (spendable < 0) {
-        budgetStatus.classList.add("negative");
-        budgetStatus.textContent = `Budget Negative: ${formatMoney(Math.abs(spendable))} overspent`;
-    } else {
-        budgetStatus.classList.add("neutral");
-        budgetStatus.textContent = `Budget Balanced`;
-    }
+    // Store globally for Quick Update calculations
+    const monthKey = getMonthKey(currentMonth);
+    const transferDone = Number(monthData._transferDone || 0);
+    window._budgetTrackedExpenses = untracked;
 
-    // Previous month CC outstanding carryover note
-    const prevMonth = new Date(currentMonth);
-    prevMonth.setMonth(prevMonth.getMonth() - 1);
-    const prevMonthData = (appData.monthlyBudgetData || {})[getMonthKey(prevMonth)];
-    const prevCC = prevMonthData ? Number(prevMonthData.outflow?.creditCardOutstanding || 0) : 0;
-    if (prevCC > 0) {
-        budgetStatus.textContent += ` | CC carryover: ${formatMoney(prevCC)}`;
+    // Budget status banner — based on spendable vs untracked
+    const isMonthClosed = Boolean(monthData._monthClosed);
+    if (!isMonthClosed && budgetStatus) {
+        budgetStatus.className = "budget-status";
+        // Guard: no accounts set up
+        if (!salaryAccount || !expenditureAccount) {
+            budgetStatus.classList.add("neutral");
+            budgetStatus.innerHTML = `<div class="month-end-banner">⚠️ Set up a <strong>Primary (Expenditure)</strong> and <strong>Salary</strong> account in the Accounts tab first.</div>`;
+        } else if (inflowTotal === 0 && fixedMonthlyOutflow === 0) {
+            // No data entered yet — don't show misleading "balanced"
+            budgetStatus.textContent = "";
+        } else if (inflowTotal === 0) {
+            budgetStatus.classList.add("neutral");
+            budgetStatus.textContent = "Enter your Primary Income to see budget status";
+        } else {
+            const budgetBalance = spendable - untracked;
+            if (budgetBalance > 0) {
+                budgetStatus.classList.add("positive");
+                budgetStatus.textContent = `Budget Surplus: +${formatMoney(budgetBalance)} remaining`;
+            } else if (budgetBalance < 0) {
+                budgetStatus.classList.add("negative");
+                budgetStatus.textContent = `Over Budget: ${formatMoney(Math.abs(budgetBalance))} overspent`;
+            } else {
+                budgetStatus.classList.add("neutral");
+                budgetStatus.textContent = `Budget Balanced — all income allocated`;
+            }
+        }
     }
 
     // Transfer calculation: income - auto-debited fixed outflows = amount to transfer to expenditure
@@ -3883,32 +3956,41 @@ function calculateAndDisplaySummary(monthData) {
     document.getElementById("transferPrimaryIncome").textContent = formatMoney(primaryIncome);
     document.getElementById("transferFixedExpenses").textContent = formatMoney(fixedMonthlyOutflow);
     const transferEl = document.getElementById("transferAmount");
-    transferEl.textContent = formatMoney(Math.abs(transferAmt));
-    transferEl.style.color = transferAmt >= 0 ? "#22c55e" : "#ef4444";
-    transferEl.previousElementSibling.textContent = transferAmt >= 0
-        ? "Transfer to Expenditure Account"
-        : "Shortfall (Fixed Outflow exceeds Income)";
+    if (transferEl) {
+        transferEl.textContent = formatMoney(Math.abs(transferAmt));
+        transferEl.style.color = transferAmt >= 0 ? "#22c55e" : "#ef4444";
+    }
+    const transferLabelEl = transferEl?.previousElementSibling;
+    if (transferLabelEl) {
+        transferLabelEl.textContent = transferAmt >= 0
+            ? "Transfer to Expenditure Account"
+            : "Shortfall (Fixed Outflow exceeds Income)";
+    }
 
     // Store transfer amount for Execute Transfer button
     window._budgetTransferAmt = transferAmt;
     window._budgetSalaryAccount = salaryAccount;
     window._budgetExpAccount = expenditureAccount;
-    window._budgetTrackedExpenses = trackedExpenses;
+    window._budgetAutoDebitByType = autoDebitByType;
     window._budgetTransferDone = transferDone;
 
-    // Month-end carryforward: show if expenditure balance > 0 and budget is positive
+    // Hide Monthly Transfer Breakdown if transfer already done for this month OR month is closed
+    const transferSection = document.getElementById("transferBreakdownSection");
+    if (transferSection) {
+        transferSection.hidden = Boolean(monthData._transferDone) || isMonthClosed;
+    }
+
+    // Close Current Month Budget section
     const carrySection = document.getElementById("carryforwardSection");
     if (carrySection) {
         const today = new Date();
         const isCurrentMonth = getMonthKey(currentMonth) === getMonthKey(today);
         const isPastMonth = getMonthKey(currentMonth) < getMonthKey(today);
-        // Show carryforward for current or past months with positive expenditure balance
-        if ((isCurrentMonth || isPastMonth) && expBalance > 0 && spendable >= 0) {
+        // Show close budget for current or past months that have transfer done but not closed
+        if ((isCurrentMonth || isPastMonth) && monthData._transferDone && !isMonthClosed) {
             carrySection.hidden = false;
             const cfBalEl = document.getElementById("carryforwardBalance");
-            const cfAmtEl = document.getElementById("carryforwardAmount");
             if (cfBalEl) cfBalEl.textContent = formatMoney(expBalance);
-            if (cfAmtEl) cfAmtEl.textContent = formatMoney(expBalance);
         } else {
             carrySection.hidden = true;
         }
@@ -4346,6 +4428,10 @@ toggleBudgetView.addEventListener("click", () => {
 });
 
 toggleBudgetEdit.addEventListener("click", () => {
+    // Block edit for closed months
+    const monthKey = getMonthKey(currentMonth);
+    const md = (appData.monthlyBudgetData || {})[monthKey];
+    if (md && md._monthClosed) return;
     // If in annual view, switch to monthly first before editing
     if (isAnnualBudgetView) {
         isAnnualBudgetView = false;
@@ -4373,24 +4459,62 @@ if (btnDoTransfer) btnDoTransfer.addEventListener("click", () => {
     const amt = window._budgetTransferAmt;
     const salary = window._budgetSalaryAccount;
     const exp = window._budgetExpAccount;
+    const autoDebitByType = window._budgetAutoDebitByType || {};
     if (!salary) { alert("No Salary account found. Add one with purpose 'Salary' in Accounts tab."); return; }
     if (!exp) { alert("No Primary (Expenditure) account found. Set an account as Primary in the Accounts tab."); return; }
-    if (amt <= 0) { alert("Nothing to transfer — fixed outflow exceeds or equals income."); return; }
-    const confirmed = confirm(
-        `Transfer ${formatMoney(amt)} from ${salary.bankName} (Salary) to ${exp.bankName} (Expenditure)?\n\n` +
-        `Salary balance: ${formatMoney(Number(salary.balance || 0))} → ${formatMoney(Number(salary.balance || 0) - amt)}\n` +
-        `Expenditure balance: ${formatMoney(Number(exp.balance || 0))} → ${formatMoney(Number(exp.balance || 0) + amt)}`
-    );
-    if (!confirmed) return;
-    salary.balance = Number(salary.balance || 0) - amt;
-    exp.balance = Number(exp.balance || 0) + amt;
-    const cards = (appData.tabData || {}).cards || [];
-    appData.tabData.cards = cards.map(c => c.id === salary.id ? salary : c.id === exp.id ? exp : c);
-    // Record transfer done for this month
+    // Block if primaryIncome not defined or transfer already done
     const monthKey = getMonthKey(currentMonth);
+    const monthData = (appData.monthlyBudgetData || {})[monthKey] || {};
+    if (monthData._transferDone) { alert("Transfer already executed for this month."); return; }
+    if (monthData._monthClosed) { alert("This month is already closed."); return; }
+    const primaryIncome = Number(monthData.inflow?.primaryIncome || 0);
+    if (primaryIncome <= 0) { alert("Please enter your Primary Income (salary credited this month) before executing transfer."); return; }
+    if (amt <= 0) { alert("Nothing to transfer — fixed outflow exceeds or equals income."); return; }
+
+    const cards = (appData.tabData || {}).cards || [];
+    const savingAccount = cards.find(c => c.purpose === "Saving" && c.isPrimary !== "Yes");
+    const investmentAccount = cards.find(c => c.purpose === "Investment" && c.isPrimary !== "Yes");
+
+    let confirmMsg = `Execute Transfer:\n\n`;
+    confirmMsg += `Salary A/c: ${formatMoney(Number(salary.balance || 0))} → ₹0 (deduct all)\n`;
+    confirmMsg += `Expenditure A/c: ${formatMoney(Number(exp.balance || 0))} → ${formatMoney(Number(exp.balance || 0) + amt)}\n`;
+    if (savingAccount && autoDebitByType.Saving > 0) {
+        confirmMsg += `Saving A/c (${savingAccount.bankName}): +${formatMoney(autoDebitByType.Saving)}\n`;
+    }
+    if (investmentAccount && autoDebitByType.Investment > 0) {
+        confirmMsg += `Investment A/c (${investmentAccount.bankName}): +${formatMoney(autoDebitByType.Investment)}\n`;
+    }
+    confirmMsg += `\nLiability/Insurance: ${formatMoney((autoDebitByType.Liability || 0) + (autoDebitByType.Insurance || 0))} leaves system`;
+    if (!confirm(confirmMsg)) return;
+
+    // Deduct full primaryIncome from salary (all obligations + transfer)
+    salary.balance = 0;
+    // Credit expenditure account with transfer amount
+    exp.balance = Number(exp.balance || 0) + amt;
+    // Credit saving account with auto-debit saving amount
+    if (savingAccount && autoDebitByType.Saving > 0) {
+        savingAccount.balance = Number(savingAccount.balance || 0) + autoDebitByType.Saving;
+    }
+    // Credit investment account with auto-debit investment amount
+    if (investmentAccount && autoDebitByType.Investment > 0) {
+        investmentAccount.balance = Number(investmentAccount.balance || 0) + autoDebitByType.Investment;
+    }
+
+    // Update all account balances
+    appData.tabData.cards = cards.map(c => {
+        if (c.id === salary.id) return salary;
+        if (c.id === exp.id) return exp;
+        if (savingAccount && c.id === savingAccount.id) return savingAccount;
+        if (investmentAccount && c.id === investmentAccount.id) return investmentAccount;
+        return c;
+    });
+
+    // Record transfer done for this month
     if (!appData.monthlyBudgetData) appData.monthlyBudgetData = {};
     if (!appData.monthlyBudgetData[monthKey]) appData.monthlyBudgetData[monthKey] = { inflow: {}, outflow: {}, investing: {} };
     appData.monthlyBudgetData[monthKey]._transferDone = (appData.monthlyBudgetData[monthKey]._transferDone || 0) + amt;
+    // Record initial expenditure balance for variable expenditure tracking
+    appData.monthlyBudgetData[monthKey]._initialBalance = (appData.monthlyBudgetData[monthKey]._initialBalance || 0) + amt;
     scheduleSave();
     renderMonthlyBudget();
 });
@@ -4432,23 +4556,41 @@ if (btnReconcile) btnReconcile.addEventListener("click", () => {
     }
 });
 
-// ── Carry Forward button ─────────────────────────────────────────────────────
+// ── Close Current Month Budget button ─────────────────────────────────────────
 const btnCarryForward = document.getElementById("btnCarryForward");
 if (btnCarryForward) btnCarryForward.addEventListener("click", () => {
     const exp = window._budgetExpAccount;
     if (!exp) { alert("No Expenditure account found."); return; }
-    const balance = Number(exp.balance || 0);
-    if (balance <= 0) { alert("Nothing to carry forward — expenditure balance is zero or negative."); return; }
 
-    // The "carry forward" simply means: the expenditure balance stays and is available next month.
-    // We record it in the current month's data so we know carryforward was done.
     const monthKey = getMonthKey(currentMonth);
     if (!appData.monthlyBudgetData) appData.monthlyBudgetData = {};
     if (!appData.monthlyBudgetData[monthKey]) appData.monthlyBudgetData[monthKey] = { inflow: {}, outflow: {}, investing: {} };
-    appData.monthlyBudgetData[monthKey]._carryForwardDone = balance;
-    scheduleSave();
+    const monthData = appData.monthlyBudgetData[monthKey];
+    if (monthData._monthClosed) { alert("This month is already closed."); return; }
+    if (!monthData._transferDone) { alert("Execute the monthly transfer first before closing the month."); return; }
+    const balance = Number(exp.balance || 0);
 
-    alert(`${formatMoney(balance)} will carry forward in the Expenditure account to next month.`);
+    const midMonthCC = Number(monthData.outflow?.midMonthCCOutstanding || 0);
+    const monthLabel = currentMonth.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+
+    let confirmMsg = `Close ${monthLabel} Budget?\n\nThis will:\n`;
+    confirmMsg += `• Mark this month as read-only (no more edits)\n`;
+    if (balance > 0) {
+        confirmMsg += `• Carry forward ₹${balance.toLocaleString("en-IN")} expenditure balance as next month's initial balance\n`;
+    }
+    if (midMonthCC > 0) {
+        confirmMsg += `• Set ₹${midMonthCC.toLocaleString("en-IN")} as next month's "Previous Month CC Bill (Unpaid)"\n`;
+    }
+    confirmMsg += `• Navigate to next month\n\nProceed?`;
+    if (!confirm(confirmMsg)) return;
+
+    // Close the current month
+    monthData._monthClosed = true;
+    monthData._carryForwardDone = balance;
+
+    // Navigate to next month
+    currentMonth.setMonth(currentMonth.getMonth() + 1);
+    scheduleSave();
     renderMonthlyBudget();
 });
 
@@ -4482,21 +4624,21 @@ if (btnUpdateExpBalance) btnUpdateExpBalance.addEventListener("click", () => {
     appData.tabData.cards = cards.map(c => c.id === exp.id ? exp : c);
     scheduleSave();
     input.value = "";
-    // Calculate and show untracked expenses
+    // Calculate and show variable expenditure: totalFunded - currentBalance
     const monthKey = getMonthKey(currentMonth);
     const monthData = (appData.monthlyBudgetData || {})[monthKey] || {};
     const transferDone = Number(monthData._transferDone || 0);
+    const initialBalance = Number(monthData._initialBalance || 0);
     const prevMonthForCarry = new Date(currentMonth);
     prevMonthForCarry.setMonth(prevMonthForCarry.getMonth() - 1);
     const prevMonthCarry = (appData.monthlyBudgetData || {})[getMonthKey(prevMonthForCarry)];
     const prevCarryForward = Number(prevMonthCarry?._carryForwardDone || 0);
-    const trackedExp = window._budgetTrackedExpenses || 0;
-    const totalFunded = prevCarryForward + transferDone;
-    const untracked = totalFunded > 0 ? Math.max(0, totalFunded - trackedExp - newBalance) : 0;
+    const totalFunded = initialBalance + prevCarryForward + transferDone;
+    const varExp = totalFunded > 0 ? Math.max(0, totalFunded - newBalance) : 0;
     const resultEl = document.getElementById("quickUpdateResult");
     const untrackedEl = document.getElementById("quickUpdateUntracked");
     if (resultEl) resultEl.hidden = false;
-    if (untrackedEl) { untrackedEl.textContent = formatMoney(untracked); untrackedEl.style.color = untracked > 0 ? "#eab308" : "#22c55e"; }
+    if (untrackedEl) { untrackedEl.textContent = formatMoney(varExp); untrackedEl.style.color = varExp > 0 ? "#eab308" : "#22c55e"; }
     if (!isBudgetEditMode) renderMonthlyBudget();
     alert(`Expenditure account balance updated to ${formatMoney(newBalance)}`);
 });
@@ -4695,6 +4837,17 @@ function handleCategoryFieldChange(e) {
         monthData[category] = {};
     }
     monthData[category][fieldId] = Number(e.target.value) || 0;
+
+    // When PRIMARY INCOME changes, auto-update salary account balance
+    if (fieldId === "primaryIncome") {
+        const newIncome = Number(e.target.value) || 0;
+        const cards = (appData.tabData || {}).cards || [];
+        const salary = cards.find(c => c.purpose === "Salary" && c.isPrimary !== "Yes");
+        if (salary) {
+            salary.balance = newIncome;
+            appData.tabData.cards = cards.map(c => c.id === salary.id ? salary : c);
+        }
+    }
     
     // Update edit mode totals
     const inflowTotal = Object.values(monthData.inflow).reduce((s, v) => s + Number(v || 0), 0);

@@ -40,7 +40,7 @@ SmartFin is a personal finance web application (dark/light theme) that helps you
 - **Net Worth** — Assets & liabilities with 70-year projection
 - **Tax Plan** — Old/New regime comparison with auto-calculated deductions from budget
 - **Gifts** — Gift tracking with yearly/on-demand categories
-- **Emergency Fund** — Fund adequacy calculator based on average monthly expenses
+- **Emergency Fund** — Fund adequacy calculator based on fixed obligations + average variable expenses
 
 All data syncs in real-time across devices via Firebase Firestore.
 
@@ -151,12 +151,22 @@ The Budget tab is the central financial cockpit. It shows monthly income vs. exp
 |--------|------|---------|
 | **Total Inflow** | All income sources this month | Sum of Cash Inflow fields |
 | **Total Outflow** | Fixed obligations + on-demand spending | Sum of Cash Outflow + On-Demand Outflow |
-| **Cash Flow** | Planning metric | Inflow − Outflow |
-| **Salary Account Balance** | After auto-debit of fixed outflows | Salary balance − fixed monthly outflows |
+| **Salary A/c Balance** | Current salary account balance | Auto-set when Primary Income entered |
 | **Expenditure Account Balance** | Current spending account balance | From Accounts tab |
-| **Total Spendable This Month** | What you can still spend | Expenditure balance + pending transfers − tracked expenses |
-| **Tracked Expenses** | Bills, CC spending you entered | Sum of all manually entered outflow/on-demand items |
-| **Untracked Expenses** | Cash/unrecorded spending | (carryforward + transfers) − tracked − current balance |
+| **Total Spendable This Month** | What you can afford to spend | Inflow total − fixed monthly outflow |
+| **Variable Expenses** | Spending from expenditure account + CC | variableExpenditure + midMonthCCOutstanding |
+
+### Budget Status Banner
+
+| Status | Condition |
+|--------|----------|
+| ⚠️ **No accounts** | Missing Primary or Salary account — setup guidance shown |
+| *Empty* | No income or outflows entered yet |
+| ⚪ **Enter income** | Outflows exist but no income entered |
+| 🟢 **Budget Surplus** | Spendable > Variable Expenses |
+| 🔴 **Over Budget** | Variable Expenses > Spendable |
+| ⚪ **Budget Balanced** | Spendable = Variable Expenses |
+| 🟢🔒 **Closed** | Month is closed and read-only |
 
 ### Budget Categories
 
@@ -169,7 +179,12 @@ The Budget tab is the central financial cockpit. It shows monthly income vs. exp
 
 **Cash Outflow:**
 - Auto-calculated Liabilities (EMIs) — auto-linked from Outflow tab
-- Previous Month CC Bill (unpaid) — last month's credit card balance
+- Auto-calculated Insurance Premiums — auto-linked from Outflow tab
+- Auto-calculated Fixed Saving — auto-linked from Outflow tab
+- Auto-calculated Fixed Investment — auto-linked from Outflow tab
+- Auto-calculated Fixed Expenditure — auto-linked from Outflow tab
+- Auto-calculated Variable Expenditure — auto: totalFunded − current exp balance
+- Previous Month CC Bill (Unpaid) — auto from previous closed month's CC spending
 - Current Month CC Spending — this month's credit card purchases
 - Debt Repayment / Lending
 - Utility Bills (electricity, water, gas, internet)
@@ -182,32 +197,38 @@ The Budget tab is the central financial cockpit. It shows monthly income vs. exp
 - On-Demand Expenditure
 - On-Demand Liability
 
-### Monthly Transfer Flow
+### Monthly Budget Flow
 
-1. Salary received → Auto-debit fixed outflows (EMIs, insurance, etc.)
-2. Remaining → **Execute Transfer** to Primary (Expenditure) account
-3. Track daily spending in Cash Outflow / On-Demand Outflow
-4. Month-end → **Carry Forward** remaining balance
+1. **Enter Primary Income** (salary credited this month) → salary account balance auto-updated
+2. **Execute Transfer** → Salary deducted to ₹0, funds routed to Expenditure/Saving/Investment accounts
+3. **Mid-month**: Update Expenditure Account Balance & Current Month CC Spending via Quick Update
+4. **End of month** (when next salary credited): **Close Current Month Budget** → marks read-only, carries forward balance, navigates to next month
+
+> **Note:** Salary account balance is auto-managed (set when income entered, zeroed on transfer). It cannot be manually updated.
 
 ### Quick Update (Mid-Month)
 
-Update account balances and CC spending without editing the full budget:
+Update account balances and CC spending without editing the full budget (located in edit mode):
 
 | Field | What it does |
 |-------|-------------|
-| **Salary Account Balance** | Updates the Salary account balance in Accounts |
-| **Expenditure Account Balance** | Updates the Primary account balance + auto-calculates untracked expenses |
+| **Expenditure Account Balance** | Updates the Primary account balance + auto-calculates variable expenditure |
 | **Current Month CC Spending** | Stores as `midMonthCCOutstanding` (separate from previous month's CC bill) |
 
-When you update Expenditure Balance, the system calculates untracked expenses:
-`Untracked = (transfers + carryforward) − tracked expenses − actual balance`
+When you update Expenditure Balance, the system calculates variable expenditure:
+`Variable Expenditure = (initialBalance + carryForward + transferDone) − current balance`
 
-### Month-End Carry Forward Banner
+### Close Current Month Budget
 
-When navigating to a new month, if the previous month has an unclosed balance, a banner appears:
-> "Previous month (May 2026) has ₹X remaining. Carry forward?"
+Shown after Execute Transfer is done (current or past months only).
 
-Click **Carry Forward** to record it.
+Clicking **Close Month** will:
+- Mark the month as **read-only** (no more edits)
+- Carry forward the remaining expenditure balance to next month
+- Set current month's CC spending as next month's "Previous Month CC Bill (Unpaid)"
+- Navigate to the next month
+
+**Requires:** Transfer must be executed first. Cannot close an already-closed month.
 
 ---
 
@@ -403,9 +424,11 @@ Each goal shows a progress bar with percentage and status badge.
 ### How It Works
 
 - Enter your current emergency fund amount
-- System auto-calculates average monthly expenses from budget data
-- Shows how many months your fund covers
-- Target: 6–12 months of expenses
+- System calculates **Minimum Monthly Need** = Fixed Liabilities/Insurance + Fixed Expenditure + Average Variable Expenses
+- Saving and Investment outflows are excluded (can be stopped in an emergency)
+- Shows practical scenarios: 3 months (bare minimum), 6 months (recommended), 12 months (ideal)
+- Monthly need breakdown shows each component
+- Status: EXCELLENT (≥12 mo), READY (6–12), ADEQUATE (3–6), LOW (<3)
 
 ---
 
@@ -479,8 +502,9 @@ Access via the ⚙️ Settings button in the header.
 3. **Use Quick Update** mid-month to keep balances accurate
 4. **Check Portfolio Summary** for a consolidated investment view
 5. **Export monthly** for offline backups
-6. **Use the carry forward banner** when switching months
+6. **Close each month** before starting the next one to maintain accurate records
 7. **Keep Insurance tab updated** separately from Outflow premiums
+8. **Don't manually edit salary balance** — it's auto-managed as a transit account
 
 ---
 
@@ -488,6 +512,7 @@ Access via the ⚙️ Settings button in the header.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 5.0 | 2026-06-09 | **Auto-debit routing**: fixedSaving/fixedInvestment/fixedExpenditure/insurancePremiums moved to outflow; variableExpenditure auto-calculated; creditCardOutstanding auto from previous closed month; salary is transit-only account (no manual edit); Execute Transfer deducts full salary, credits all accounts; replaced Carry Forward with Close Current Month Budget (read-only months); updated emergency fund calculation (fixed obligations + avg variable, excludes saving/investment); budget status handles no-data/no-accounts/no-income edge cases; transfer section responsive for mobile; monthly need breakdown in emergency fund |
 | 4.0 | 2026-06-08 | **Major restructure**: Inflow→Investments with sub-sections (Existing/Monthly/Portfolio Summary); new Insurance tab (policy tracking with premium frequency, sum assured, nominees); Budget engine rewrite (account-balance-aware "Total Spendable" formula); separated CC fields (Previous Month CC Bill vs Current Month CC Spending); Quick Update consolidation (added Expenditure Balance field, removed standalone Reconciliation, shows untracked expenses inline); Delete Account feature (Settings→Danger Zone, deletes Firestore data + Firebase Auth); month-end carry forward banner (auto-detects unclosed months); improved UI with summary hints/descriptions on all fields; investment category field (Existing/Monthly) for sub-section filtering. |
 | 3.2 | 2026-06-04 | Changed UI pattern from Edit/Save/Cancel to Edit/Done for all tabs except Liability; Liability page keeps Save button for fixed monthly income field; removed Cancel buttons from all tabs except Liability; added theme-based favicon switching (logo_dark/logo_light); fixed auto-calculated badge tooltip. |
 | 3.1 | 2026-06-04 | Monthly Budget: removed Insurance and Rent/Maintenance from Cash Outflow; removed SIP/Monthly Investment and Monthly Saving from On-Demand Outflow; renamed "Outflow" → "Cash Outflow"; added hover tooltips for auto-calculated fields showing breakdown; removed insurance from annual summary and pie charts; removed duplicate save button. |

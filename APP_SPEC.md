@@ -22,9 +22,9 @@
 
 | File | Purpose | Approx Lines |
 |------|---------|-------------|
-| `index.html` | All HTML structure (single file, all tabs) | ~1060 |
-| `assets/js/app.js` | All application logic (single file) | ~4700 |
-| `assets/css/styles.css` | All styles (single file) | ~3250 |
+| `index.html` | All HTML structure (single file, all tabs) | ~1050 |
+| `assets/js/app.js` | All application logic (single file) | ~4900 |
+| `assets/css/styles.css` | All styles (single file) | ~3280 |
 
 ---
 
@@ -89,13 +89,15 @@ users/{uid} → single document
   "monthlyBudgetData": {
     "2026-06": {
       "inflow": { "primaryIncome": 0, "secondaryIncome": 0, ... },
-      "outflow": { "loanEMI": 0, "creditCardOutstanding": 0, "midMonthCCOutstanding": 0, ... },
+      "outflow": { "loanEMI": 0, "fixedSaving": 0, "fixedInvestment": 0, "fixedExpenditure": 0, "variableExpenditure": 0, "creditCardOutstanding": 0, "midMonthCCOutstanding": 0, ... },
       "investing": { "onetimeSaving": 0, "onetimeInvestment": 0, ... },
       "monthEndBalance": 0,
       "_transferDone": 0,
+      "_initialBalance": 0,
       "_carryForwardDone": 0,
-      "autoLinkedFields": { "outflow.loanEMI": true, ... },
-      "autoLinkedBreakdown": { "outflow.loanEMI": "EMI1: ₹X, EMI2: ₹Y" }
+      "_monthClosed": false,
+      "autoLinkedFields": { "outflow.loanEMI": true, "outflow.variableExpenditure": true, ... },
+      "autoLinkedBreakdown": { "outflow.loanEMI": [{name, amount, source}] }
     }
   },
   "customTabs": [ { "id": "string", "label": "string", "color": "#hex", "text": "#hex" } ]
@@ -257,67 +259,90 @@ Every entry has:
 
 ```
 inflow:    primaryIncome, secondaryIncome, borrowing, interest, othersInflow
-outflow:   loanEMI, creditCardOutstanding, midMonthCCOutstanding, debtRepayment,
-           utilityBills, familyExpenditure, miscExpenses
+outflow:   loanEMI, insurancePremiums, fixedSaving, fixedInvestment, fixedExpenditure,
+           variableExpenditure, creditCardOutstanding, midMonthCCOutstanding,
+           debtRepayment, utilityBills, familyExpenditure, miscExpenses
 investing: onetimeSaving, onetimeInvestment, ondemandExpenditure, ondemandLiability
 ```
 
 ### Auto-Linked Fields
 
 These fields are auto-calculated from other tabs (read-only in budget edit):
-- `outflow.loanEMI` — Sum of all Liability outflows (all frequencies converted to monthly equivalent)
-- `inflow.primaryIncome` — From Salary account balance or fixed monthly income
+- `outflow.loanEMI` — Sum of all Liability outflows (monthly equivalent)
+- `outflow.insurancePremiums` — Sum of all Insurance outflows (monthly equivalent)
+- `outflow.fixedSaving` — Sum of all Saving outflows (monthly equivalent)
+- `outflow.fixedInvestment` — Sum of all Investment outflows (monthly equivalent)
+- `outflow.fixedExpenditure` — Sum of all Expenditure outflows (monthly equivalent)
+- `outflow.variableExpenditure` — Auto: (initialBalance + prevCarryForward + transferDone) - currentExpBalance
+- `outflow.creditCardOutstanding` — Auto from previous month's midMonthCCOutstanding (when prev month is closed)
 
 ### Key Calculations (calculateAndDisplaySummary)
 
 ```
 fixedMonthlyOutflow = sum of all Outflow entries converted to monthly equivalent:
   Monthly → amount, Quarterly → amount/3, Semi-Annual → amount/6, Annual → amount/12, One-Time → excluded
-salaryBalance shown as-is (real balance, not calculated)
 
-trackedExpenses = creditCardOutstanding + midMonthCCOutstanding + debtRepayment
-                + utilityBills + familyExpenditure + miscExpenses
-                + ondemandExpenditure + ondemandLiability
-
-pendingTransfer = (if transfer not done yet) max(0, primaryIncome - fixedMonthlyOutflow)
-totalSpendable = expenditureBalance + pendingTransfer - trackedExpenses
-
-effectiveFunded = transferDone > 0 ? transferDone : pendingTransfer
-untracked = max(0, (prevCarryForward + effectiveFunded) - trackedExpenses - expenditureBalance)
-
-cashFlow = inflowTotal - (outflowTotal + investingTotal)
+totalSpendable = inflowTotal - fixedMonthlyOutflow
+variableExpenses = variableExpenditure + midMonthCCOutstanding
+budgetBalance = totalSpendable - variableExpenses (positive = surplus, negative = overspent)
 ```
 
 ### Transfer Flow
 
 ```
 transferAmount = primaryIncome - fixedMonthlyOutflow
-Execute Transfer → salary.balance -= transferAmount, expenditure.balance += transferAmount
-Records: monthData._transferDone = transferAmount
+Execute Transfer:
+  1. Blocks if no Salary or Expenditure account
+  2. Blocks if transfer already done (_transferDone exists)
+  3. Blocks if month already closed (_monthClosed)
+  4. Blocks if primaryIncome not set or ≤ 0
+  5. Blocks if transferAmount ≤ 0 (outflow exceeds income)
+  6. salary.balance = 0 (deduct full primaryIncome)
+  7. expenditure.balance += transferAmount
+  8. savingAccount.balance += autoDebitByType.Saving
+  9. investmentAccount.balance += autoDebitByType.Investment
+  10. Records: _transferDone, _initialBalance
+  11. Transfer section hidden after execution
 ```
 
-### Carry Forward
+When primaryIncome is entered, salary account balance is auto-updated to match.
+
+### Close Current Month Budget
+
+Replaces old "Carry Forward". Shown after transfer is done.
 
 ```
-Records: monthData._carryForwardDone = expenditureBalance
-Expenditure balance carries to next month automatically (stays in account).
+Close Month → confirmation dialog showing:
+  • Month becomes read-only
+  • Leftover expenditure balance carries forward
+  • CC outstanding becomes next month's "Previous Month CC Bill (Unpaid)"
+
+Actions:
+  monthData._monthClosed = true
+  monthData._carryForwardDone = expenditureBalance
+  Navigate to next month
 ```
 
-### Month-End Banner
+### Closed Month Behavior
 
-Appears when navigating to a month where previous month has `_transferDone` but no `_carryForwardDone` and expenditure balance > 0.
+- Edit button shows "🔒 Closed" (disabled)
+- Budget status shows read-only banner
+- Transfer section hidden
+- Close section hidden
+- Next month auto-gets CC outstanding via applyMonthlyAutoValues
 
 ---
 
 ## 6. Quick Update System
 
-Located in Budget preview mode. Three fields:
+Located in Budget edit mode. Two fields (salary is auto-managed, not manually editable):
 
 | Field | DOM ID | Action |
 |-------|--------|--------|
-| Salary Balance | `midMonthSalaryBalance` | Updates Salary account balance in `tabData.cards` |
-| Expenditure Balance | `midMonthExpBalance` | Updates Primary account balance, calculates untracked |
+| Expenditure Balance | `midMonthExpBalance` | Updates Primary account balance, auto-calculates variable expenditure |
 | CC Spending | `midMonthCCOutstanding` | Stores in `monthlyBudgetData[monthKey].outflow.midMonthCCOutstanding` |
+
+Variable expenditure shown after update: `totalFunded (initialBalance + prevCarryForward + transferDone) − newBalance`
 
 ---
 
@@ -501,9 +526,8 @@ render()
 | `toggleBudgetEdit` click | Toggle `isBudgetEditMode` | Budget |
 | `prevMonth/nextMonth` click | Navigate month | Budget |
 | `toggleBudgetView` click | Toggle annual/monthly view | Budget |
-| `btnCarryForward` click | Record carry forward | Budget |
-| `btnUpdateSalaryBalance` click | Update salary account balance | Budget Quick Update |
-| `btnUpdateExpBalance` click | Update expenditure balance + calc untracked | Budget Quick Update |
+| `btnCarryForward` click | Close current month budget | Budget |
+| `btnUpdateExpBalance` click | Update expenditure balance + calc variable expenditure | Budget Quick Update |
 | `btnUpdateCCOutstanding` click | Store midMonthCCOutstanding | Budget Quick Update |
 | `inflowFields/outflowFields/investingFields` input | `handleCategoryFieldChange` | Budget Edit |
 | `toggle{Tab}Edit` click | Toggle edit mode | All tabs |
@@ -519,8 +543,12 @@ render()
 
 | Variable | Purpose |
 |----------|---------|
-| `window._budgetExpAccount` | Reference to expenditure account (set during budget render) |
-| `window._budgetTrackedExpenses` | Last calculated tracked expenses total |
+| `window._budgetExpAccount` | Reference to expenditure account |
+| `window._budgetSalaryAccount` | Reference to salary account |
+| `window._budgetTransferAmt` | Calculated transfer amount |
+| `window._budgetAutoDebitByType` | Auto-debit amounts by type |
+| `window._budgetTransferDone` | Transfer done amount for current month |
+| `window._budgetTrackedExpenses` | Variable expenses (variableExp + CC) |
 
 ---
 
@@ -533,7 +561,7 @@ render()
 5. **Budget → Investments (Portfolio)**: On-demand investment amounts feed portfolio summary
 6. **Outflow (Insurance type) → Insurance**: Premium payments in Outflow should match policy entries in Insurance
 7. **Outflow + Investments → Tax Plan**: EPF, PPF, NPS, insurance premiums auto-calculated as deductions
-8. **Budget → Emergency Fund**: Average monthly expenses calculated from budget history
+8. **Budget → Emergency Fund**: Fixed liabilities + fixed expenditure + avg variable expenses from budget history
 
 ---
 
@@ -552,4 +580,4 @@ When modifying the app, check these areas:
 
 ---
 
-*Last updated: 2026-06-08 (v4.0)*
+*Last updated: 2026-06-09 (v5.0)*

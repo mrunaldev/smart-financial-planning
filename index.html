@@ -190,11 +190,6 @@
                         <strong id="totalExpenses">₹0</strong>
                     </div>
                     <div class="summary-item">
-                        <span class="summary-label">Cash Flow</span>
-                        <span class="summary-hint">Inflow minus all outflows (planning metric)</span>
-                        <strong id="cashFlow">₹0</strong>
-                    </div>
-                    <div class="summary-item">
                         <span class="summary-label" id="salaryBalanceLabel">Salary A/c Balance</span>
                         <span class="summary-hint" id="salaryBalanceHint">Current balance in your salary account</span>
                         <strong id="initialBalance">₹0</strong>
@@ -206,17 +201,12 @@
                     </div>
                     <div class="summary-item">
                         <span id="amountAvailableLabel" class="summary-label">Total Spendable This Month</span>
-                        <span class="summary-hint">Expenditure balance + pending transfers − tracked spend</span>
+                        <span class="summary-hint">Total cash inflow minus all fixed obligations</span>
                         <strong id="amountAvailableToSpend" style="color:#22c55e">₹0</strong>
                     </div>
                     <div class="summary-item">
-                        <span class="summary-label">Tracked Expenses</span>
-                        <span class="summary-hint">Bills, family expenses, misc, CC spending entered by you</span>
-                        <strong id="trackedExpenses">₹0</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span class="summary-label">Untracked Expenses</span>
-                        <span class="summary-hint">Difference between expected and actual balance (cash/unrecorded)</span>
+                        <span class="summary-label">Variable Expenses</span>
+                        <span class="summary-hint">Amount spent from expenditure account + CC outstanding this month</span>
                         <strong id="untrackedExpenses" style="color:#eab308">₹0</strong>
                     </div>
                 </div>
@@ -242,7 +232,7 @@
                 </div>
 
                 <!-- Monthly Transfer & Reconciliation Section -->
-                <div class="expense-transfer-section">
+                <div class="expense-transfer-section" id="transferBreakdownSection">
                     <h3>Monthly Transfer Breakdown</h3>
                     <div class="expense-transfer-grid">
                         <div class="expense-transfer-item">
@@ -264,28 +254,24 @@
                     </div>
                     <div class="transfer-action-row">
                         <button type="button" id="btnDoTransfer" class="btn-do-transfer">Execute Transfer</button>
-                        <small class="transfer-note">This will deduct from Salary and add to Primary (Expenditure) account balance.</small>
+                        <small class="transfer-note">Deducts all obligations from Salary, credits Expenditure/Saving/Investment accounts.</small>
                     </div>
                 </div>
 
                 <!-- Reconciliation merged into Quick Update above -->
 
-                <!-- Month-End Carryforward -->
+                <!-- Close Current Month Budget -->
                 <div class="expense-transfer-section" id="carryforwardSection" hidden>
-                    <h3>Month-End Carryforward</h3>
+                    <h3>Close Current Month Budget</h3>
                     <div class="expense-transfer-grid">
                         <div class="expense-transfer-item">
-                            <span class="expense-transfer-label">Expenditure Account End Balance</span>
+                            <span class="expense-transfer-label">Expenditure Account Balance</span>
                             <strong id="carryforwardBalance">₹0</strong>
-                        </div>
-                        <div class="expense-transfer-item highlight-transfer">
-                            <span class="expense-transfer-label">Carry to Next Month</span>
-                            <strong id="carryforwardAmount" style="color:#22c55e">₹0</strong>
                         </div>
                     </div>
                     <div class="transfer-action-row">
-                        <button type="button" id="btnCarryForward" class="btn-do-transfer">Carry Forward</button>
-                        <small class="transfer-note">Adds remaining expenditure balance to next month's expenditure account.</small>
+                        <button type="button" id="btnCarryForward" class="btn-do-transfer" style="background:#ef4444">Close Month</button>
+                        <small class="transfer-note">Marks this month as read-only. Leftover balance carries forward, CC outstanding becomes next month's unpaid bill.</small>
                     </div>
                 </div>
 
@@ -320,14 +306,8 @@
                 <!-- Mid-Month Quick Update (consolidated) -->
                 <div class="mid-month-update-section">
                     <h3>Quick Update (Mid-Month)</h3>
-                    <p class="section-description">Update these values periodically to keep your budget accurate. Only change what has changed.</p>
+                    <p class="section-description">Update these values periodically to track your spending. Variable expenditure is auto-calculated.</p>
                     <div class="mid-month-row">
-                        <div class="mid-month-field">
-                            <label for="midMonthSalaryBalance">Salary Account Balance</label>
-                            <span class="field-hint">Current balance in your salary account today</span>
-                            <input type="number" id="midMonthSalaryBalance" min="0" step="1" placeholder="Current salary balance">
-                            <button type="button" id="btnUpdateSalaryBalance" class="btn-mid-update">Update</button>
-                        </div>
                         <div class="mid-month-field">
                             <label for="midMonthExpBalance">Expenditure Account Balance</label>
                             <span class="field-hint">Current balance in your spending account today</span>
@@ -343,10 +323,10 @@
                     </div>
                     <div id="quickUpdateResult" class="quick-update-result" hidden>
                         <div class="quick-update-result-item">
-                            <span>Untracked/Cash Expenses</span>
+                            <span>Variable Expenditure</span>
                             <strong id="quickUpdateUntracked" style="color:#eab308">₹0</strong>
                         </div>
-                        <span class="field-hint">Calculated from: (transfers + carryforward) − tracked expenses − current balance</span>
+                        <span class="field-hint">Amount spent from expenditure account (funded − current balance)</span>
                     </div>
                 </div>
             </div><!-- end budgetEdit -->
@@ -898,17 +878,28 @@
                         <strong id="currentEmergencyFundDisplay">₹0</strong>
                     </div>
                     <div class="emergency-fund-summary-item">
-                        <span class="emergency-fund-summary-label">Average Monthly Expenses</span>
+                        <span class="emergency-fund-summary-label">Minimum Monthly Need</span>
+                        <span class="summary-hint">Fixed liabilities + expenditures + avg variable (no saving/investment)</span>
                         <strong id="averageMonthlyExpenses">₹0</strong>
                     </div>
                     <div class="emergency-fund-summary-item">
-                        <span class="emergency-fund-summary-label">6 Months Needed</span>
+                        <span class="emergency-fund-summary-label">3 Months (Bare Minimum)</span>
+                        <strong id="threeMonthsNeeded">₹0</strong>
+                    </div>
+                    <div class="emergency-fund-summary-item">
+                        <span class="emergency-fund-summary-label">6 Months (Recommended)</span>
                         <strong id="sixMonthsNeeded">₹0</strong>
                     </div>
                     <div class="emergency-fund-summary-item">
-                        <span class="emergency-fund-summary-label">12 Months Needed</span>
+                        <span class="emergency-fund-summary-label">12 Months (Ideal)</span>
                         <strong id="twelveMonthsNeeded">₹0</strong>
                     </div>
+                </div>
+
+                <!-- Monthly Need Breakdown -->
+                <div class="expense-transfer-section" style="margin-top:16px">
+                    <h3>Monthly Need Breakdown</h3>
+                    <div id="emergencyFundBreakdown" class="ef-breakdown"></div>
                 </div>
 
                 <!-- Status Display -->
@@ -916,7 +907,7 @@
                     <div class="status-badge" id="statusBadge">-</div>
                     <div class="status-details">
                         <div class="status-detail">
-                            <span class="status-detail-label">Amount Needed</span>
+                            <span class="status-detail-label">Shortfall (vs 6 months)</span>
                             <strong id="amountNeeded">₹0</strong>
                         </div>
                         <div class="status-detail">

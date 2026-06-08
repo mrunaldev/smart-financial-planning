@@ -1,6 +1,6 @@
 # SmartFin – Architecture Document
 
-> Version 2.0 | May 2026
+> Version 3.0 | June 2026
 
 ---
 
@@ -239,7 +239,12 @@ classDiagram
         +Object inflow
         +Object outflow
         +Object investing
-        +number monthEndBalance
+        +Object autoLinkedFields
+        +Object autoLinkedBreakdown
+        +number _transferDone
+        +number _initialBalance
+        +boolean _monthClosed
+        +number _carryForwardDone
     }
 
     class TabEntry {
@@ -402,6 +407,7 @@ handleCategoryFieldChange(event)
 appData.monthlyBudgetData[YYYY-MM][category][fieldId] = value
         │
         ├── updates: inflowTotalEdit / outflowTotalEdit / investingTotalEdit (live)
+        ├── if primaryIncome changed: auto-updates salary account balance
         ├── calls:   calculateAndDisplaySummary(monthData)
         ├── calls:   renderPieChart(monthData)
         └── calls:   scheduleSave()
@@ -547,27 +553,31 @@ sequenceDiagram
     participant EF as Emergency Fund Entries
     participant UI as Status Badge
 
-    App->>MB: read all monthlyBudgetData keys
-    App->>MB: sum outflow per month → totalExpenses
-    App->>App: avgMonthlyExpenses = totalExpenses / monthCount
+    App->>App: fixedObligations = sum Outflow items (type=Liability/Insurance), monthly equivalent
+    App->>App: fixedExpenditure = sum Outflow items (type=Expenditure), monthly equivalent
+    App->>MB: read variable expense fields across all months with data
+    App->>App: avgVariable = average of (utilityBills + familyExp + misc + debtRepayment + CC + onDemand)
+    App->>App: minimumMonthlyNeed = fixedObligations + fixedExpenditure + avgVariable
 
-    alt No monthly data exists
+    alt No outflow or budget data
         App->>UI: badge = "NO DATA" (yellow)
-        App->>UI: amountNeeded = "Add monthly expenses first"
-    else Monthly data available
+    else Data available
         App->>EF: read entries[0].currentFund
-        App->>App: monthsCovered = currentFund / avgMonthlyExpenses
+        App->>App: monthsCovered = currentFund / minimumMonthlyNeed
 
         alt monthsCovered >= 12
-            App->>UI: badge = "READY" (green)
+            App->>UI: badge = "EXCELLENT" (green)
         else monthsCovered >= 6
-            App->>UI: badge = "GOOD" (yellow)
+            App->>UI: badge = "READY" (green)
+        else monthsCovered >= 3
+            App->>UI: badge = "ADEQUATE" (yellow)
         else
             App->>UI: badge = "LOW" (red)
         end
 
-        App->>UI: amountNeeded = max(0, 6×avg - currentFund)
-        App->>UI: monthsCovered displayed
+        App->>UI: 3/6/12 month scenarios displayed
+        App->>UI: shortfall = max(0, 6×monthlyNeed - currentFund)
+        App->>UI: breakdown: fixedObligations, fixedExpenditure, avgVariable
     end
 ```
 
@@ -598,11 +608,14 @@ sequenceDiagram
   "monthlyBudgetData": {
     "2026-05": {
       "inflow":    { "primaryIncome": 80000, "secondaryIncome": 5000 },
-      "outflow":   { "rent": 20000, "loanEMI": 15000, "utilityBills": 3000 },
-      "investing": { "sipInvestment": 10000, "monthlySaving": 5000 },
-      "monthEndBalance": 32000
+      "outflow":   { "loanEMI": 107000, "insurancePremiums": 5000, "fixedSaving": 45000, "fixedInvestment": 121000, "fixedExpenditure": 10000, "variableExpenditure": 15000, "creditCardOutstanding": 30000, "midMonthCCOutstanding": 27819, "utilityBills": 1504 },
+      "investing": { "onetimeInvestment": 10000 },
+      "_transferDone": 92000,
+      "_initialBalance": 92000,
+      "_monthClosed": true,
+      "_carryForwardDone": 5000
     },
-    "2026-04": { "inflow": {}, "outflow": {}, "investing": {}, "monthEndBalance": 0 }
+    "2026-04": { "inflow": {}, "outflow": {}, "investing": {} }
   },
   "customTabs": [
     { "id": "my-wedding-2026-1748374923004", "label": "My Wedding 2026",
@@ -643,12 +656,16 @@ Old Regime:
 ### 6.3 Emergency Fund Thresholds
 
 ```
-monthsCovered = currentFund ÷ avgMonthlyOutflow
+minimumMonthlyNeed = fixedLiabilities/Insurance + fixedExpenditure + avgVariableExpenses
+monthsCovered = currentFund ÷ minimumMonthlyNeed
 
-< 6 months  → LOW  (red)    — Urgent: build emergency fund
-6–12 months → GOOD (yellow) — Safe but not optimal
-≥ 12 months → READY (green) — Fully covered
-No outflow data → NO DATA (yellow) — Add monthly budget data first
+< 3 months  → LOW      (red)    — Urgent: build emergency fund
+3–6 months  → ADEQUATE (yellow) — Bare minimum covered
+6–12 months → READY    (green)  — Recommended level
+≥ 12 months → EXCELLENT(green)  — Fully covered
+No data     → NO DATA  (yellow) — Add outflow entries / budget data first
+
+Excludes Saving & Investment outflows (stoppable in emergency).
 ```
 
 ---

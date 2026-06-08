@@ -8,17 +8,15 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
 
 1. **Budget** – Monthly income & expense tracking with category-based fields
    - **Cash Inflow**: Primary Income, Secondary Income, Borrowing/Money Back, Interest/Dividend, Others
-   - **Cash Outflow**: Auto-calculated Liabilities (from Outflow tab), Outstanding Credit Card Bill, Debt Repayment/Lending, Utility Bills, Family Expenditure, Miscellaneous Expenses
+   - **Cash Outflow**: Auto-calculated Liabilities, Insurance Premiums, Fixed Saving, Fixed Investment, Fixed Expenditure, Variable Expenditure (auto), Previous Month CC Bill, Current Month CC Spending, Debt Repayment/Lending, Utility Bills, Family Expenditure, Miscellaneous Expenses
    - **On-Demand Outflow**: On-Demand Saving, On-Demand Investment, On-Demand Expenditure, On-Demand Liability
    - Auto-calculated fields with **clickable breakdown popups** showing source items (both edit & preview modes)
    - **Monthly Transfer Breakdown**: Primary Income − Auto-deducted Fixed Outflow = Transfer to Expenditure Account
-   - **Execute Transfer** button: moves funds from Salary → Expenditure account, updates both balances; salary should reach ₹0 after auto-debit + transfer
-   - **Expenditure Reconciliation**: input current expenditure account balance to detect untracked/cash expenses
-   - **Month-End Carryforward**: positive expenditure balance carries to next month
-   - **Mid-Month Quick Update**: update Salary account balance and CC outstanding directly from budget edit mode
-   - Summary: Total Inflow, Total Outflow, Cash Flow, Salary Balance (after auto-debit), Expenditure Balance, Total Spendable, Tracked Expenses, Untracked Expenses
-   - Budget status banner: **Positive** (surplus), **Negative** (overspent), **Neutral** (balanced) + CC carryover
-   - **Settle from Saving** button on credit card outstanding field
+   - **Execute Transfer** button: deducts full salary to ₹0, credits Expenditure/Saving/Investment accounts; one-time per month
+   - **Close Current Month Budget**: marks month read-only, carries forward balance, navigates to next month
+   - **Mid-Month Quick Update**: update Expenditure Account balance and CC outstanding from budget edit mode (salary is auto-managed, not editable)
+   - Summary: Total Inflow, Total Outflow, Salary Balance, Expenditure Balance, Total Spendable, Variable Expenses
+   - Budget status banner: **Surplus** / **Over Budget** / **Balanced** + edge cases (no accounts, no income, closed month)
    - Month navigation restricted: cannot go before April of onboarding FY or beyond next month from today
    - Financial-year annual view with Apr–Mar calculations (averages based on months with data)
    - Pie chart visualization (hidden during edit mode)
@@ -70,9 +68,11 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
    - Summary: Total Gifts, Total Amount, Fixed Every Year count
 
 9. **Emergency Fund** – Calculate emergency fund requirements
-   - Auto average monthly expense from budget data
-   - 6-month and 12-month targets
-   - Status: Green (12+), Yellow (6–12), Red (<6 months)
+   - Minimum Monthly Need = Fixed Liabilities/Insurance + Fixed Expenditure + Avg Variable Expenses
+   - Excludes Saving & Investment (stoppable in emergency)
+   - Practical scenarios: 3-month (bare min), 6-month (recommended), 12-month (ideal)
+   - Monthly need breakdown with component details
+   - Status: EXCELLENT (≥12), READY (6–12), ADEQUATE (3–6), LOW (<3)
 
 ### Additional Features
 
@@ -170,21 +170,22 @@ Then open `http://localhost:8082`
 |---|---|
 | **Total Inflow** | Same as Cash Inflow Total |
 | **Total Outflow** | Cash Outflow Total + On-Demand Outflow Total |
-| **Cash Flow** | `Total Inflow − Total Outflow` (green if ≥ 0, red if < 0) |
-| **Salary Balance (after auto-debit)** | `Salary Account Balance − Fixed Monthly Outflow` — Fixed Monthly Outflow = sum of all Outflow tab items with `frequency = Monthly`. These are assumed auto-debited at the start of each month. |
-| **Expenditure Account Balance** | Current balance of the Expenditure account (from Accounts tab). |
-| **Total Spendable / Amount Overspent** | `Total Inflow − Total Outflow` — shows "Total Spendable" if ≥ 0, "Amount Overspent" if < 0. |
-| **Tracked Expenses** | `CC Outstanding + Debt Repayment + Utility Bills + Family Expenditure + Misc Expenses + On-Demand Expenditure + On-Demand Liability` — excludes auto-calc liabilities (already debited from salary). |
-| **Untracked Expenses** | `(Previous Month Carryforward + Transfers Done) − Tracked Expenses − Current Expenditure Balance` — clamped to ≥ 0. Shows ₹0 if no transfers done yet. |
+| **Salary A/c Balance** | Auto-set when Primary Income entered (transit account, zeroed on transfer) |
+| **Expenditure Account Balance** | Current balance of the Expenditure account (from Accounts tab) |
+| **Total Spendable / Amount Overspent** | `Inflow Total − Fixed Monthly Outflow` — shows "Total Spendable" if ≥ 0, "Amount Overspent" if < 0. Fixed Monthly Outflow = sum of all Outflow tab items converted to monthly equivalent (all frequencies). |
+| **Variable Expenses** | `variableExpenditure + midMonthCCOutstanding` — spending from expenditure account + CC charges |
 
 #### Budget Status Banner
 
 | Status | Condition |
 |---|---|
-| 🟢 **Budget Positive** | Cash Flow > 0 → shows surplus amount |
-| 🔴 **Budget Negative** | Cash Flow < 0 → shows overspent amount |
-| ⚪ **Budget Balanced** | Cash Flow = 0 |
-| **CC Carryover** | If previous month had CC Outstanding > 0, appended to banner |
+| ⚠️ **No accounts** | Missing Primary or Salary account — setup guidance shown |
+| *Empty* | No income or outflows entered yet |
+| ⚪ **Enter income** | Outflows exist but no income entered |
+| � **Budget Surplus** | Spendable > Variable Expenses |
+| 🔴 **Over Budget** | Variable Expenses > Spendable |
+| ⚪ **Budget Balanced** | Spendable = Variable Expenses |
+| 🔒 **Closed** | Month is closed and read-only |
 
 ---
 
@@ -202,32 +203,25 @@ Then open `http://localhost:8082`
 | | • **Expenditure** → credited to Primary (Expenditure) account |
 | **Remaining → Transfer to Primary** | `Primary Income − Total Fixed Monthly Outflow` (green if ≥ 0; red = shortfall) |
 
-**Execute Transfer** button: Deducts transfer amount from Salary account, adds to Primary (Expenditure) account, records `_transferDone` on the month. Can be clicked multiple times (cumulative).
+**Execute Transfer** button:
+- Deducts **full** primaryIncome from Salary (balance → ₹0)
+- Credits Expenditure account with transfer amount
+- Credits Saving and Investment accounts with respective auto-debit totals
+- Records `_transferDone` and `_initialBalance`
+- **One-time only** per month — section hidden after execution
 
 ---
 
-### Expenditure Reconciliation
+### Close Current Month Budget
 
-| Field | Formula |
-|---|---|
-| **Expected Balance** | `Previous Month Carryforward + Transfers Done − Tracked Expenses` |
-| **Actual Balance** | User-entered current expenditure account balance |
-| **Untracked/Cash Expenses** | `Expected Balance − Actual Balance` (clamped to ≥ 0) |
+Visible when: transfer done, current or past month, not already closed.
 
-The **Reconcile** button also updates the Expenditure account balance in the Accounts tab.
-
----
-
-### Month-End Carryforward
-
-Visible when: current or past month, expenditure balance > 0, and budget is positive.
-
-| Field | Formula |
-|---|---|
-| **Expenditure Account End Balance** | Current Expenditure account balance |
-| **Carry to Next Month** | Same as end balance |
-
-**Carry Forward** button records `_carryForwardDone` on the month data. The balance stays in the Expenditure account and is available next month.
+**Close Month** button:
+- Marks month as **read-only** (`_monthClosed = true`)
+- Records expenditure balance as `_carryForwardDone`
+- Sets current month's CC spending as next month's "Previous Month CC Bill (Unpaid)"
+- Navigates to next month
+- **Requires transfer first** — blocks if not yet executed
 
 ---
 
@@ -235,19 +229,10 @@ Visible when: current or past month, expenditure balance > 0, and budget is posi
 
 | Field | What It Updates |
 |---|---|
-| **Salary Account Balance** | Updates the Salary (Primary) account balance in Accounts tab |
-| **Credit Card Outstanding** | Updates `creditCardOutstanding` in the current month's outflow data |
+| **Expenditure Account Balance** | Updates Primary account balance + auto-calculates variable expenditure |
+| **Current Month CC Spending** | Stores as `midMonthCCOutstanding` in current month's outflow data |
 
----
-
-### Settle from Saving (Budget Edit Mode)
-
-Available on the "Outstanding Credit Card Bill" field in edit mode.
-
-| Step | Formula |
-|---|---|
-| **Settle Amount** | `min(CC Outstanding, Saving Account Balance)` |
-| **After settle** | CC Outstanding reduced by settle amount; Saving account balance reduced by settle amount |
+Salary balance is **not** manually editable — auto-managed as a transit account.
 
 ---
 
@@ -269,14 +254,30 @@ Averages are calculated using **only months that have data** (not always 12).
 
 ### Emergency Fund
 
-| Field | Formula |
+**Minimum Monthly Need** = Fixed Liabilities/Insurance + Fixed Expenditure + Average Variable Expenses
+
+Excludes Saving & Investment outflows (stoppable in emergency).
+
+| Component | Source |
 |---|---|
-| **Average Monthly Expenses** | Sum of all `outflow` values across all recorded months ÷ number of months |
-| **6-Month Target** | `Average Monthly Expenses × 6` |
-| **12-Month Target** | `Average Monthly Expenses × 12` |
-| **Months Covered** | `Current Fund ÷ Average Monthly Expenses` |
-| **Amount Needed** | `max(0, 6-Month Target − Current Fund)` |
-| **Status** | 🟢 Green (≥12 months) · 🟡 Yellow (6–12) · 🔴 Red (<6) |
+| **Fixed Liabilities & Insurance** | Outflow tab items (type=Liability or Insurance), converted to monthly equivalent |
+| **Fixed Expenditure** | Outflow tab items (type=Expenditure), converted to monthly equivalent |
+| **Avg Variable Expenses** | Average of variable budget fields across months with data |
+
+| Scenario | Formula |
+|---|---|
+| **3 Months (Bare Minimum)** | Minimum Monthly Need × 3 |
+| **6 Months (Recommended)** | Minimum Monthly Need × 6 |
+| **12 Months (Ideal)** | Minimum Monthly Need × 12 |
+| **Shortfall** | `max(0, 6×Monthly Need − Current Fund)` |
+| **Months Covered** | `Current Fund ÷ Minimum Monthly Need` |
+
+| Status | Condition |
+|---|---|
+| 🟢 **EXCELLENT** | ≥ 12 months covered |
+| 🟢 **READY** | 6–12 months |
+| 🟡 **ADEQUATE** | 3–6 months |
+| 🔴 **LOW** | < 3 months |
 
 ---
 

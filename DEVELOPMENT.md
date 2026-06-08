@@ -167,7 +167,7 @@ The test suite is a standalone HTML file with no dependencies or build step.
 |----------|-------|
 | `DEFAULT_TABS` structure | 10 tabs, correct IDs, no removed tabs (`misc`, `oneTimeBudget`) |
 | `TAB_FIELDS` definitions | Field counts and required field presence including Frequency in Liabilities |
-| `MONTHLY_BUDGET_CATEGORIES` | Inflow, Outflow, On-Demand Outflow field definitions |
+| `MONTHLY_BUDGET_CATEGORIES` | Inflow (5 fields), Outflow (12 fields incl. variableExpenditure), On-Demand Outflow (4 fields) |
 | `formatMoney()` | Indian number format, null/undefined safety, negative values |
 | `esc()` | HTML entity escaping, XSS prevention |
 | `getMonthKey()` | Month key format `YYYY-MM`, zero-padding |
@@ -214,26 +214,22 @@ All logic is in `assets/js/app.js`. Key sections:
 
 ```
 lines 1–94      TAB_FIELDS and DEFAULT_TABS config (includes Frequency in Liabilities, purposeOther in Cards)
-lines 96–125    MONTHLY_BUDGET_CATEGORIES config (On-Demand Outflow fields)
-lines 127–304   DOM references (removed monthEndBalance, added balanceToSpend/amountAvailableToSpend)
-lines 306–329   App state variables (added budgetEditSnapshot)
-lines 336–449   Firebase Auth + Firestore listeners (currentAge now restored)
-lines 451–494   Utility: formatMoney, esc, activeEntries, setActiveEntries
-lines 496–651   render() dispatch and renderTabs()
-lines 653–714   renderMonthlyBudget() (budget edit snapshot/restore, on-demand section hidden)
-lines 740–895   renderFinancialGoal()
-lines 897–1141  renderMonthlyFixedExpense() + charts (Frequency in preview)
-lines 1142–1328 renderInvestments() + chart
-lines 1330–1474 renderInsurances()
-lines 1476–1622 renderCards() (sortCardEntries, purposeOther conditional)
-lines 1624–1886 renderNetWorth() + projection chart
-lines 1888–2119 renderTaxPlan() + tax breakdown
-lines 2120–2262 renderGifts()
-lines 2264–2390 renderEmergencyFund() + calculateEmergencyFundSummary()
-lines 2392–2470 calculateAnnualSummary()
-lines 2472–2550 buildMonthlyAutoValues() (Frequency filter, no CC carryover)
-lines 2656–2820 exportToExcel(), resetAllData() (includes all fields)
-lines 2828+     All event listeners (delete confirmation for all entries)
+lines 96–165    MONTHLY_BUDGET_CATEGORIES config (inflow, outflow with variableExpenditure, investing)
+lines 167–310   DOM references
+lines 312–335   App state variables
+lines 340–460   Firebase Auth + Firestore listeners
+lines 462–505   Utility: formatMoney, esc, activeEntries, setActiveEntries
+lines 507–660   render() dispatch and renderTabs()
+lines 1240–1341 applyMonthlyAutoValues() (auto-calc fields, variable expenditure)
+lines 1381–1475 renderMonthlyBudget() (closed month handling, edit mode)
+lines 1477–1514 renderCategoryPreview() (shows auto-linked fields even at ₹0)
+lines 3381–3500 calculateEmergencyFundSummary() (fixed obligations + avg variable)
+lines 3800–3990 calculateAndDisplaySummary() (budget status, transfer, close month)
+lines 4430–4455 toggleBudgetEdit (blocks closed months)
+lines 4457–4520 Execute Transfer handler (blocks: no income, already done, closed)
+lines 4557–4595 Close Current Month Budget handler
+lines 4597–4645 Mid-Month Quick Update handlers (exp balance + CC only)
+lines 4700+     handleCategoryFieldChange, addCardEntry, all event listeners
 ```
 
 ### Adding a new tab
@@ -408,10 +404,13 @@ Run through this before considering any deployment complete.
 - [ ] Register a new user — account created, redirected to app
 - [ ] Sign out and sign back in — data persists
 - [ ] All 10 tabs render without errors
-- [ ] Monthly Budget: add data, switch months, toggle Annual view, test Cancel edit, verify on-demand section hides when empty
-- [ ] Liabilities: add Monthly/Quarterly items, verify only Monthly auto-populates budget, verify Frequency shows in preview
-- [ ] Accounts: test Primary account enforcement, test Saving account limit, verify sort order (Primary → Saving → balance desc), test purposeOther field
-- [ ] Emergency Fund: shows correct status badge
+- [ ] Monthly Budget: enter Primary Income (salary balance updates), Execute Transfer (salary → ₹0, exp/saving/investment credited), mid-month Quick Update (exp balance + CC), Close Month (read-only), navigate months
+- [ ] Budget: verify transfer blocks (no income, already done, month closed), close blocks (no transfer, already closed)
+- [ ] Budget: verify budget status banner shows correct state (no accounts, no income, surplus, over budget, balanced, closed)
+- [ ] Budget: verify variableExpenditure appears in Cash Outflow preview (auto badge, even at ₹0)
+- [ ] Outflow: add Monthly/Quarterly/Annual items, verify all types auto-populate budget (Liability, Insurance, Saving, Investment, Expenditure)
+- [ ] Accounts: test Primary account enforcement, test Saving account limit, verify sort order (Primary → Saving → balance desc)
+- [ ] Emergency Fund: verify calculation uses fixed obligations + avg variable (excludes saving/investment), 3/6/12 month scenarios shown
 - [ ] Export Excel downloads `.xlsx` file
 - [ ] Reset All Data clears everything after typing `DELETE`
 - [ ] `test.html` → all automated tests pass

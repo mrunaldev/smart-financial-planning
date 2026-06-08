@@ -1039,22 +1039,22 @@ td.amount {
 
 .expense-transfer-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
 }
 
 .expense-transfer-item {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     background: var(--surf2);
     border: 1px solid var(--border2);
     border-radius: 10px;
-    padding: 14px 16px;
+    padding: 10px 14px;
 }
 
 .expense-transfer-label {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -1062,7 +1062,7 @@ td.amount {
 }
 
 .expense-transfer-item strong {
-    font-size: 1.3rem;
+    font-size: 1.1rem;
     font-weight: 700;
     color: var(--white);
 }
@@ -1071,8 +1071,53 @@ td.amount {
     border-color: rgba(34,197,94,.35);
 }
 
+.auto-debit-breakdown-container,
+.expense-transfer-item.highlight-transfer {
+    grid-column: 1 / -1;
+}
+
 @media (max-width: 600px) {
-    .expense-transfer-grid { grid-template-columns: 1fr; }
+    .expense-transfer-section {
+        padding: 14px 12px;
+    }
+    .expense-transfer-section h3 {
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+    }
+    .expense-transfer-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .expense-transfer-item {
+        padding: 8px 10px;
+    }
+    .expense-transfer-label {
+        font-size: 0.68rem;
+    }
+    .expense-transfer-item strong {
+        font-size: 0.95rem;
+    }
+    .auto-debit-breakdown-container {
+        padding: 4px 8px;
+        margin: 0 0 0 4px;
+    }
+    .auto-debit-line {
+        font-size: 0.72rem;
+    }
+    .transfer-action-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .btn-do-transfer {
+        width: 100%;
+        text-align: center;
+        padding: 10px;
+        font-size: 0.82rem;
+    }
+    .transfer-note {
+        text-align: center;
+        font-size: 0.7rem;
+    }
 }
 
 .chart-container {
@@ -2329,10 +2374,10 @@ td.amount {
 
 .emergency-fund-summary {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     gap: 14px;
 }
-@media (max-width: 900px) {
+@media (max-width: 600px) {
     .emergency-fund-summary { grid-template-columns: repeat(2, 1fr); }
 }
 
@@ -2423,6 +2468,37 @@ td.amount {
 .status-detail strong {
     color: var(--white);
     font-size: 1.1rem;
+}
+
+.ef-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+.ef-breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    color: var(--dim);
+    border-bottom: 1px solid var(--border);
+}
+.ef-breakdown-row:last-child { border-bottom: none; }
+.ef-breakdown-row strong {
+    color: var(--white);
+    font-size: 0.95rem;
+}
+.ef-breakdown-row.ef-total {
+    background: var(--surf2);
+    border-radius: 8px;
+    margin-top: 4px;
+    font-weight: 600;
+    color: var(--text);
+}
+.ef-breakdown-row.ef-total strong {
+    font-size: 1.05rem;
+    color: #22c55e;
 }
 
 .emergency-fund-edit {
@@ -2646,8 +2722,8 @@ td.amount {
     .auth-card { padding: 28px 18px 24px; }
     .auth-brand h1 { font-size: 1.3rem; }
 
-    /* Header */
-    .app-header { padding: 10px 14px; gap: 10px; }
+    /* Header – preserve safe-area inset for notched phones */
+    .app-header { padding: calc(10px + var(--safe-top)) calc(14px + var(--safe-right)) 10px calc(14px + var(--safe-left)); gap: 10px; }
     .logo-mark.logo-sm { width: 30px; height: 30px; }
     .brand-text h1 { font-size: 1rem; }
     .brand-text p { display: none; }

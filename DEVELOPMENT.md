@@ -408,7 +408,7 @@ Run through this before considering any deployment complete.
 - [ ] Budget: verify transfer blocks (no income, already done, month closed), close blocks (no transfer, already closed)
 - [ ] Budget: verify budget status banner shows correct state (no accounts, no income, surplus, over budget, balanced, closed)
 - [ ] Budget: verify variableExpenditure appears in Cash Outflow preview (auto badge, even at ₹0)
-- [ ] Outflow: add Monthly/Quarterly/Annual items, verify all types auto-populate budget (Liability, Insurance, Saving, Investment, Expenditure)
+- [ ] Outflow: add Monthly/Quarterly/Annual items, verify all types auto-populate budget (Liability, Insurance, Saving, Investment, Expenditure). One-Time items must NOT auto-populate.
 - [ ] Accounts: test Primary account enforcement, test Saving account limit, verify sort order (Primary → Saving → balance desc)
 - [ ] Emergency Fund: verify calculation uses fixed obligations + avg variable (excludes saving/investment), 3/6/12 month scenarios shown
 - [ ] Export Excel downloads `.xlsx` file

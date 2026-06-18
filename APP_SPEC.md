@@ -172,7 +172,7 @@ Every entry has:
 | endDate | End Date | date | — | — |
 | details | Details | text | — | — |
 
-**Auto-Debit Routing (Monthly frequency only):**
+**Auto-Debit Routing (recurring frequencies only, One-Time excluded):**
 - Liability → leaves system
 - Insurance → leaves system
 - Saving → Saving account
@@ -221,6 +221,8 @@ Every entry has:
 | details | Details | text | — | — |
 
 **Auto-entries:** Account balances (Assets) and Outflow liabilities are auto-imported.
+
+**Display per item:** Current value, @ 70 yrs (projected), @ 70 yrs real (inflation-adjusted at 6%).
 
 ### taxPlan
 
@@ -273,7 +275,7 @@ These fields are auto-calculated from other tabs (read-only in budget edit):
 - `outflow.fixedSaving` — Sum of all Saving outflows (monthly equivalent)
 - `outflow.fixedInvestment` — Sum of all Investment outflows (monthly equivalent)
 - `outflow.fixedExpenditure` — Sum of all Expenditure outflows (monthly equivalent)
-- `outflow.variableExpenditure` — Auto: (initialBalance + prevCarryForward + transferDone) - currentExpBalance
+- `outflow.variableExpenditure` — Auto: totalFunded − currentExpBalance, where totalFunded = account initial balance + carry forward from last month + salary leftover transferred (_initialBalance captures this post-transfer; fallback: _transferDone + prevCarryForward)
 - `outflow.creditCardOutstanding` — Auto from previous month's midMonthCCOutstanding (when prev month is closed)
 
 ### Key Calculations (calculateAndDisplaySummary)
@@ -282,6 +284,7 @@ These fields are auto-calculated from other tabs (read-only in budget edit):
 fixedMonthlyOutflow = sum of all Outflow entries converted to monthly equivalent:
   Monthly → amount, Quarterly → amount/3, Semi-Annual → amount/6, Annual → amount/12, One-Time → excluded
 
+Total Outflow = outflowTotal only (excludes On-Demand investing category)
 totalSpendable = inflowTotal - fixedMonthlyOutflow
 variableExpenses = variableExpenditure + midMonthCCOutstanding
 budgetBalance = totalSpendable - variableExpenses (positive = surplus, negative = overspent)
@@ -306,6 +309,8 @@ Execute Transfer:
 ```
 
 When primaryIncome is entered, salary account balance is auto-updated to match.
+
+Transfer confirm message shows structured breakdown: Salary Credited → Fixed Outflows Deducted (by type) → Salary Leftover → Transferred to Expenditure A/c → Expenditure A/c balance before/after.
 
 ### Close Current Month Budget
 
@@ -580,4 +585,4 @@ When modifying the app, check these areas:
 
 ---
 
-*Last updated: 2026-06-09 (v5.0)*
+*Last updated: 2026-06-18 (v5.1)*

@@ -11,15 +11,15 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
    - **Cash Outflow**: Auto-calculated Liabilities, Insurance Premiums, Fixed Saving, Fixed Investment, Fixed Expenditure, Variable Expenditure (auto), Previous Month CC Bill, Current Month CC Spending, Debt Repayment/Lending, Utility Bills, Family Expenditure, Miscellaneous Expenses
    - **On-Demand Outflow**: On-Demand Saving, On-Demand Investment, On-Demand Expenditure, On-Demand Liability
    - Auto-calculated fields with **clickable breakdown popups** showing source items (both edit & preview modes)
-   - **Monthly Transfer Breakdown**: Primary Income − Auto-deducted Fixed Outflow = Transfer to Expenditure Account
+   - **Monthly Transfer Breakdown**: Primary Income − Auto-deducted Fixed Outflow = Salary Leftover → Expenditure A/c
    - **Execute Transfer** button: deducts full salary to ₹0, credits Expenditure/Saving/Investment accounts; one-time per month
    - **Close Current Month Budget**: marks month read-only, carries forward balance, navigates to next month
    - **Mid-Month Quick Update**: update Expenditure Account balance and CC outstanding from budget edit mode (salary is auto-managed, not editable)
-   - Summary: Total Inflow, Total Outflow, Salary Balance, Expenditure Balance, Total Spendable, Variable Expenses
+   - Summary: Total Inflow, Total Outflow (recurring monthly obligations only), Salary Balance, Expenditure Balance, Total Spendable, Variable Expenses
    - Budget status banner: **Surplus** / **Over Budget** / **Balanced** + edge cases (no accounts, no income, closed month)
    - Month navigation restricted: cannot go before April of onboarding FY or beyond next month from today
    - Financial-year annual view with Apr–Mar calculations (averages based on months with data)
-   - Pie chart visualization (hidden during edit mode)
+   - Pie chart: 6 categories (Investment, Liability, Savings, Expenditure, Insurance, Others) — recurring instruments only, excludes on-demand/one-time items
    - Edit mode with snapshot/restore on Cancel
 
 2. **Goals** – Set and track financial goals
@@ -37,8 +37,8 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
 4. **Outflow** – Track recurring liabilities & insurance (replaces old Liabilities + Insurances tabs)
    - Name, Type (Liability/Insurance/Expenditure/Saving/Investment), Bank, Frequency, Amount, End Date, Details
    - Items grouped by type in preview with subtotals per group
-   - Monthly Liability items auto-populate budget outflow (auto-calculated)
-   - Monthly items auto-debited from salary account at month start
+   - Recurring items (Monthly/Quarterly/Semi-Annual/Annual) auto-populate budget outflow; **One-Time items excluded** from auto-calc
+   - Recurring items auto-debited from salary account at month start
    - Summary: Fixed Monthly Income, Monthly Deductions, Remaining, Total Items
    - Bar charts: Amount by Bank, Amount by Type
 
@@ -56,6 +56,7 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
 6. **Net Worth** – Calculate and project net worth
    - Auto-populated assets from Inflow tab, liabilities from Outflow tab
    - Manual entries with growth rates
+   - Each item shows: Current, @ 70 yrs (projected), @ 70 yrs real (inflation-adjusted at 6%)
    - Net worth projection graph (till age 70), inflation-adjusted (6%)
 
 7. **Tax Plan** – Tax liability under new/old regimes
@@ -162,14 +163,14 @@ Then open `http://localhost:8082`
 | Field | Source | How |
 |---|---|---|
 | **Auto-calculated Liabilities** (loanEMI) | Outflow tab | Sum of all Outflow items where `type = Liability` and `frequency = Monthly` and item has not ended. Click the "auto" badge to see itemised breakdown. |
-| **On-Demand Investment** (auto part) | Inflow tab | Sum of Inflow items with `frequency = Annual` (in matching month) or `frequency = One-Time` (in start month). |
+| **On-Demand Investment** (auto part) | Inflow tab | Sum of recurring Inflow items (Monthly/Quarterly/Semi-Annual/Annual in matching months). One-Time excluded. |
 
 #### Summary Grid
 
 | Field | Formula |
 |---|---|
 | **Total Inflow** | Same as Cash Inflow Total |
-| **Total Outflow** | Cash Outflow Total + On-Demand Outflow Total |
+| **Total Outflow** | Cash Outflow Total only (recurring monthly obligations; excludes On-Demand Outflow) |
 | **Salary A/c Balance** | Auto-set when Primary Income entered (transit account, zeroed on transfer) |
 | **Expenditure Account Balance** | Current balance of the Expenditure account (from Accounts tab) |
 | **Total Spendable / Amount Overspent** | `Inflow Total − Fixed Monthly Outflow` — shows "Total Spendable" if ≥ 0, "Amount Overspent" if < 0. Fixed Monthly Outflow = sum of all Outflow tab items converted to monthly equivalent (all frequencies). |
@@ -201,7 +202,7 @@ Then open `http://localhost:8082`
 | | • **Saving** → credited to Saving account |
 | | • **Investment** → credited to Investment account |
 | | • **Expenditure** → credited to Primary (Expenditure) account |
-| **Remaining → Transfer to Primary** | `Primary Income − Total Fixed Monthly Outflow` (green if ≥ 0; red = shortfall) |
+| **Salary Leftover → Expenditure A/c** | `Primary Income − Total Fixed Monthly Outflow` (green if ≥ 0; red = shortfall) |
 
 **Execute Transfer** button:
 - Deducts **full** primaryIncome from Salary (balance → ₹0)
@@ -243,11 +244,12 @@ Averages are calculated using **only months that have data** (not always 12).
 | Field | Formula |
 |---|---|
 | **Income** | Sum of all monthly inflow totals across FY (Apr–Mar) |
-| **Expenditure** | Sum of: Utility Bills + Family Expenditure + Misc Expenses + CC Outstanding + On-Demand Expenditure + On-Demand Liability (per month) |
-| **Saving** | Sum of On-Demand Saving per month |
-| **Investment** | Sum of On-Demand Investment per month |
+| **Expenditure** | Sum of: Fixed Expenditure + Variable Expenditure + Utility Bills + Family Expenditure + Misc Expenses + CC Outstanding + CC Spending (per month) |
+| **Saving** | Sum of Fixed Saving per month |
+| **Investment** | Sum of Fixed Investment per month |
 | **Liability** | Sum of Loan EMI + Debt Repayment per month |
-| **Other** | `(Cash Outflow Total + On-Demand Total) − (Liability + Expenditure + Saving + Investment)` per month (catches any unclassified items) |
+| **Insurance** | Sum of Insurance Premiums per month |
+| **Other** | `Cash Outflow Total − (Liability + Insurance + Expenditure + Saving + Investment)` per month (catches any unclassified items) |
 | **Monthly Average** | `Total ÷ Months with data` |
 
 ---
@@ -302,8 +304,8 @@ Auto-pulled from Inflow and Outflow tabs based on item type mapping to tax secti
 
 | Chart | Data |
 |---|---|
-| **Monthly** | Distribution of: Investment, Liability, Saving, Expenditure, Other (from `getMonthlyDistribution`) |
-| **Annual** | Same categories summed across 12 FY months |
+| **Monthly** | Distribution of 6 categories: Investment, Liability, Savings, Expenditure, Insurance, Others — recurring outflow only, excludes on-demand/one-time (from `getMonthlyDistribution`) |
+| **Annual** | Same 6 categories summed across 12 FY months |
 
 ## Libraries Used
 

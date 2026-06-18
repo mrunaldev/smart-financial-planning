@@ -22,8 +22,10 @@ A comprehensive guide to using SmartFin for personal financial planning.
 14. [Emergency Fund](#emergency-fund)
 15. [Settings & Danger Zone](#settings--danger-zone)
 16. [Export to Excel](#export-to-excel)
-17. [Cross-Device Sync](#cross-device-sync)
-18. [FAQ](#faq)
+17. [Backup & Restore](#backup--restore)
+18. [Cross-Device Sync](#cross-device-sync)
+19. [Precautions & Common Pitfalls](#precautions--common-pitfalls)
+20. [FAQ](#faq)
 
 ---
 
@@ -56,10 +58,24 @@ All data syncs in real-time across devices via Firebase Firestore.
 
 ### First-Time Setup
 
-1. Open `index.html` in your browser
-2. **Register** with name, email, and password
+1. Open `index.html` in your browser (or the hosted URL)
+2. **Register** with name, date of birth, email, and password
 3. Go to **Accounts** tab → Add a **Primary (Expenditure)** account and a **Salary** account
 4. This unlocks all other tabs
+5. **Before your first budget month**, complete this recommended setup order:
+
+#### Recommended Setup Order (Critical)
+
+| Step | Tab | What to do | Why |
+|------|-----|-----------|-----|
+| 1 | **Accounts** | Add Primary + Salary accounts (balance = 0 if starting fresh) | Unlocks all tabs |
+| 2 | **Accounts** | Add Saving, Investment accounts if applicable | Transfer will credit these |
+| 3 | **Outflow** | Add ALL fixed deductions (EMIs, rent, insurance premiums, savings, investments) | These must exist BEFORE Execute Transfer |
+| 4 | **Insurance** | Add policy details (separate from outflow premiums) | For tracking coverage |
+| 5 | **Investments** | Add existing investments (FDs, stocks, MFs, etc.) | For portfolio tracking |
+| 6 | **Budget** | Enter Primary Income → Execute Transfer | Only after steps 1–3 are complete |
+
+> **⚠️ CRITICAL:** Add ALL outflow items **before** clicking Execute Transfer. The transfer uses the outflow items that exist *at the moment you click the button*. If you add outflow items afterward, those deductions will NOT have been taken from salary, causing incorrect variable expenditure calculations.
 
 ---
 
@@ -150,7 +166,7 @@ The Budget tab is the central financial cockpit. It shows monthly income vs. exp
 | Metric | Hint | Formula |
 |--------|------|---------|
 | **Total Inflow** | All income sources this month | Sum of Cash Inflow fields |
-| **Total Outflow** | Fixed obligations + on-demand spending | Sum of Cash Outflow + On-Demand Outflow |
+| **Total Outflow** | Recurring monthly obligations only | Sum of Cash Outflow fields only (excludes On-Demand Outflow) |
 | **Salary A/c Balance** | Current salary account balance | Auto-set when Primary Income entered |
 | **Expenditure Account Balance** | Current spending account balance | From Accounts tab |
 | **Total Spendable This Month** | What you can afford to spend | Inflow total − fixed monthly outflow |
@@ -199,12 +215,37 @@ The Budget tab is the central financial cockpit. It shows monthly income vs. exp
 
 ### Monthly Budget Flow
 
+```
+Month Start                          Mid-Month                      Month End
+    │                                    │                              │
+    ▼                                    ▼                              ▼
+┌──────────┐  ┌─────────────────┐  ┌────────────┐  ┌──────────────────┐
+│ Enter    │→ │ Execute Transfer │→ │ Quick      │→ │ Close Month      │
+│ Primary  │  │ (salary → accs) │  │ Update     │  │ (read-only,      │
+│ Income   │  │                 │  │ (exp bal,  │  │  carry forward)  │
+│          │  │                 │  │  CC spend) │  │                  │
+└──────────┘  └─────────────────┘  └────────────┘  └──────────────────┘
+```
+
 1. **Enter Primary Income** (salary credited this month) → salary account balance auto-updated
-2. **Execute Transfer** → Salary deducted to ₹0, funds routed to Expenditure/Saving/Investment accounts
-3. **Mid-month**: Update Expenditure Account Balance & Current Month CC Spending via Quick Update
-4. **End of month** (when next salary credited): **Close Current Month Budget** → marks read-only, carries forward balance, navigates to next month
+2. **Review the Transfer Breakdown** — verify all outflow items are listed and amounts look correct
+3. **Execute Transfer** → Salary deducted to ₹0, funds routed to Expenditure/Saving/Investment accounts
+4. **Mid-month**: Update Expenditure Account Balance & Current Month CC Spending via Quick Update
+5. **End of month** (when next salary credited): **Close Current Month Budget** → marks read-only, carries forward balance, navigates to next month
 
 > **Note:** Salary account balance is auto-managed (set when income entered, zeroed on transfer). It cannot be manually updated.
+
+### Transfer Mismatch Warning
+
+If you add or change outflow items **after** executing the transfer, a red **"⚠️ Transfer Mismatch Detected"** banner will appear showing:
+
+- **Transfer Used** — the amount that was actually transferred (based on old outflows)
+- **Correct Transfer** — what it should be with current outflows
+- **Difference** — the discrepancy
+
+Click **Recalculate Transfer** to fix the budget metadata (`_transferDone`, `_initialBalance`). This corrects the variable expenditure calculation but does **not** change actual account balances. Verify your account balances manually after recalculating.
+
+> This feature is blocked on closed months — you must fix the mismatch before closing.
 
 ### Quick Update (Mid-Month)
 
@@ -216,7 +257,8 @@ Update account balances and CC spending without editing the full budget (located
 | **Current Month CC Spending** | Stores as `midMonthCCOutstanding` (separate from previous month's CC bill) |
 
 When you update Expenditure Balance, the system calculates variable expenditure:
-`Variable Expenditure = (initialBalance + carryForward + transferDone) − current balance`
+`Variable Expenditure = totalFunded − current balance`
+where `totalFunded = account initial balance + carry forward from last month + salary leftover transferred` (`_initialBalance` captures this post-transfer; fallback before transfer: `_transferDone + prevCarryForward`)
 
 ### Close Current Month Budget
 
@@ -296,7 +338,7 @@ Recurring monthly deductions auto-debited from your Salary account at month star
 
 ### Auto-Debit Routing
 
-Monthly-frequency outflows are auto-debited from Salary and routed by type:
+Recurring outflows (Monthly/Quarterly/Semi-Annual/Annual) are auto-debited from Salary and routed by type. **One-Time items are excluded** from auto-debit and budget auto-calculation:
 
 | Outflow Type | Destination |
 |-------------|-------------|
@@ -388,6 +430,7 @@ Each goal shows a progress bar with percentage and status badge.
 
 - Auto-imports account balances and outflow liabilities as net worth entries
 - Assets vs. Liabilities breakdown
+- Each item shows: **Current**, **@ 70 yrs** (projected), **@ 70 yrs real** (inflation-adjusted at 6%)
 - **Projection chart** — Projects net worth growth until age 70
 
 ---
@@ -461,6 +504,32 @@ Access via the ⚙️ Settings button in the header.
 
 ---
 
+## Backup & Restore
+
+### Export Backup
+
+- Go to **Settings** (⚙️) → **Export Backup**
+- Downloads `smartfin-backup-YYYY-MM-DD.json` containing ALL your data
+- Includes: accounts, investments, outflows, insurance, budget data, goals, net worth, tax plan, gifts, emergency fund
+- **Recommended**: Export before and after major changes
+
+### Import Backup
+
+- Go to **Settings** (⚙️) → **Import Backup**
+- Select a previously exported `.json` file
+- **Warning**: This **overwrites ALL current data** with the imported backup
+- A confirmation dialog shows the backup date before proceeding
+- After import, the app verifies your accounts and re-checks onboarding status
+
+### When to Use
+
+- **Before Delete Account / Reset All Data** — always export first
+- **To fix corrupt data** — export, edit the JSON, import the corrected version
+- **To migrate between Firebase projects** — export from old, import to new
+- **Monthly safety backup** — export at month end for offline records
+
+---
+
 ## Cross-Device Sync
 
 - **Real-time** via Firebase Firestore
@@ -470,41 +539,152 @@ Access via the ⚙️ Settings button in the header.
 
 ---
 
+## Precautions & Common Pitfalls
+
+### Before Execute Transfer
+
+| Pitfall | What happens | How to avoid |
+|---------|-------------|-------------|
+| **Outflow items added AFTER transfer** | Transfer amount is too high; variable expenditure inflated | Add ALL outflow items before clicking Execute Transfer |
+| **Wrong salary amount** | All calculations cascade incorrectly | Double-check Primary Income matches actual salary credited |
+| **Missing Saving/Investment account** | Transfer can't credit those accounts | Add accounts before first transfer |
+| **Account balance not zero** | Pre-existing balance included in totalFunded | Set balance to 0 if starting fresh; or verify the balance is accurate |
+
+### During the Month
+
+| Pitfall | What happens | How to avoid |
+|---------|-------------|-------------|
+| **Forgetting Quick Update** | Variable expenditure stays at 0 or stale value | Update expenditure balance whenever you check your bank |
+| **Editing outflow amounts after transfer** | Mismatch warning appears; budget calculations off | Use Recalculate Transfer button if this happens |
+| **Manually changing salary account balance** | Not possible — salary is auto-managed | Use Primary Income field only |
+
+### At Month End
+
+| Pitfall | What happens | How to avoid |
+|---------|-------------|-------------|
+| **Not closing the month** | Carry forward doesn't happen; next month can't start clean | Always Close Month before entering next month's income |
+| **Closing with wrong exp balance** | Wrong carry forward to next month | Update exp balance via Quick Update before closing |
+| **Closing without transfer** | Not allowed — transfer is required first | Execute Transfer before Close Month |
+
+### Data Safety
+
+| Pitfall | What happens | How to avoid |
+|---------|-------------|-------------|
+| **Reset All Data without backup** | All data permanently lost | Always Export Backup before Reset |
+| **Delete Account without backup** | Firebase Auth + data permanently deleted | Export Backup first; this is irreversible |
+| **Importing old/wrong backup** | Overwrites all current data | Verify backup date in confirmation dialog; export current data first |
+
+---
+
 ## FAQ
 
+### General
+
 ### Q: How do I delete my account?
-**A:** Go to Settings → Danger Zone → Delete Account. Type "DELETE ACCOUNT" to confirm.
+**A:** Go to Settings → Danger Zone → Delete Account. Type "DELETE ACCOUNT" to confirm. This permanently deletes your Firestore data and Firebase Auth record.
+
+### Q: Is my data secure?
+**A:** Yes. Data is in Firebase Firestore with user-specific authentication. Only you can access your data with your login credentials.
+
+### Q: What currency does the app use?
+**A:** Indian Rupee (₹) with Indian number formatting (₹12,34,567).
+
+### Q: Can multiple people use the same app?
+**A:** Yes. Each user registers their own account. Data is completely separate per user — stored under `users/{uid}` in Firestore.
+
+### Accounts
+
+### Q: What accounts do I need to set up?
+**A:** At minimum: one **Primary (Expenditure)** account and one **Salary** account. Optionally add a **Saving** and **Investment** account if you want the transfer to credit those.
+
+### Q: What balance should I enter when adding accounts?
+**A:** Enter the **actual current balance** from your bank. If you're starting fresh and want the app to track from zero, enter 0. The balance you enter becomes the starting point for all calculations.
+
+### Q: Can I have multiple Saving accounts?
+**A:** No. The app enforces one Saving, one Primary, and one Salary account. You can have multiple Investment, Loan, and Others accounts.
+
+### Budget & Transfer
+
+### Q: What happens when I click Execute Transfer?
+**A:** The app deducts all fixed outflows from your salary, credits the remaining (salary leftover) to your Expenditure account, and also credits Saving/Investment accounts with their respective fixed amounts. Salary account goes to ₹0.
+
+### Q: I added outflow items after Execute Transfer. What do I do?
+**A:** A red **"Transfer Mismatch Detected"** banner will appear. Click **Recalculate Transfer** to correct the budget metadata. This fixes the variable expenditure calculation. Verify your actual account balances manually afterward.
+
+### Q: What is Variable Expenditure?
+**A:** It's automatically calculated as `totalFunded − current expenditure account balance`. It represents how much money has left your expenditure account since the transfer. Update your expenditure balance via Quick Update to keep this accurate.
+
+### Q: What is totalFunded / _initialBalance?
+**A:** The expenditure account balance right after Execute Transfer. Formula: `pre-existing balance + carry forward from last month + salary leftover`. This snapshot is stored and never changes for the rest of the month.
+
+### Q: How is Total Outflow calculated?
+**A:** Total Outflow = sum of all Cash Outflow fields only (recurring monthly obligations). It **excludes** On-Demand Outflow items and any one-time investments.
 
 ### Q: What's the difference between Outflow and Insurance tabs?
-**A:** Outflow tracks **premium payments** (monthly deductions from salary). Insurance tracks **policy details** (coverage, nominees, dates). Policies with premiums should appear in both.
+**A:** Outflow tracks **premium payments** (monthly deductions from salary). Insurance tracks **policy details** (coverage, nominees, dates). Policies with active premiums should appear in both.
 
 ### Q: What does "Previous Month CC Bill" vs "Current Month CC Spending" mean?
-**A:** Previous Month CC Bill is the unpaid credit card balance from last month (a fixed obligation). Current Month CC Spending is what you've charged to your credit card this month (ongoing, updated via Quick Update).
+**A:** Previous Month CC Bill is the unpaid credit card balance from last month (auto-carried from previous month's close). Current Month CC Spending is what you've charged this month (updated via Quick Update).
 
 ### Q: How is "Total Spendable" calculated?
-**A:** `Expenditure Account Balance + Pending Transfers − Tracked Expenses`. This reflects actual money available, not a theoretical budget.
+**A:** `Total Inflow − Fixed Monthly Outflow`. This shows how much of your income remains after all recurring deductions. If negative, your fixed obligations exceed your income.
+
+### Q: What is the Monthly Distribution pie chart?
+**A:** It shows your outflow broken into 6 categories: **Investment**, **Liability**, **Savings**, **Expenditure**, **Insurance**, **Others**. It only includes recurring outflow items — one-time and on-demand items are excluded.
+
+### Investments & Outflow
 
 ### Q: What's the Portfolio Summary view in Investments?
 **A:** It consolidates your investments from three sources: Existing (lump sum), Monthly (SIPs/RDs), and One-Time (from Budget on-demand investments).
 
-### Q: Is my data secure?
-**A:** Yes. Data is in Firebase Firestore with authentication. Only you can access it.
+### Q: Are One-Time outflow items included in the budget?
+**A:** No. One-Time frequency items in Outflow and Investments are **excluded** from monthly auto-calculation. They don't appear in auto-debit routing, pie charts, or Total Outflow. They are tracked for reference only.
 
-### Q: What currency does the app use?
-**A:** Indian Rupee (₹) with Indian number formatting (₹12,34,567).
+### Q: What's the difference between Outflow frequency and amount?
+**A:** The amount is what you pay per occurrence. The app converts it to a monthly equivalent: Quarterly ÷ 3, Semi-Annual ÷ 6, Annual ÷ 12. This monthly equivalent is what appears in the budget.
+
+### Net Worth & Emergency Fund
+
+### Q: How does Net Worth projection work?
+**A:** Each item shows three values: **Current** (today's value), **@ 70 yrs** (projected using expected growth rate), **@ 70 yrs real** (inflation-adjusted at 6%). The projection chart shows net worth growth over time.
+
+### Q: How is Emergency Fund adequacy calculated?
+**A:** Minimum Monthly Need = Fixed Liabilities/Insurance + Fixed Expenditure + Average Variable Expenses. Saving and Investment outflows are excluded (they can be paused in an emergency). Status: EXCELLENT (≥12 months), READY (6–12), ADEQUATE (3–6), LOW (<3).
+
+### Backup & Data
+
+### Q: How do I fix wrong data?
+**A:** Export a backup, edit the JSON file to correct values, then import the corrected backup. For transfer mismatch issues, use the Recalculate Transfer button instead.
+
+### Q: Will importing a backup lose any data?
+**A:** Import preserves all fields from the backup file. It maps all tab data (cards, inflow, outflow, insurance, etc.), budget data, user settings, and metadata. No fields are dropped during import.
 
 ---
 
 ## Tips & Best Practices
 
+### Setup (Do Once)
+
 1. **Set up Accounts first** — Primary + Salary accounts unlock all features
-2. **Add Outflow items** before budgeting — they auto-populate budget deductions
-3. **Use Quick Update** mid-month to keep balances accurate
-4. **Check Portfolio Summary** for a consolidated investment view
-5. **Export monthly** for offline backups
-6. **Close each month** before starting the next one to maintain accurate records
-7. **Keep Insurance tab updated** separately from Outflow premiums
-8. **Don't manually edit salary balance** — it's auto-managed as a transit account
+2. **Add ALL Outflow items before your first Execute Transfer** — this is the single most important step to avoid data issues
+3. **Set account balances accurately** — enter 0 if starting fresh, or your actual bank balance
+4. **Add Insurance policies** in both the Insurance tab (details) and Outflow tab (premium payments)
+
+### Monthly Routine
+
+5. **Start of month**: Enter Primary Income → Review Transfer Breakdown → Execute Transfer
+6. **Mid-month** (weekly or biweekly): Quick Update → enter current Expenditure Account Balance from your bank app + CC spending
+7. **End of month**: Final Quick Update with latest balance → Close Month → move to next month
+8. **Export backup monthly** — download JSON backup at month end for safety
+
+### Ongoing
+
+9. **If you add new outflow items after transfer**: Use the Recalculate Transfer button when the mismatch warning appears
+10. **Check Portfolio Summary** for a consolidated investment view across all sources
+11. **Review Emergency Fund** quarterly — update currentFund amount as your savings grow
+12. **Don't manually edit salary balance** — it's auto-managed as a transit account
+13. **Keep Insurance tab updated** separately from Outflow premiums
+14. **Use On-Demand fields** for irregular expenses (gifts, medical, travel) that aren't monthly
 
 ---
 
@@ -512,6 +692,8 @@ Access via the ⚙️ Settings button in the header.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 5.2 | 2026-06-18 | **Transfer Mismatch Detection**: red warning banner when outflows change after Execute Transfer, with Recalculate Transfer button to fix `_transferDone` and `_initialBalance`. **Outflow snapshot**: `_transferOutflowSnapshot` stored at transfer time for audit trail. **Variable Expenditure breakdown**: popup now shows individual components (Carry Forward, Salary Leftover, Pre-existing Balance) instead of combined total. **Recalculate formula**: correctly handles pre-existing account balance + carry forward without double-counting. |
+| 5.1 | 2026-06-18 | **Pie chart fix**: 6 categories (added Insurance); excludes on-demand/one-time items from monthly & annual distribution. **Total Outflow fix**: shows recurring outflow only (excludes On-Demand investing). **One-Time exclusion**: One-Time frequency outflow and inflow items excluded from `buildMonthlyAutoValues` auto-calculation. **Transfer message**: restructured confirm dialog showing salary leftover explicitly. **Net worth display**: each item shows Current, @ 70 yrs, @ 70 yrs real (inflation-adjusted). **Emergency fund fix**: Details text field preserved on edit (pre-fills all fields, not just currentFund). |
 | 5.0 | 2026-06-09 | **Auto-debit routing**: fixedSaving/fixedInvestment/fixedExpenditure/insurancePremiums moved to outflow; variableExpenditure auto-calculated; creditCardOutstanding auto from previous closed month; salary is transit-only account (no manual edit); Execute Transfer deducts full salary, credits all accounts; replaced Carry Forward with Close Current Month Budget (read-only months); updated emergency fund calculation (fixed obligations + avg variable, excludes saving/investment); budget status handles no-data/no-accounts/no-income edge cases; transfer section responsive for mobile; monthly need breakdown in emergency fund |
 | 4.0 | 2026-06-08 | **Major restructure**: Inflow→Investments with sub-sections (Existing/Monthly/Portfolio Summary); new Insurance tab (policy tracking with premium frequency, sum assured, nominees); Budget engine rewrite (account-balance-aware "Total Spendable" formula); separated CC fields (Previous Month CC Bill vs Current Month CC Spending); Quick Update consolidation (added Expenditure Balance field, removed standalone Reconciliation, shows untracked expenses inline); Delete Account feature (Settings→Danger Zone, deletes Firestore data + Firebase Auth); month-end carry forward banner (auto-detects unclosed months); improved UI with summary hints/descriptions on all fields; investment category field (Existing/Monthly) for sub-section filtering. |
 | 3.2 | 2026-06-04 | Changed UI pattern from Edit/Save/Cancel to Edit/Done for all tabs except Liability; Liability page keeps Save button for fixed monthly income field; removed Cancel buttons from all tabs except Liability; added theme-based favicon switching (logo_dark/logo_light); fixed auto-calculated badge tooltip. |

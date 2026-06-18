@@ -25,25 +25,27 @@ function getChartThemeColors() {
 }
 
 const SEMANTIC_COLORS = {
-    investment: { color: "#3b82f6", bg: "rgba(59, 130, 246, .18)", paidBg: "rgba(59, 130, 246, .05)", text: "#93c5fd" },
-    liability: { color: "#ef4444", bg: "rgba(239, 68, 68, .18)", paidBg: "rgba(239, 68, 68, .05)", text: "#fca5a5" },
-    saving: { color: "#22c55e", bg: "rgba(34, 197, 94, .18)", paidBg: "rgba(34, 197, 94, .05)", text: "#86efac" },
-    savings: { color: "#22c55e", bg: "rgba(34, 197, 94, .18)", paidBg: "rgba(34, 197, 94, .05)", text: "#86efac" },
-    expenditure: { color: "#f97316", bg: "rgba(249, 115, 22, .18)", paidBg: "rgba(249, 115, 22, .05)", text: "#fdba74" },
-    insurance: { color: "#eab308", bg: "rgba(234, 179, 8, .18)", paidBg: "rgba(234, 179, 8, .05)", text: "#fde68a" },
-    others: { color: "#a855f7", bg: "rgba(168, 85, 247, .18)", paidBg: "rgba(168, 85, 247, .05)", text: "#d8b4fe" },
-    other: { color: "#a855f7", bg: "rgba(168, 85, 247, .18)", paidBg: "rgba(168, 85, 247, .05)", text: "#d8b4fe" }
+    investment: { color: "#3b82f6", bg: "rgba(59, 130, 246, .18)", paidBg: "rgba(59, 130, 246, .05)", text: "#93c5fd", lightBg: "rgba(59, 130, 246, .12)", lightText: "#2563eb" },
+    liability: { color: "#ef4444", bg: "rgba(239, 68, 68, .18)", paidBg: "rgba(239, 68, 68, .05)", text: "#fca5a5", lightBg: "rgba(239, 68, 68, .12)", lightText: "#dc2626" },
+    savings: { color: "#22c55e", bg: "rgba(34, 197, 94, .18)", paidBg: "rgba(34, 197, 94, .05)", text: "#86efac", lightBg: "rgba(34, 197, 94, .12)", lightText: "#16a34a" },
+    expenditure: { color: "#f97316", bg: "rgba(249, 115, 22, .18)", paidBg: "rgba(249, 115, 22, .05)", text: "#fdba74", lightBg: "rgba(249, 115, 22, .12)", lightText: "#ea580c" },
+    insurance: { color: "#a855f7", bg: "rgba(168, 85, 247, .18)", paidBg: "rgba(168, 85, 247, .05)", text: "#d8b4fe", lightBg: "rgba(168, 85, 247, .12)", lightText: "#7c3aed" },
+    others: { color: "#eab308", bg: "rgba(234, 179, 8, .18)", paidBg: "rgba(234, 179, 8, .05)", text: "#fde68a", lightBg: "rgba(234, 179, 8, .12)", lightText: "#ca8a04" }
 };
 
 function semanticKey(value) {
-    return String(value || "others").trim().toLowerCase().replace(/[^a-z]/g, "") || "others";
+    let key = String(value || "others").trim().toLowerCase().replace(/[^a-z]/g, "") || "others";
+    if (key === "saving") key = "savings";
+    if (key === "other") key = "others";
+    return key;
 }
 
 function getSemanticColor(value, paid = false) {
     const palette = SEMANTIC_COLORS[semanticKey(value)] || SEMANTIC_COLORS.others;
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
     return {
-        background: paid ? palette.paidBg : palette.bg,
-        color: palette.text,
+        background: paid ? palette.paidBg : (isLight ? palette.lightBg : palette.bg),
+        color: isLight ? palette.lightText : palette.text,
         borderColor: palette.color
     };
 }
@@ -59,11 +61,11 @@ const DEFAULT_TABS = [
     { id: "outflow",             label: "Fixed Outflow",          semantic: "Liability", core: true },
     { id: "insurance",           label: "Insurance",             semantic: "Insurance", core: true },
     { id: "monthlyBudget",       label: "Budget",                semantic: "Expenditure", core: true },
-    { id: "financialGoal",       label: "Goals",                 semantic: "Saving", core: true },
+    { id: "financialGoal",       label: "Goals",                 semantic: "Savings", core: true },
     { id: "netWorth",            label: "Net Worth",             semantic: "Others" },
-    { id: "taxPlan",             label: "Tax Plan",              semantic: "Saving" },
+    { id: "taxPlan",             label: "Tax Plan",              semantic: "Savings" },
     { id: "gifts",               label: "Gifts",                 semantic: "Others" },
-    { id: "emergencyFund",       label: "Emergency Fund",        semantic: "Saving" }
+    { id: "emergencyFund",       label: "Emergency Fund",        semantic: "Savings" }
 ];
 
 // ── Tab-specific field configurations ───────────────────────────────────────
@@ -81,12 +83,11 @@ const TAB_FIELDS = {
         { id: "amountAccumulated", label: "Amount Accumulated (₹)", type: "number", placeholder: "0" },
         { id: "targetDate", label: "Target Date", type: "date", placeholder: "" },
         { id: "details", label: "Details", type: "text", placeholder: "Optional" },
-        { id: "goalType", label: "Goal Type", type: "select", options: ["Short Term", "Mid Term", "Long Term"] },
-        { id: "status", label: "Status", type: "select", options: ["Planned", "Ongoing", "Achieved", "Missed"] }
+        { id: "goalType", label: "Goal Type", type: "select", options: ["Short Term", "Mid Term", "Long Term"] }
     ],
     inflow: [
         { id: "name",         label: "Investment Name",     type: "text",   placeholder: "e.g. HDFC SIP, Axis FD", required: true },
-                { id: "type",         label: "Type",               type: "select", options: ["Mutual Fund", "ELSS", "Index Fund", "ETF", "FD", "RD", "PPF", "EPF", "VPF", "NPS", "NSC", "SSY", "SGB", "Gold ETF", "Digital Gold", "Stocks", "Bonds", "REIT", "Real Estate", "P2P Lending", "ULIP", "Saving", "Others"] },
+        { id: "type",         label: "Type",               type: "select", options: ["Mutual Fund", "SIP", "ELSS", "Index Fund", "ETF", "FD", "RD", "PPF", "EPF", "VPF", "NPS", "NSC", "SSY", "SGB", "Gold ETF", "Digital Gold", "Stocks", "Bonds", "REIT", "Real Estate", "P2P Lending", "ULIP", "Savings", "Others"] },
         { id: "amount",       label: "Invested Amount (₹)", type: "number", placeholder: "Total amount invested", required: true },
         { id: "interestRate", label: "Expected Return (%)", type: "number", placeholder: "Annual return rate" },
         { id: "frequency",    label: "Frequency",           type: "select", options: ["One-Time", "Monthly", "Quarterly", "Semi-Annual", "Annual"] },
@@ -96,7 +97,7 @@ const TAB_FIELDS = {
     ],
     outflow: [
         { id: "name",      label: "Name",           type: "text",   placeholder: "e.g. Rent, LIC Premium", required: true },
-        { id: "type",      label: "Type",           type: "select", options: ["Insurance", "Liability", "Saving", "Expenditure", "Investment"] },
+        { id: "type",      label: "Type",           type: "select", options: ["Insurance", "Liability", "Savings", "Expenditure", "Investment"] },
         { id: "amount",    label: "Amount (₹)",     type: "number", placeholder: "0", required: true },
         { id: "frequency", label: "Frequency",      type: "select", options: ["Monthly", "Quarterly", "Semi-Annual", "Annual", "One-Time"] },
         { id: "bankName",  label: "Bank Name",      type: "text",   placeholder: "e.g. HDFC, ICICI" },
@@ -111,7 +112,7 @@ const TAB_FIELDS = {
         { id: "debitCardPresent", label: "Debit Card Present", type: "select", options: ["Yes", "No"] },
         { id: "creditCardPresent", label: "Credit Card Present", type: "select", options: ["Yes", "No"] },
         { id: "creditLimit",   label: "Credit Card Limit (₹)", type: "number", placeholder: "0" },
-        { id: "purpose",       label: "Purpose of Use",      type: "select", options: ["Salary", "Expenditure", "Saving", "Investment", "Loan", "Others"] },
+        { id: "purpose",       label: "Purpose of Use",      type: "select", options: ["Salary", "Expenditure", "Savings", "Investment", "Loan", "Others"] },
         { id: "purposeOther",  label: "Specify Purpose",     type: "text",   placeholder: "Custom purpose (if Others selected)", noTable: true },
         { id: "kycUpdated",   label: "Address/KYC Updated",  type: "select", options: ["Yes", "No"] },
         { id: "nomineeAdded",  label: "Nominee Added",       type: "select", options: ["Yes", "No"] }
@@ -126,7 +127,7 @@ const TAB_FIELDS = {
     taxPlan: [
         { id: "name",      label: "Tax Saving Item",     type: "text",   placeholder: "e.g. PPF, ELSS, 80C", required: true },
         { id: "amount",   label: "Amount Invested (₹)", type: "number", placeholder: "0", required: true },
-        { id: "section",  label: "Section",             type: "select", options: ["80C", "80D", "80CCD(1B)", "80CCD(2)", "80E", "80EEA", "80G", "Other"] },
+        { id: "section",  label: "Section",             type: "select", options: ["80C", "80D", "80CCD(1B)", "80CCD(2)", "80E", "80EEA", "80G", "Others"] },
         { id: "details",   label: "Details",            type: "text",   placeholder: "Optional" }
     ],
     gifts: [
@@ -143,7 +144,7 @@ const TAB_FIELDS = {
     ],
     insurance: [
         { id: "name",          label: "Policy Name",          type: "text",   placeholder: "e.g. LIC Term Plan, Star Health", required: true },
-        { id: "policyType",    label: "Policy Type",          type: "select", options: ["Term Life", "Whole Life", "Health", "Vehicle", "Home", "Travel", "Critical Illness", "Personal Accident", "Other"] },
+        { id: "policyType",    label: "Policy Type",          type: "select", options: ["Term Life", "Whole Life", "Health", "Vehicle", "Home", "Travel", "Critical Illness", "Personal Accident", "Others"] },
         { id: "provider",      label: "Insurance Provider",   type: "text",   placeholder: "e.g. LIC, HDFC Life, Star Health" },
         { id: "policyNumber",  label: "Policy Number",        type: "text",   placeholder: "Policy/Certificate number" },
         { id: "sumAssured",    label: "Sum Assured (₹)",      type: "number", placeholder: "Coverage amount" },
@@ -263,12 +264,14 @@ const annualTotalExpenditure = document.getElementById("annualTotalExpenditure")
 const annualTotalSavings   = document.getElementById("annualTotalSavings");
 const annualTotalInvestment = document.getElementById("annualTotalInvestment");
 const annualTotalLiability = document.getElementById("annualTotalLiability");
+const annualTotalInsurance = document.getElementById("annualTotalInsurance");
 const annualTotalOther = document.getElementById("annualTotalOther");
 const avgMonthlyIncome     = document.getElementById("avgMonthlyIncome");
 const avgMonthlyExpenditure = document.getElementById("avgMonthlyExpenditure");
 const avgMonthlySavings = document.getElementById("avgMonthlySavings");
 const avgMonthlyInvestment = document.getElementById("avgMonthlyInvestment");
 const avgMonthlyLiability = document.getElementById("avgMonthlyLiability");
+const avgMonthlyInsurance = document.getElementById("avgMonthlyInsurance");
 const avgMonthlyOther = document.getElementById("avgMonthlyOther");
 const annualMonthsList     = document.getElementById("annualMonthsList");
 const annualPieChartCanvas = document.getElementById("annualPieChart");
@@ -598,6 +601,27 @@ settingsBtn.addEventListener("click", openSettings);
 closeSettingsBtn.addEventListener("click", closeSettings);
 settingsOverlay.addEventListener("click", closeSettings);
 
+// ── Help Panel ─────────────────────────────────────────────────────────────
+const helpBtn        = document.getElementById("helpBtn");
+const helpPanel      = document.getElementById("helpPanel");
+const helpOverlay    = document.getElementById("helpOverlay");
+const closeHelpBtn   = document.getElementById("closeHelpBtn");
+
+function openHelp() {
+    helpOverlay.hidden = false;
+    helpPanel.classList.add("open");
+    helpPanel.setAttribute("aria-hidden", "false");
+}
+function closeHelp() {
+    helpPanel.classList.remove("open");
+    helpPanel.setAttribute("aria-hidden", "true");
+    setTimeout(() => { helpOverlay.hidden = true; }, 280);
+}
+
+if (helpBtn) helpBtn.addEventListener("click", openHelp);
+if (closeHelpBtn) closeHelpBtn.addEventListener("click", closeHelp);
+if (helpOverlay) helpOverlay.addEventListener("click", closeHelp);
+
 // Export
 exportDataBtn.addEventListener("click", () => {
     if (!currentUser) return;
@@ -847,7 +871,7 @@ function migrateToNewTabStructure() {
     // Migrate liabilities → inflow (Investment/Saving types) or outflow (others)
     oldExpenses.forEach(exp => {
         const t = exp.type || "Expenditure";
-        if (t === "Investment" || t === "Saving") {
+        if (t === "Investment" || t === "Saving" || t === "Savings") {
             newInflow.push({
                 id: exp.id,
                 name: exp.name || "",
@@ -1243,8 +1267,26 @@ function calculateInvestmentCurrentValue(item = {}) {
     const amount = Number(item.amount || 0);
     const annualRate = Number(item.interestRate || 0) / 100;
     const years = yearsBetweenDates(item.startDate, new Date());
-    if (amount <= 0 || annualRate <= 0 || years <= 0) return amount;
-    return amount * Math.pow(1 + annualRate, years);
+    if (amount <= 0 || years <= 0) return amount;
+    if (annualRate <= 0) {
+        // No interest: for recurring, total = amount × number of periods elapsed
+        const freq = normalizeInvestmentFrequency(item);
+        if (freq === "One-Time") return amount;
+        const periodsPerYear = freq === "Monthly" ? 12 : freq === "Quarterly" ? 4 : freq === "Semi-Annual" ? 2 : freq === "Annual" ? 1 : 12;
+        return amount * Math.round(years * periodsPerYear);
+    }
+    const freq = normalizeInvestmentFrequency(item);
+    if (freq === "One-Time") {
+        // Lump sum compound interest
+        return amount * Math.pow(1 + annualRate, years);
+    }
+    // Recurring investment: Future Value of Annuity
+    const periodsPerYear = freq === "Monthly" ? 12 : freq === "Quarterly" ? 4 : freq === "Semi-Annual" ? 2 : freq === "Annual" ? 1 : 12;
+    const ratePerPeriod = annualRate / periodsPerYear;
+    const totalPeriods = Math.round(years * periodsPerYear);
+    if (totalPeriods <= 0) return amount;
+    // FV = P × [((1+r)^n - 1) / r] × (1+r)  (annuity due, invested at start of period)
+    return amount * ((Math.pow(1 + ratePerPeriod, totalPeriods) - 1) / ratePerPeriod) * (1 + ratePerPeriod);
 }
 
 function getInflowCurrentValue(item) {
@@ -1305,8 +1347,8 @@ function buildMonthlyAutoValues(monthKey) {
         else if (freq === "Semi-Annual") monthlyAmount = amount / 6;
         else if (freq === "Annual")      monthlyAmount = amount / 12;
         else if (freq === "One-Time") {
-            // One-time: only include in the start month
-            if (item.startDate && monthKey === item.startDate.slice(0, 7)) monthlyAmount = amount;
+            // One-time items excluded from recurring monthly budget
+            return;
         }
         if (monthlyAmount <= 0) return;
         const freqLabel = freq !== "Monthly" ? ` (${freq} ÷ ${freq === "Quarterly" ? 3 : freq === "Semi-Annual" ? 6 : freq === "Annual" ? 12 : 1})` : "";
@@ -1322,7 +1364,7 @@ function buildMonthlyAutoValues(monthKey) {
             values.outflow.fixedExpenditure = (values.outflow.fixedExpenditure || 0) + monthlyAmount;
             if (!breakdown.outflow.fixedExpenditure) breakdown.outflow.fixedExpenditure = [];
             breakdown.outflow.fixedExpenditure.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
-        } else if (item.type === "Saving") {
+        } else if (item.type === "Saving" || item.type === "Savings") {
             values.outflow.fixedSaving = (values.outflow.fixedSaving || 0) + monthlyAmount;
             if (!breakdown.outflow.fixedSaving) breakdown.outflow.fixedSaving = [];
             breakdown.outflow.fixedSaving.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
@@ -1353,9 +1395,7 @@ function buildMonthlyAutoValues(monthKey) {
         if (freq === "Annual" && inv.startDate && monthKey.slice(5) === inv.startDate.slice(5, 7)) {
             values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
         }
-        if (freq === "One-Time" && inv.startDate && monthKey === inv.startDate.slice(0, 7)) {
-            values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
-        }
+        // One-time inflow items excluded from recurring monthly budget
     });
 
     return { values, breakdown };
@@ -1399,6 +1439,10 @@ function applyMonthlyAutoValues(monthKey, monthData) {
     }
 
     // Auto-calculate Variable Expenditure (amount spent from expenditure account)
+    // totalFunded = account initial balance + carry forward from last month + salary leftover transferred
+    // _initialBalance captures this exactly (stored on Execute Transfer as exp.balance post-transfer)
+    // Fallback (before transfer): transferDone + prevCarryForward
+    // variableExpenditure = totalFunded - current exp account balance (how much was spent)
     const cards = (appData.tabData || {}).cards || [];
     const expAccount = cards.find(c => c.isPrimary === "Yes");
     const expBalance = Number(expAccount?.balance || 0);
@@ -1406,17 +1450,39 @@ function applyMonthlyAutoValues(monthKey, monthData) {
     const prevMonthCarryData = (appData.monthlyBudgetData || {})[prevKey];
     const prevCarryForward = Number(prevMonthCarryData?._carryForwardDone || 0);
     const initialBalance = Number(monthData._initialBalance || 0);
-    const totalFunded = initialBalance + prevCarryForward + transferDone;
+    const totalFunded = initialBalance > 0 ? initialBalance : (transferDone + prevCarryForward);
     const varExp = totalFunded > 0 ? Math.max(0, totalFunded - expBalance) : 0;
     if (!monthData.outflow) monthData.outflow = {};
     monthData.outflow.variableExpenditure = varExp;
     monthData.autoLinkedFields["outflow.variableExpenditure"] = true;
-    monthData.autoLinkedBreakdown["outflow.variableExpenditure"] = totalFunded > 0
-        ? [
-            { name: "Initial Balance", amount: initialBalance + prevCarryForward, source: "Carry Forward" },
-            { name: "Transfer Done", amount: transferDone, source: "Execute Transfer" },
-            { name: "Current Exp Balance", amount: -expBalance, source: "Account Balance" }
-        ].filter(b => b.amount !== 0)
+    // Build detailed breakdown showing components of totalFunded
+    const breakdownItems = [];
+    if (totalFunded > 0) {
+        if (initialBalance > 0) {
+            // Show carry forward + transfer as separate items when possible
+            if (prevCarryForward > 0) {
+                breakdownItems.push({ name: "Carry Forward (Last Month)", amount: prevCarryForward, source: "Previous Month Close" });
+            }
+            if (transferDone > 0) {
+                breakdownItems.push({ name: "Salary Leftover Transferred", amount: transferDone, source: "Execute Transfer" });
+            }
+            const accountInitial = initialBalance - transferDone - prevCarryForward;
+            if (accountInitial > 0) {
+                breakdownItems.push({ name: "Account Pre-existing Balance", amount: accountInitial, source: "Account Balance" });
+            }
+            // If components don't add up (older data), show combined
+            if (breakdownItems.length === 0) {
+                breakdownItems.push({ name: "Balance After Transfer", amount: totalFunded, source: "Post-Transfer Balance" });
+            }
+        } else {
+            // Fallback: show transfer + carry forward separately
+            if (transferDone > 0) breakdownItems.push({ name: "Salary Leftover Transferred", amount: transferDone, source: "Execute Transfer" });
+            if (prevCarryForward > 0) breakdownItems.push({ name: "Carry Forward (Last Month)", amount: prevCarryForward, source: "Previous Month Close" });
+        }
+        breakdownItems.push({ name: "Current Exp Balance", amount: -expBalance, source: "Account Balance" });
+    }
+    monthData.autoLinkedBreakdown["outflow.variableExpenditure"] = breakdownItems.length > 0
+        ? breakdownItems.filter(b => b.amount !== 0)
         : [{ name: "No transfer done yet", amount: 0, source: "Pending" }];
 
     return monthData.autoLinkedFields;
@@ -1618,36 +1684,33 @@ function getFinancialYearMonthKeys(startYear) {
 function getMonthlyDistribution(monthData) {
     const inflowTotal = Object.values(monthData.inflow || {}).reduce((s, v) => s + Number(v || 0), 0);
     const outflowTotal = Object.values(monthData.outflow || {}).reduce((s, v) => s + Number(v || 0), 0);
-    const investingTotal = Object.values(monthData.investing || {}).reduce((s, v) => s + Number(v || 0), 0);
 
-    // Liability = auto-calc loan EMIs + insurance premiums + manual debt repayment
+    // Only recurring monthly instruments (outflow category) — excludes on-demand/one-time investing items
+    // Liability = loan EMIs + debt repayment
     const loanEMI = Number(monthData.outflow?.loanEMI || 0);
-    const insurancePremiums = Number(monthData.outflow?.insurancePremiums || 0);
     const debtRepayment = Number(monthData.outflow?.debtRepayment || 0);
-    const liability = loanEMI + insurancePremiums + debtRepayment;
+    const liability = loanEMI + debtRepayment;
 
-    // Expenditure = fixed recurring + variable + manual outflow items + CC spending + on-demand spending
+    // Insurance = auto-calc insurance premiums
+    const insurance = Number(monthData.outflow?.insurancePremiums || 0);
+
+    // Expenditure = fixed recurring + variable + manual outflow items + CC spending
     const expenditure = Number(monthData.outflow?.fixedExpenditure || 0)
         + Number(monthData.outflow?.variableExpenditure || 0)
         + Number(monthData.outflow?.utilityBills || 0)
         + Number(monthData.outflow?.familyExpenditure || 0)
         + Number(monthData.outflow?.miscExpenses || 0)
         + Number(monthData.outflow?.creditCardOutstanding || 0)
-        + Number(monthData.outflow?.midMonthCCOutstanding || 0)
-        + Number(monthData.investing?.ondemandExpenditure || 0)
-        + Number(monthData.investing?.ondemandLiability || 0);
+        + Number(monthData.outflow?.midMonthCCOutstanding || 0);
 
-    // Saving = fixed recurring (now in outflow) + on-demand
-    const saving = Number(monthData.outflow?.fixedSaving || 0)
-        + Number(monthData.investing?.onetimeSaving || 0);
-    // Investment = fixed recurring (now in outflow) + on-demand
-    const investment = Number(monthData.outflow?.fixedInvestment || 0)
-        + Number(monthData.investing?.onetimeInvestment || 0);
+    // Saving = fixed recurring only
+    const saving = Number(monthData.outflow?.fixedSaving || 0);
+    // Investment = fixed recurring only
+    const investment = Number(monthData.outflow?.fixedInvestment || 0);
 
-    // Other = total outflow + total investing - all categorised items
-    const allCategorised = liability + expenditure + saving + investment;
-    const combinedTotal = outflowTotal + investingTotal;
-    const other = Math.max(0, combinedTotal - allCategorised);
+    // Other = total outflow - all categorised outflow items
+    const allCategorised = liability + insurance + expenditure + saving + investment;
+    const other = Math.max(0, outflowTotal - allCategorised);
 
     return {
         income: inflowTotal,
@@ -1655,6 +1718,7 @@ function getMonthlyDistribution(monthData) {
         saving,
         investment,
         liability,
+        insurance,
         other,
     };
 }
@@ -1725,21 +1789,7 @@ function renderGoalDynamicFields() {
         goalDynamicFields.appendChild(div);
     });
 
-    const syncStatus = () => {
-        const status = document.getElementById("goal_status");
-        if (!status) return;
-        status.value = normalizeGoalStatus({
-            amountNeeded: document.getElementById("goal_amountNeeded")?.value,
-            amountAccumulated: document.getElementById("goal_amountAccumulated")?.value,
-            targetDate: document.getElementById("goal_targetDate")?.value,
-        });
-    };
-    ["goal_amountNeeded", "goal_amountAccumulated", "goal_targetDate"].forEach(id => {
-        const input = document.getElementById(id);
-        if (input) input.addEventListener("input", syncStatus);
-        if (input) input.addEventListener("change", syncStatus);
-    });
-    syncStatus();
+    // Status is auto-calculated via normalizeGoalStatus() — no form input needed
 }
 
 function renderGoalTable(entries) {
@@ -1873,7 +1923,7 @@ function renderInflow() {
             if (chartSection) chartSection.hidden = false;
             if (inflowList) inflowList.hidden = false;
         } else if (activeInvestmentView === "monthly") {
-            displayEntries = entries.filter(e => e.frequency === "Monthly");
+            displayEntries = entries.filter(e => e.frequency !== "One-Time");
             if (portfolioEl) portfolioEl.hidden = true;
             if (chartSection) chartSection.hidden = false;
             if (inflowList) inflowList.hidden = false;
@@ -1900,7 +1950,7 @@ function renderInflow() {
 function renderPortfolioSummary(entries) {
     entries = normalizeInvestmentEntries(entries);
     const existingEntries = entries.filter(e => e.frequency === "One-Time");
-    const monthlyEntries = entries.filter(e => e.frequency === "Monthly");
+    const monthlyEntries = entries.filter(e => e.frequency !== "One-Time");
 
     // One-time investments from budget
     const budgetData = appData.monthlyBudgetData || {};
@@ -2053,7 +2103,7 @@ function renderInflowPreviewCards(entries) {
             <div class="investment-card-info">
                 <div class="investment-card-title">${esc(item.name)}</div>
                 <div class="investment-card-details">
-                    <span class="investment-card-frequency" style="${semanticBadgeStyle("Investment", false)}">${esc(item.type || "Other")}</span>
+                    <span class="investment-card-frequency" style="${semanticBadgeStyle("Investment", false)}">${esc(item.type || "Others")}</span>
                     <span class="semantic-badge semantic-investment ${frequency === "One-Time" ? "is-paid" : ""}">${esc(frequency)}</span><br>
                     Amount: ${formatMoney(Number(item.amount || 0))}<br>
                     Current Value: ${formatMoney(curVal)}<br>
@@ -2079,10 +2129,19 @@ function calculateInflowSummary(entries) {
     if (el2) el2.textContent = formatMoney(totalCurrent);
     if (el3) el3.textContent = entries.length;
 
-    // Monthly vs Existing breakdown
-    const monthlyEntries = entries.filter(e => e.frequency === "Monthly");
+    // Monthly Recurring vs Existing (Lump Sum) breakdown
+    const recurringEntries = entries.filter(e => e.frequency !== "One-Time");
     const existingEntries = entries.filter(e => e.frequency === "One-Time");
-    const monthlyTotal = monthlyEntries.reduce((s, i) => s + Number(i.amount || 0), 0);
+    // Prorate all recurring investments to monthly amount
+    const monthlyTotal = recurringEntries.reduce((s, i) => {
+        const amt = Number(i.amount || 0);
+        const freq = i.frequency || "Monthly";
+        if (freq === "Monthly") return s + amt;
+        if (freq === "Quarterly") return s + (amt / 3);
+        if (freq === "Semi-Annual") return s + (amt / 6);
+        if (freq === "Annual") return s + (amt / 12);
+        return s + amt;
+    }, 0);
     const existingTotal = existingEntries.reduce((s, i) => s + getInflowCurrentValue(i), 0);
     const el4 = document.getElementById("totalMonthlyInvestments");
     const el5 = document.getElementById("totalExistingInvestments");
@@ -2095,7 +2154,7 @@ function renderInflowChart(entries) {
     if (!inflowBarChartCanvas || entries.length === 0) return;
     const byType = {};
     normalizeInvestmentEntries(entries).forEach(e => {
-        const type = e.type || "Other";
+        const type = e.type || "Others";
         byType[type] = (byType[type] || 0) + getInflowCurrentValue(e);
     });
     const rows = Object.entries(byType).sort((a, b) => b[1] - a[1]);
@@ -2287,8 +2346,8 @@ function renderOutflowCharts(entries) {
     }
 
     // Type chart
-    const typeData = { "Insurance": { amount: 0, color: SEMANTIC_COLORS.insurance.color }, "Investment": { amount: 0, color: SEMANTIC_COLORS.investment.color }, "Saving": { amount: 0, color: SEMANTIC_COLORS.saving.color }, "Liability": { amount: 0, color: SEMANTIC_COLORS.liability.color }, "Expenditure": { amount: 0, color: SEMANTIC_COLORS.expenditure.color } };
-    entries.forEach(e => { const type = e.type || "Expenditure"; if (typeData[type]) typeData[type].amount += Number(e.amount || 0); });
+    const typeData = { "Insurance": { amount: 0, color: SEMANTIC_COLORS.insurance.color }, "Investment": { amount: 0, color: SEMANTIC_COLORS.investment.color }, "Savings": { amount: 0, color: SEMANTIC_COLORS.savings.color }, "Liability": { amount: 0, color: SEMANTIC_COLORS.liability.color }, "Expenditure": { amount: 0, color: SEMANTIC_COLORS.expenditure.color } };
+    entries.forEach(e => { let type = e.type || "Expenditure"; if (type === "Saving") type = "Savings"; if (typeData[type]) typeData[type].amount += Number(e.amount || 0); });
     if (outflowTypeChartCanvas) {
         const typeCtx = outflowTypeChartCanvas.getContext("2d");
         outflowTypeChart = new Chart(typeCtx, {
@@ -2472,7 +2531,7 @@ function renderCardTable(entries) {
 }
 
 function sortCardEntries(entries) {
-    const purposeOrder = { "Salary": 1, "Saving": 2 };
+    const purposeOrder = { "Salary": 1, "Savings": 2, "Saving": 2 };
     return [...entries].sort((a, b) => {
         // Primary (Expenditure) always first
         if (a.isPrimary === "Yes" && b.isPrimary !== "Yes") return -1;
@@ -2506,8 +2565,8 @@ function renderCardPreviewCards(entries) {
             ? `<span class="card-item-badge semantic-expenditure">⭐ PRIMARY (Expenditure)</span>` : "";
         const salaryBadge = card.purpose === "Salary"
             ? `<span class="card-item-badge semantic-insurance">💼 SALARY</span>` : "";
-        const savingBadge = card.purpose === "Saving"
-            ? `<span class="card-item-badge semantic-saving">💰 SAVING</span>` : "";
+        const savingBadge = (card.purpose === "Savings" || card.purpose === "Saving")
+            ? `<span class="card-item-badge semantic-savings">💰 SAVINGS</span>` : "";
 
         item.innerHTML = `
             <div class="card-item-info">
@@ -2553,12 +2612,24 @@ function getAutoNetWorthEntries() {
     inflowItems.forEach(item => {
         const val = getInflowCurrentValue(item);
         if (val > 0) {
+            const freq = item.frequency || "Monthly";
+            const amt = Number(item.amount || 0);
+            let annualContrib = 0;
+            if (freq !== "One-Time") {
+                if (freq === "Monthly") annualContrib = amt * 12;
+                else if (freq === "Quarterly") annualContrib = amt * 4;
+                else if (freq === "Semi-Annual") annualContrib = amt * 2;
+                else if (freq === "Annual") annualContrib = amt;
+                else annualContrib = amt * 12;
+            }
             auto.push({
                 id: 'auto_inv_' + item.id,
                 name: item.name || 'Investment',
                 type: 'Asset',
                 value: val,
                 growthRate: item.interestRate || '',
+                frequency: freq,
+                annualContribution: annualContrib,
                 details: 'From Inflow tab',
                 auto: true
             });
@@ -2715,6 +2786,22 @@ function calculateNetWorthSummary(entries) {
 function renderAssetsLiabilitiesLists(entries) {
     const assets      = entries.filter(e => e.type === "Asset");
     const liabilities = entries.filter(e => e.type === "Liability");
+    const currentAge = calculateAgeFromDob(appData.dateOfBirth) || 30;
+    const yearsTo70 = Math.max(0, 70 - currentAge);
+    const inflationRate = 0.06;
+
+    function calcProjectedValue(entry) {
+        const val = Number(entry.value || 0);
+        const gr = Number(entry.growthRate || 0) / 100;
+        const annual = Number(entry.annualContribution || 0);
+        if (yearsTo70 <= 0) return val;
+        if (annual > 0 && gr > 0) {
+            return val * Math.pow(1 + gr, yearsTo70) + annual * ((Math.pow(1 + gr, yearsTo70) - 1) / gr);
+        } else if (annual > 0) {
+            return val + annual * yearsTo70;
+        }
+        return val * Math.pow(1 + gr, yearsTo70);
+    }
 
     function makeItem(entry) {
         const item = document.createElement("div");
@@ -2722,15 +2809,28 @@ function renderAssetsLiabilitiesLists(entries) {
         const autoBadge = entry.auto
             ? `<span class="auto-badge" title="${esc(entry.details || 'Auto-calculated')}">Auto</span>`
             : `<span class="manual-badge">Manual</span>`;
+        const currentVal = Number(entry.value || 0);
+        const projectedVal = calcProjectedValue(entry);
+        const inflationAdjVal = yearsTo70 > 0 ? projectedVal / Math.pow(1 + inflationRate, yearsTo70) : projectedVal;
+        const showProjected = yearsTo70 > 0 && Math.round(projectedVal) !== Math.round(currentVal);
+        const gr = Number(entry.growthRate || 0);
+        const annual = Number(entry.annualContribution || 0);
+        const freq = entry.frequency || "";
+        const metaParts = [];
+        if (gr > 0) metaParts.push(`${gr}% p.a.`);
+        if (freq && freq !== "One-Time" && annual > 0) metaParts.push(`${freq}`);
+        const metaStr = metaParts.length > 0 ? metaParts.join(' · ') : '';
         item.innerHTML = `
             <div class="asset-label-group">
                 ${autoBadge}
                 <span class="label">${esc(entry.name)}</span>
                 ${entry.auto ? `<span class="auto-source">${esc(entry.details)}</span>` : ''}
+                ${metaStr ? `<span class="growth">${metaStr}</span>` : ''}
             </div>
-            <div>
-                <span class="value">${formatMoney(Number(entry.value || 0))}</span>
-                ${entry.growthRate ? `<span class="growth">${entry.growthRate}% growth</span>` : ''}
+            <div class="nw-values">
+                <span class="nw-val-row"><span class="nw-val-label">Current</span><span class="value">${formatMoney(currentVal)}</span></span>
+                ${showProjected ? `<span class="nw-val-row"><span class="nw-val-label">@ 70 yrs</span><span class="projected-value">${formatMoney(projectedVal)}</span></span>` : ''}
+                ${showProjected ? `<span class="nw-val-row"><span class="nw-val-label">@ 70 yrs real</span><span class="inflation-adj-value">${formatMoney(inflationAdjVal)}</span></span>` : ''}
             </div>
         `;
         return item;
@@ -2777,14 +2877,28 @@ function renderNetWorthProjectionChart(entries) {
         let projectedAssets = 0;
         let projectedLiabilities = 0;
         
-        // Calculate asset growth
+        // Calculate asset growth (with recurring contributions for investment assets)
         assets.forEach(asset => {
             const growthRate = (Number(asset.growthRate || 0) / 100);
-            const futureValue = Number(asset.value || 0) * Math.pow(1 + growthRate, year);
-            projectedAssets += futureValue;
+            const currentVal = Number(asset.value || 0);
+            const annualContrib = Number(asset.annualContribution || 0);
+            
+            if (annualContrib > 0 && growthRate > 0) {
+                // FV of current value + FV of annual contributions (annuity)
+                const fvCurrent = currentVal * Math.pow(1 + growthRate, year);
+                const fvContrib = year > 0 ? annualContrib * ((Math.pow(1 + growthRate, year) - 1) / growthRate) : 0;
+                projectedAssets += fvCurrent + fvContrib;
+            } else if (annualContrib > 0) {
+                // No growth but recurring contributions
+                projectedAssets += currentVal + (annualContrib * year);
+            } else {
+                // Simple compound growth on current value
+                const futureValue = currentVal * Math.pow(1 + growthRate, year);
+                projectedAssets += futureValue;
+            }
         });
         
-        // Calculate liability growth
+        // Calculate liability reduction/growth
         liabilities.forEach(liability => {
             const growthRate = (Number(liability.growthRate || 0) / 100);
             const futureValue = Number(liability.value || 0) * Math.pow(1 + growthRate, year);
@@ -3061,13 +3175,18 @@ function calculateTaxSummary(entries, taxRegime) {
 
 function calculateTax(income, regime) {
     if (regime === "new") {
-        // New Tax Regime (FY 2024-25)
-        if (income <= 300000) return 0;
-        if (income <= 600000) return (income - 300000) * 0.05;
-        if (income <= 900000) return 15000 + (income - 600000) * 0.10;
-        if (income <= 1200000) return 45000 + (income - 900000) * 0.15;
-        if (income <= 1500000) return 90000 + (income - 1200000) * 0.20;
-        return 150000 + (income - 1500000) * 0.30;
+        // New Tax Regime (FY 2025-26, Budget 2025)
+        let tax = 0;
+        if (income <= 400000) tax = 0;
+        else if (income <= 800000) tax = (income - 400000) * 0.05;
+        else if (income <= 1200000) tax = 20000 + (income - 800000) * 0.10;
+        else if (income <= 1600000) tax = 60000 + (income - 1200000) * 0.15;
+        else if (income <= 2000000) tax = 120000 + (income - 1600000) * 0.20;
+        else if (income <= 2400000) tax = 200000 + (income - 2000000) * 0.25;
+        else tax = 300000 + (income - 2400000) * 0.30;
+        // Rebate u/s 87A: if taxable income ≤ ₹12L, rebate up to ₹60,000
+        if (income <= 1200000) tax = Math.max(0, tax - 60000);
+        return tax;
     } else {
         // Old Tax Regime
         if (income <= 250000) return 0;
@@ -3311,12 +3430,15 @@ function renderEmergencyFund() {
         // Render form fields
         renderEmergencyFundDynamicFields();
         
-        // Pre-fill with current fund value if exists
+        // Pre-fill with current entry values if exists
         if (entries.length > 0) {
-            const currentFundInput = document.getElementById("emergencyFund_currentFund");
-            if (currentFundInput) {
-                currentFundInput.value = entries[0].currentFund || 0;
-            }
+            const fields = TAB_FIELDS.emergencyFund || [];
+            fields.forEach(f => {
+                const input = document.getElementById(`emergencyFund_${f.id}`);
+                if (input && entries[0][f.id] !== undefined) {
+                    input.value = entries[0][f.id];
+                }
+            });
         }
     } else {
         if (emergencyFundPreview) emergencyFundPreview.hidden = false;
@@ -3471,7 +3593,7 @@ function renderInsurancePreviewCards(entries) {
             <div class="insurance-card-info">
                 <div class="insurance-card-title">${esc(item.name)}</div>
                 <div class="insurance-card-details">
-                    <span class="policy-badge semantic-insurance">${esc(item.policyType || "Other")}</span>
+                    <span class="policy-badge semantic-insurance">${esc(item.policyType || "Others")}</span>
                     ${hasPremium ? `<span class="premium-badge semantic-liability">${esc(item.premiumFrequency)} Premium</span>` : `<span class="no-premium-badge semantic-insurance is-paid">No Active Premium</span>`}
                     <br>Provider: ${esc(item.provider || "—")}
                     | Policy #: ${esc(item.policyNumber || "—")}
@@ -3639,8 +3761,8 @@ function calculateAnnualSummary() {
         currentMonthDisplay.textContent = getFinancialYearLabel(fyStartYear);
         
         if (!monthKeys.some(k => monthlyBudgetData[k])) {
-            [annualTotalIncome, annualTotalExpenditure, annualTotalSavings, annualTotalInvestment, annualTotalLiability, annualTotalOther,
-             avgMonthlyIncome, avgMonthlyExpenditure, avgMonthlySavings, avgMonthlyInvestment, avgMonthlyLiability, avgMonthlyOther]
+            [annualTotalIncome, annualTotalExpenditure, annualTotalSavings, annualTotalInvestment, annualTotalLiability, annualTotalInsurance, annualTotalOther,
+             avgMonthlyIncome, avgMonthlyExpenditure, avgMonthlySavings, avgMonthlyInvestment, avgMonthlyLiability, avgMonthlyInsurance, avgMonthlyOther]
                 .forEach(el => { if (el) el.textContent = "₹0"; });
             annualMonthsList.innerHTML = "<p class='empty-state visible'>No monthly data available yet. Add data in Monthly view first.</p>";
             return;
@@ -3652,17 +3774,24 @@ function calculateAnnualSummary() {
             saving: 0,
             investment: 0,
             liability: 0,
+            insurance: 0,
             other: 0,
         };
         const monthDataList = [];
 
-        // Determine earliest month (onboarding date)
+        // Determine earliest month (onboarding date) and latest valid month (current month)
         const onboardingMonth = appData.onboardingDate ? appData.onboardingDate.slice(0, 7) : null;
+        const currentMonthKey = getMonthKey(new Date());
         
         monthKeys.forEach(monthKey => {
             // Skip months before onboarding
             if (onboardingMonth && monthKey < onboardingMonth) return;
-            const monthData = monthlyBudgetData[monthKey] || { inflow: {}, outflow: {}, investing: {} };
+            // Skip future months — only include up to current month
+            if (monthKey > currentMonthKey) return;
+            // Only process months that have actual data in monthlyBudgetData
+            const storedData = monthlyBudgetData[monthKey];
+            if (!storedData) return;
+            const monthData = { ...storedData, inflow: { ...(storedData.inflow || {}) }, outflow: { ...(storedData.outflow || {}) }, investing: { ...(storedData.investing || {}) } };
             // Apply auto-values so loanEMI, insurancePremiums etc. are populated
             applyMonthlyAutoValues(monthKey, monthData);
             const dist = getMonthlyDistribution(monthData);
@@ -3670,7 +3799,7 @@ function calculateAnnualSummary() {
             monthDataList.push({ month: monthKey, ...dist });
         });
         
-        const monthsWithData = monthDataList.filter(m => m.income > 0 || m.expenditure > 0 || m.saving > 0 || m.investment > 0 || m.liability > 0).length;
+        const monthsWithData = monthDataList.filter(m => m.income > 0 || m.expenditure > 0 || m.saving > 0 || m.investment > 0 || m.liability > 0 || m.insurance > 0).length;
         const monthCount = Math.max(monthsWithData, 1);
         
         annualTotalIncome.textContent = formatMoney(totals.income);
@@ -3678,12 +3807,14 @@ function calculateAnnualSummary() {
         annualTotalSavings.textContent = formatMoney(totals.saving);
         annualTotalInvestment.textContent = formatMoney(totals.investment);
         annualTotalLiability.textContent = formatMoney(totals.liability);
+        if (annualTotalInsurance) annualTotalInsurance.textContent = formatMoney(totals.insurance);
         annualTotalOther.textContent = formatMoney(totals.other);
         avgMonthlyIncome.textContent = formatMoney(totals.income / monthCount);
         avgMonthlyExpenditure.textContent = formatMoney(totals.expenditure / monthCount);
         avgMonthlySavings.textContent = formatMoney(totals.saving / monthCount);
         avgMonthlyInvestment.textContent = formatMoney(totals.investment / monthCount);
         avgMonthlyLiability.textContent = formatMoney(totals.liability / monthCount);
+        if (avgMonthlyInsurance) avgMonthlyInsurance.textContent = formatMoney(totals.insurance / monthCount);
         avgMonthlyOther.textContent = formatMoney(totals.other / monthCount);
 
         // Render annual pie chart
@@ -3702,10 +3833,11 @@ function calculateAnnualSummary() {
                 <div class="annual-month-details">
                     <span class="annual-month-detail">Income: <strong>${formatMoney(month.income)}</strong></span>
                     <span class="annual-month-detail">Expenditure: <strong>${formatMoney(month.expenditure)}</strong></span>
-                    <span class="annual-month-detail">Saving: <strong>${formatMoney(month.saving)}</strong></span>
+                    <span class="annual-month-detail">Savings: <strong>${formatMoney(month.saving)}</strong></span>
                     <span class="annual-month-detail">Investment: <strong>${formatMoney(month.investment)}</strong></span>
                     <span class="annual-month-detail">Liability: <strong>${formatMoney(month.liability)}</strong></span>
-                    <span class="annual-month-detail">Other: <strong>${formatMoney(month.other)}</strong></span>
+                    <span class="annual-month-detail">Insurance: <strong>${formatMoney(month.insurance)}</strong></span>
+                    <span class="annual-month-detail">Others: <strong>${formatMoney(month.other)}</strong></span>
                 </div>
             `;
             annualMonthsList.appendChild(div);
@@ -3723,17 +3855,17 @@ function calculateAnnualSummary() {
 
 function renderAnnualPieChart(totals) {
     if (annualPieChart) annualPieChart.destroy();
-    const values = [totals.investment, totals.liability, totals.saving, totals.expenditure, totals.other];
+    const values = [totals.investment, totals.liability, totals.saving, totals.expenditure, totals.insurance, totals.other];
     if (values.every(v => Number(v || 0) === 0)) return;
 
     const ctx = annualPieChartCanvas.getContext("2d");
     annualPieChart = new Chart(ctx, {
         type: "pie",
         data: {
-            labels: ["Investment", "Liability", "Saving", "Expenditure", "Other"],
+            labels: ["Investment", "Liability", "Savings", "Expenditure", "Insurance", "Others"],
             datasets: [{
                 data: values,
-                backgroundColor: ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"],
+                backgroundColor: ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7", "#eab308"],
                 borderWidth: 0
             }]
         },
@@ -3885,9 +4017,9 @@ function renderCategoryFields(container, fields, data, autoLinkedFields = {}, au
 
 function settleCreditCardFromSaving() {
     const cards = getCardEntries();
-    const savingAccount = cards.find(c => c.purpose === "Saving");
+    const savingAccount = cards.find(c => c.purpose === "Savings" || c.purpose === "Saving");
     if (!savingAccount) {
-        alert("No Saving account found. Please set up a Saving account first.");
+        alert("No Savings account found. Please set up a Savings account first.");
         return;
     }
     const monthKey = getMonthKey(currentMonth);
@@ -3931,14 +4063,14 @@ function calculateAndDisplaySummary(monthData) {
     const cards = (appData.tabData || {}).cards || [];
     const salaryAccount = cards.find(c => c.purpose === "Salary" && c.isPrimary !== "Yes");
     const expenditureAccount = cards.find(c => c.isPrimary === "Yes");
-    const savingAccount = cards.find(c => c.purpose === "Saving" && c.isPrimary !== "Yes");
+    const savingAccount = cards.find(c => (c.purpose === "Savings" || c.purpose === "Saving") && c.isPrimary !== "Yes");
     const investmentAccount = cards.find(c => c.purpose === "Investment" && c.isPrimary !== "Yes");
     const rawSalaryBalance = Number(salaryAccount?.balance || 0);
     const expBalance = Number(expenditureAccount?.balance || 0);
 
     // Fixed outflows auto-debited from salary — all frequencies converted to monthly equivalent
     const allOutflows = ((appData.tabData || {}).outflow || []);
-    const autoDebitByType = { Liability: 0, Insurance: 0, Saving: 0, Expenditure: 0, Investment: 0 };
+    const autoDebitByType = { Liability: 0, Insurance: 0, Savings: 0, Expenditure: 0, Investment: 0 };
     allOutflows.forEach(e => {
         const amount = Number(e.amount || 0);
         if (amount <= 0) return;
@@ -3949,24 +4081,24 @@ function calculateAndDisplaySummary(monthData) {
         else if (freq === "Semi-Annual") monthlyAmt = amount / 6;
         else if (freq === "Annual")      monthlyAmt = amount / 12;
         if (monthlyAmt <= 0) return;
-        const t = e.type || "Expenditure";
+        let t = e.type || "Expenditure";
+        if (t === "Saving") t = "Savings";
         autoDebitByType[t] = (autoDebitByType[t] || 0) + monthlyAmt;
     });
     const fixedMonthlyOutflow = Object.values(autoDebitByType).reduce((s, v) => s + v, 0);
 
-    // Category totals
+    // Category totals — Total Outflow uses only recurring outflow, excludes on-demand investing
     const inflowTotal = Object.values(monthData.inflow || {}).reduce((s, v) => s + Number(v || 0), 0);
     const outflowTotal = Object.values(monthData.outflow || {}).reduce((s, v) => s + Number(v || 0), 0);
     const investingTotal = Object.values(monthData.investing || {}).reduce((s, v) => s + Number(v || 0), 0);
-    const totalOutAll = outflowTotal + investingTotal;
 
     document.getElementById("inflowTotal").textContent = formatMoney(inflowTotal);
     document.getElementById("outflowTotal").textContent = formatMoney(outflowTotal);
     document.getElementById("investingTotal").textContent = formatMoney(investingTotal);
 
-    // Summary grid
+    // Summary grid — Total Outflow = only recurring outflow (no one-time investing items)
     document.getElementById("totalIncome").textContent = formatMoney(inflowTotal);
-    document.getElementById("totalExpenses").textContent = formatMoney(totalOutAll);
+    document.getElementById("totalExpenses").textContent = formatMoney(outflowTotal);
 
     // Account balances
     document.getElementById("initialBalance").textContent = formatMoney(rawSalaryBalance);
@@ -3994,7 +4126,8 @@ function calculateAndDisplaySummary(monthData) {
             else if (freq === "Semi-Annual") monthlyAmt = amount / 6;
             else if (freq === "Annual")      monthlyAmt = amount / 12;
             if (monthlyAmt <= 0) return;
-            const t = e.type || "Expenditure";
+            let t = e.type || "Expenditure";
+            if (t === "Saving") t = "Savings";
             if (!itemsByType[t]) itemsByType[t] = [];
             const freqNote = freq !== "Monthly" ? ` <span style="color:var(--muted);font-size:0.7rem">(${freq} ÷${freq === "Quarterly" ? 3 : freq === "Semi-Annual" ? 6 : 12})</span>` : "";
             itemsByType[t].push(`${esc(e.name)}${freqNote}: ${formatMoney(monthlyAmt)}`);
@@ -4007,9 +4140,9 @@ function calculateAndDisplaySummary(monthData) {
             lines.push(`<strong>Insurance: ${formatMoney(autoDebitByType.Insurance)}</strong>`);
             (itemsByType.Insurance || []).forEach(l => lines.push(`&nbsp;&nbsp;${l}`));
         }
-        if (autoDebitByType.Saving > 0) {
-            lines.push(`<strong>→ Saving A/c: ${formatMoney(autoDebitByType.Saving)}</strong>${savingAccount ? ` (${savingAccount.bankName})` : ""}`);
-            (itemsByType.Saving || []).forEach(l => lines.push(`&nbsp;&nbsp;${l}`));
+        if (autoDebitByType.Savings > 0) {
+            lines.push(`<strong>→ Savings A/c: ${formatMoney(autoDebitByType.Savings)}</strong>${savingAccount ? ` (${savingAccount.bankName})` : ""}`);
+            (itemsByType.Savings || []).forEach(l => lines.push(`&nbsp;&nbsp;${l}`));
         }
         if (autoDebitByType.Investment > 0) {
             lines.push(`<strong>→ Investment A/c: ${formatMoney(autoDebitByType.Investment)}</strong>${investmentAccount ? ` (${investmentAccount.bankName})` : ""}`);
@@ -4093,7 +4226,7 @@ function calculateAndDisplaySummary(monthData) {
     const transferLabelEl = transferEl?.previousElementSibling;
     if (transferLabelEl) {
         transferLabelEl.textContent = transferAmt >= 0
-            ? "Transfer to Expenditure Account"
+            ? "Salary Leftover → Expenditure A/c"
             : "Shortfall (Fixed Outflow exceeds Income)";
     }
 
@@ -4108,6 +4241,29 @@ function calculateAndDisplaySummary(monthData) {
     const transferSection = document.getElementById("transferBreakdownSection");
     if (transferSection) {
         transferSection.hidden = Boolean(monthData._transferDone) || isMonthClosed;
+    }
+
+    // Transfer Mismatch Detection: warn if outflows changed after transfer was executed
+    const mismatchEl = document.getElementById("transferMismatchWarning");
+    if (mismatchEl) {
+        if (transferDone > 0 && primaryIncome > 0 && !isMonthClosed) {
+            const correctTransfer = Math.max(0, primaryIncome - fixedMonthlyOutflow);
+            const diff = transferDone - correctTransfer;
+            // Show warning if mismatch exceeds ₹1 (float tolerance)
+            if (Math.abs(diff) > 1) {
+                mismatchEl.hidden = false;
+                document.getElementById("mismatchOldTransfer").textContent = formatMoney(transferDone);
+                document.getElementById("mismatchNewTransfer").textContent = formatMoney(correctTransfer);
+                document.getElementById("mismatchDifference").textContent = (diff > 0 ? "+" : "") + formatMoney(diff);
+                // Store for recalc button
+                window._mismatchCorrectTransfer = correctTransfer;
+                window._mismatchFixedOutflow = fixedMonthlyOutflow;
+            } else {
+                mismatchEl.hidden = true;
+            }
+        } else {
+            mismatchEl.hidden = true;
+        }
     }
 
     // Close Current Month Budget section
@@ -4137,21 +4293,23 @@ function renderPieChart(monthData) {
     const dist = getMonthlyDistribution(monthData);
     
     const data = {
-        labels: ["Investment", "Liability", "Saving", "Expenditure", "Other"],
+        labels: ["Investment", "Liability", "Savings", "Expenditure", "Insurance", "Others"],
         datasets: [{
             data: [
                 dist.investment,
                 dist.liability,
                 dist.saving,
                 dist.expenditure,
+                dist.insurance,
                 dist.other
             ],
             backgroundColor: [
                 "#3b82f6", // Investment - blue
                 "#ef4444", // Liability - red
-                "#22c55e", // Saving - green
+                "#22c55e", // Savings - green
                 "#f97316", // Expenditure - orange
-                "#a855f7"  // Other - purple
+                "#a855f7", // Insurance - purple
+                "#eab308"  // Others - yellow
             ],
             borderWidth: 0
         }]
@@ -4272,10 +4430,9 @@ function renderTabs() {
         const disabled = !accountsReady && tab.id !== "cards";
         btn.className = "tab" + (tab.id === activeTabId ? " active" : "") + (disabled ? " tab-disabled" : "");
         btn.textContent = tab.label;
-        const tabColor = getSemanticColor(tab.semantic || "Others", false);
-        btn.style.borderColor = tab.id === activeTabId ? tabColor.borderColor : "transparent";
-        btn.style.background = tab.id === activeTabId ? tabColor.background : "transparent";
-        btn.style.color = tab.id === activeTabId ? tabColor.color : "var(--text)";
+        btn.style.borderColor = tab.id === activeTabId ? "var(--text)" : "transparent";
+        btn.style.background = tab.id === activeTabId ? "var(--surf2)" : "transparent";
+        btn.style.color = "var(--text)";
         if (disabled) {
             btn.title = "Set up a Primary (Expenditure) + Salary account first";
             btn.style.opacity = "0.4";
@@ -4604,28 +4761,43 @@ if (btnDoTransfer) btnDoTransfer.addEventListener("click", () => {
     if (amt <= 0) { alert("Nothing to transfer — fixed outflow exceeds or equals income."); return; }
 
     const cards = (appData.tabData || {}).cards || [];
-    const savingAccount = cards.find(c => c.purpose === "Saving" && c.isPrimary !== "Yes");
+    const savingAccount = cards.find(c => (c.purpose === "Savings" || c.purpose === "Saving") && c.isPrimary !== "Yes");
     const investmentAccount = cards.find(c => c.purpose === "Investment" && c.isPrimary !== "Yes");
 
-    let confirmMsg = `Execute Transfer:\n\n`;
-    confirmMsg += `Salary A/c: ${formatMoney(Number(salary.balance || 0))} → ₹0 (deduct all)\n`;
-    confirmMsg += `Expenditure A/c: ${formatMoney(Number(exp.balance || 0))} → ${formatMoney(Number(exp.balance || 0) + amt)}\n`;
-    if (savingAccount && autoDebitByType.Saving > 0) {
-        confirmMsg += `Saving A/c (${savingAccount.bankName}): +${formatMoney(autoDebitByType.Saving)}\n`;
-    }
-    if (investmentAccount && autoDebitByType.Investment > 0) {
-        confirmMsg += `Investment A/c (${investmentAccount.bankName}): +${formatMoney(autoDebitByType.Investment)}\n`;
-    }
-    confirmMsg += `\nLiability/Insurance: ${formatMoney((autoDebitByType.Liability || 0) + (autoDebitByType.Insurance || 0))} leaves system`;
+    const liabInsTotal = (autoDebitByType.Liability || 0) + (autoDebitByType.Insurance || 0);
+    const fixedTotal = liabInsTotal
+        + (autoDebitByType.Savings || 0)
+        + (autoDebitByType.Investment || 0)
+        + (autoDebitByType.Expenditure || 0);
+    const expBalBefore = Number(exp.balance || 0);
+    const expBalAfter = expBalBefore + amt;
+
+    let confirmMsg = `Execute Monthly Transfer\n`;
+    confirmMsg += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    confirmMsg += `Salary Credited: ${formatMoney(primaryIncome)}\n\n`;
+    confirmMsg += `Fixed Outflows Deducted from Salary:\n`;
+    if (autoDebitByType.Liability > 0) confirmMsg += `  Liability:   ${formatMoney(autoDebitByType.Liability)}\n`;
+    if (autoDebitByType.Insurance > 0) confirmMsg += `  Insurance:   ${formatMoney(autoDebitByType.Insurance)}\n`;
+    if (autoDebitByType.Savings > 0) confirmMsg += `  → Savings A/c${savingAccount ? ` (${savingAccount.bankName})` : ''}: ${formatMoney(autoDebitByType.Savings)}\n`;
+    if (autoDebitByType.Investment > 0) confirmMsg += `  → Investment A/c${investmentAccount ? ` (${investmentAccount.bankName})` : ''}: ${formatMoney(autoDebitByType.Investment)}\n`;
+    if (autoDebitByType.Expenditure > 0) confirmMsg += `  → Fixed Expenditure: ${formatMoney(autoDebitByType.Expenditure)}\n`;
+    confirmMsg += `  Total Deducted: ${formatMoney(fixedTotal)}\n\n`;
+    confirmMsg += `Salary Leftover: ${formatMoney(amt)}\n`;
+    confirmMsg += `→ Transferred to Expenditure A/c (${exp.bankName || 'Primary'})\n\n`;
+    confirmMsg += `Expenditure A/c Balance:\n`;
+    confirmMsg += `  Before: ${formatMoney(expBalBefore)}${expBalBefore > 0 ? ' (includes carry forward)' : ''}\n`;
+    confirmMsg += `  + Transfer: ${formatMoney(amt)}\n`;
+    confirmMsg += `  After:  ${formatMoney(expBalAfter)}\n\n`;
+    confirmMsg += `Salary A/c: ${formatMoney(Number(salary.balance || 0))} → ₹0`;
     if (!confirm(confirmMsg)) return;
 
     // Deduct full primaryIncome from salary (all obligations + transfer)
     salary.balance = 0;
     // Credit expenditure account with transfer amount
     exp.balance = Number(exp.balance || 0) + amt;
-    // Credit saving account with auto-debit saving amount
-    if (savingAccount && autoDebitByType.Saving > 0) {
-        savingAccount.balance = Number(savingAccount.balance || 0) + autoDebitByType.Saving;
+    // Credit savings account with auto-debit savings amount
+    if (savingAccount && autoDebitByType.Savings > 0) {
+        savingAccount.balance = Number(savingAccount.balance || 0) + autoDebitByType.Savings;
     }
     // Credit investment account with auto-debit investment amount
     if (investmentAccount && autoDebitByType.Investment > 0) {
@@ -4645,10 +4817,66 @@ if (btnDoTransfer) btnDoTransfer.addEventListener("click", () => {
     if (!appData.monthlyBudgetData) appData.monthlyBudgetData = {};
     if (!appData.monthlyBudgetData[monthKey]) appData.monthlyBudgetData[monthKey] = { inflow: {}, outflow: {}, investing: {} };
     appData.monthlyBudgetData[monthKey]._transferDone = (appData.monthlyBudgetData[monthKey]._transferDone || 0) + amt;
-    // Record initial expenditure balance for variable expenditure tracking
-    appData.monthlyBudgetData[monthKey]._initialBalance = (appData.monthlyBudgetData[monthKey]._initialBalance || 0) + amt;
+    // Record actual expenditure account balance after transfer for variable expenditure tracking
+    appData.monthlyBudgetData[monthKey]._initialBalance = exp.balance;
+    // Snapshot: fixed outflow total at time of transfer (for mismatch detection)
+    appData.monthlyBudgetData[monthKey]._transferOutflowSnapshot = fixedTotal;
     scheduleSave();
     renderMonthlyBudget();
+});
+
+// ── Recalculate Transfer (fix mismatch) ──────────────────────────────────────
+const btnRecalcTransfer = document.getElementById("btnRecalcTransfer");
+if (btnRecalcTransfer) btnRecalcTransfer.addEventListener("click", () => {
+    const monthKey = getMonthKey(currentMonth);
+    const monthData = (appData.monthlyBudgetData || {})[monthKey];
+    if (!monthData || !monthData._transferDone) { alert("No transfer to recalculate."); return; }
+    if (monthData._monthClosed) { alert("Cannot recalculate — month is already closed."); return; }
+
+    const primaryIncome = Number(monthData.inflow?.primaryIncome || 0);
+    const correctTransfer = window._mismatchCorrectTransfer;
+    const fixedOutflow = window._mismatchFixedOutflow;
+    if (correctTransfer == null || fixedOutflow == null) { alert("No mismatch detected."); return; }
+
+    const oldTransfer = Number(monthData._transferDone || 0);
+    const oldInitial = Number(monthData._initialBalance || 0);
+
+    // New _initialBalance: recalculate based on correct transfer + any pre-existing balance
+    // preExisting = old _initialBalance - old _transferDone
+    // This already includes carry forward and any account balance before transfer
+    const preExisting = Math.max(0, oldInitial - oldTransfer);
+    const newInitial = preExisting + correctTransfer;
+
+    const cards = (appData.tabData || {}).cards || [];
+    const expAccount = cards.find(c => c.isPrimary === "Yes");
+    const currentExpBal = Number(expAccount?.balance || 0);
+    const newVarExp = Math.max(0, newInitial - currentExpBal);
+
+    let msg = `Recalculate Transfer\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    msg += `Primary Income: ${formatMoney(primaryIncome)}\n`;
+    msg += `Current Fixed Outflows: ${formatMoney(fixedOutflow)}\n\n`;
+    msg += `OLD Transfer Amount: ${formatMoney(oldTransfer)}\n`;
+    msg += `NEW Transfer Amount: ${formatMoney(correctTransfer)}\n`;
+    msg += `Difference: ${formatMoney(oldTransfer - correctTransfer)}\n\n`;
+    if (preExisting > 0) {
+        msg += `Pre-existing Exp Balance: ${formatMoney(preExisting)}\n`;
+    }
+    msg += `OLD _initialBalance: ${formatMoney(oldInitial)}\n`;
+    msg += `NEW _initialBalance: ${formatMoney(newInitial)}\n\n`;
+    msg += `Current Exp Balance: ${formatMoney(currentExpBal)}\n`;
+    msg += `NEW Variable Expenditure: ${formatMoney(newVarExp)}\n\n`;
+    msg += `⚠️ This does NOT change account balances.\n`;
+    msg += `Only budget metadata (_transferDone, _initialBalance) will be corrected.\n\n`;
+    msg += `Proceed?`;
+
+    if (!confirm(msg)) return;
+
+    monthData._transferDone = correctTransfer;
+    monthData._initialBalance = newInitial;
+    scheduleSave();
+    renderMonthlyBudget();
+    alert("Transfer recalculated. Variable expenditure has been corrected.");
 });
 
 // ── Reconcile button ─────────────────────────────────────────────────────────
@@ -4765,7 +4993,8 @@ if (btnUpdateExpBalance) btnUpdateExpBalance.addEventListener("click", () => {
     prevMonthForCarry.setMonth(prevMonthForCarry.getMonth() - 1);
     const prevMonthCarry = (appData.monthlyBudgetData || {})[getMonthKey(prevMonthForCarry)];
     const prevCarryForward = Number(prevMonthCarry?._carryForwardDone || 0);
-    const totalFunded = initialBalance + prevCarryForward + transferDone;
+    // totalFunded = exp account balance right after transfer
+    const totalFunded = initialBalance > 0 ? initialBalance : (transferDone + prevCarryForward);
     const varExp = totalFunded > 0 ? Math.max(0, totalFunded - newBalance) : 0;
     const resultEl = document.getElementById("quickUpdateResult");
     const untrackedEl = document.getElementById("quickUpdateUntracked");
@@ -5050,8 +5279,8 @@ function addCardEntry(event) {
         return;
     }
     // Enforce: only one Saving account
-    if (entry.purpose === "Saving" && entries.some(c => c.purpose === "Saving" && c.id !== editingId)) {
-        alert("A Saving account already exists.\nOnly one Saving account is allowed.");
+    if ((entry.purpose === "Savings" || entry.purpose === "Saving") && entries.some(c => (c.purpose === "Savings" || c.purpose === "Saving") && c.id !== editingId)) {
+        alert("A Savings account already exists.\nOnly one Savings account is allowed.");
         return;
     }
 

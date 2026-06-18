@@ -1,6 +1,6 @@
 # SmartFin – Architecture Document
 
-> Version 3.0 | June 2026
+> Version 3.1 | June 2026
 
 ---
 
@@ -508,7 +508,7 @@ sequenceDiagram
     App->>App: monthlyViewSection.hidden = true
     App->>App: calculateAnnualSummary()
     App->>App: build Apr-Mar financial-year month keys
-    App->>App: sum income, expenditure, saving, investment, liability, insurance, other
+    App->>App: sum income, expenditure, saving, investment, liability, insurance, other (recurring outflow only, excludes on-demand)
     App->>App: sort FY months desc (using "YYYY-MM-01" dates)
     App->>UI: annual total cards updated for all six outflow sections plus income
     App->>UI: monthly average cards updated for the same sections
@@ -556,7 +556,7 @@ sequenceDiagram
     App->>App: fixedObligations = sum Outflow items (type=Liability/Insurance), monthly equivalent
     App->>App: fixedExpenditure = sum Outflow items (type=Expenditure), monthly equivalent
     App->>MB: read variable expense fields across all months with data
-    App->>App: avgVariable = average of (utilityBills + familyExp + misc + debtRepayment + CC + onDemand)
+    App->>App: avgVariable = average of (utilityBills + familyExp + misc + debtRepayment + CC + ondemandExp + ondemandLiability)
     App->>App: minimumMonthlyNeed = fixedObligations + fixedExpenditure + avgVariable
 
     alt No outflow or budget data
@@ -685,6 +685,10 @@ Excludes Saving & Investment outflows (stoppable in emergency).
 | 7 | Medium | `currentEmergencyFundInput` listener had stale `isEditMode` guard | ✅ Fixed |
 | 8 | High | `test.html` tested stale 11-tab config with removed tabs | ✅ Rewritten |
 | 9 | High | `</script>` literal inside `<script>` block caused parse error | ✅ Fixed |
+| 10 | High | Monthly pie chart included one-time investments/liabilities from auto-calc | ✅ Fixed (v5.1) |
+| 11 | High | `getMonthlyDistribution` included on-demand investing items in pie chart | ✅ Fixed (v5.1) |
+| 12 | Medium | Total Outflow included On-Demand investing total | ✅ Fixed (v5.1) |
+| 13 | Medium | Emergency fund Details text lost on edit (only currentFund pre-filled) | ✅ Fixed (v5.1) |
 
 ### 7.2 Architecture Strengths
 

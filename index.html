@@ -77,6 +77,13 @@
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                 </svg>
             </button>
+            <button type="button" id="helpBtn" class="btn-icon-only" aria-label="Help Guide" title="Help & User Guide">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+            </button>
         </div>
     </header>
 
@@ -129,7 +136,11 @@
                         <strong id="annualTotalLiability">₹0</strong>
                     </div>
                     <div class="annual-summary-item">
-                        <span class="annual-summary-label">Total Other</span>
+                        <span class="annual-summary-label">Total Insurance</span>
+                        <strong id="annualTotalInsurance">₹0</strong>
+                    </div>
+                    <div class="annual-summary-item">
+                        <span class="annual-summary-label">Total Others</span>
                         <strong id="annualTotalOther">₹0</strong>
                     </div>
                     <div class="annual-summary-item">
@@ -153,7 +164,11 @@
                         <strong id="avgMonthlyLiability">₹0</strong>
                     </div>
                     <div class="annual-summary-item">
-                        <span class="annual-summary-label">Avg Monthly Other</span>
+                        <span class="annual-summary-label">Avg Monthly Insurance</span>
+                        <strong id="avgMonthlyInsurance">₹0</strong>
+                    </div>
+                    <div class="annual-summary-item">
+                        <span class="annual-summary-label">Avg Monthly Others</span>
                         <strong id="avgMonthlyOther">₹0</strong>
                     </div>
                 </div>
@@ -186,7 +201,7 @@
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">Total Outflow</span>
-                        <span class="summary-hint">Fixed obligations + on-demand spending</span>
+                        <span class="summary-hint">Recurring monthly obligations only</span>
                         <strong id="totalExpenses">₹0</strong>
                     </div>
                     <div class="summary-item">
@@ -255,6 +270,32 @@
                     <div class="transfer-action-row">
                         <button type="button" id="btnDoTransfer" class="btn-do-transfer">Execute Transfer</button>
                         <small class="transfer-note">Deducts all obligations from Salary, credits Expenditure/Saving/Investment accounts.</small>
+                    </div>
+                </div>
+
+                <!-- Transfer Mismatch Warning (outflows changed after transfer) -->
+                <div class="expense-transfer-section" id="transferMismatchWarning" hidden style="border-color:#ef4444">
+                    <h3 style="color:#ef4444">⚠️ Transfer Mismatch Detected</h3>
+                    <div style="font-size:0.85rem;color:var(--dim);margin-bottom:0.5rem">
+                        Outflow items were added or changed <strong>after</strong> Execute Transfer. The transfer amount and variable expenditure are incorrect.
+                    </div>
+                    <div class="expense-transfer-grid">
+                        <div class="expense-transfer-item">
+                            <span class="expense-transfer-label">Transfer Used (old outflows)</span>
+                            <strong id="mismatchOldTransfer" style="color:#ef4444">₹0</strong>
+                        </div>
+                        <div class="expense-transfer-item">
+                            <span class="expense-transfer-label">Correct Transfer (current outflows)</span>
+                            <strong id="mismatchNewTransfer" style="color:#22c55e">₹0</strong>
+                        </div>
+                        <div class="expense-transfer-item">
+                            <span class="expense-transfer-label">Difference</span>
+                            <strong id="mismatchDifference" style="color:#eab308">₹0</strong>
+                        </div>
+                    </div>
+                    <div class="transfer-action-row">
+                        <button type="button" id="btnRecalcTransfer" class="btn-do-transfer" style="background:#ef4444">Recalculate Transfer</button>
+                        <small class="transfer-note">Corrects _transferDone and _initialBalance to match current outflows. Does not change account balances.</small>
                     </div>
                 </div>
 
@@ -404,12 +445,12 @@
                     <strong id="totalInflowItems">0</strong>
                 </div>
                 <div class="investment-summary-item">
-                    <span class="investment-summary-label">Monthly Investments</span>
-                    <span class="summary-hint">Recurring SIPs, RDs, etc.</span>
+                    <span class="investment-summary-label">Monthly Recurring Investments</span>
+                    <span class="summary-hint">All recurring investments prorated monthly</span>
                     <strong id="totalMonthlyInvestments">₹0</strong>
                 </div>
                 <div class="investment-summary-item">
-                    <span class="investment-summary-label">Existing (Lump Sum)</span>
+                    <span class="investment-summary-label">One-time (Lump Sum)</span>
                     <span class="summary-hint">FDs, PPF, Stocks, Bonds, etc.</span>
                     <strong id="totalExistingInvestments">₹0</strong>
                 </div>
@@ -418,8 +459,8 @@
             <!-- Sub-section toggle -->
             <div class="investment-subsection-tabs" id="investmentSubTabs">
                 <button type="button" class="inv-sub-tab active" data-inv-view="all">All</button>
-                <button type="button" class="inv-sub-tab" data-inv-view="existing">Existing</button>
-                <button type="button" class="inv-sub-tab" data-inv-view="monthly">Monthly</button>
+                <button type="button" class="inv-sub-tab" data-inv-view="existing">One-time</button>
+                <button type="button" class="inv-sub-tab" data-inv-view="monthly">Recurring</button>
                 <button type="button" class="inv-sub-tab" data-inv-view="portfolio">Portfolio Summary</button>
             </div>
 
@@ -436,12 +477,12 @@
                 <!-- Portfolio Summary (shown when Portfolio tab selected) -->
                 <div id="portfolioSummary" class="portfolio-summary" hidden>
                     <div class="portfolio-group">
-                        <h4>Existing Investments</h4>
+                        <h4>One-time Investments</h4>
                         <div id="portfolioExisting" class="portfolio-list"></div>
                         <div class="portfolio-subtotal">Subtotal: <strong id="portfolioExistingTotal">₹0</strong></div>
                     </div>
                     <div class="portfolio-group">
-                        <h4>Monthly Investments (SIP/RD)</h4>
+                        <h4>Monthly Recurring Investments</h4>
                         <div id="portfolioMonthly" class="portfolio-list"></div>
                         <div class="portfolio-subtotal">Subtotal: <strong id="portfolioMonthlyTotal">₹0</strong></div>
                     </div>
@@ -490,13 +531,13 @@
                     <strong id="outflowDisplayIncome">₹0</strong>
                 </div>
                 <div class="expense-summary-item">
-                    <span class="expense-summary-label">Monthly Deductions</span>
+                    <span class="expense-summary-label">Monthly Fixed Outflow</span>
                     <span class="summary-hint">Total of all monthly frequency outflows</span>
                     <strong id="totalOutflowDeductions">₹0</strong>
                 </div>
                 <div class="expense-summary-item">
                     <span class="expense-summary-label">Remaining After Deductions</span>
-                    <span class="summary-hint">Income minus monthly deductions</span>
+                    <span class="summary-hint">Income minus monthly fixed outflow</span>
                     <strong id="outflowRemainingToSpend" class="remaining-amount">₹0</strong>
                 </div>
                 <div class="expense-summary-item">
@@ -507,8 +548,6 @@
 
             <!-- Preview Mode -->
             <div id="outflowTabPreview" class="expense-preview">
-                <div id="outflowSortFilter"></div>
-                <div id="outflowList" class="expenses-list"></div>
                 <div class="charts-container">
                     <div class="chart-section">
                         <h3>Amount by Bank</h3>
@@ -523,6 +562,8 @@
                         </div>
                     </div>
                 </div>
+                <div id="outflowSortFilter"></div>
+                <div id="outflowList" class="expenses-list"></div>
             </div>
 
             <!-- Edit Mode -->
@@ -898,7 +939,7 @@
                 </div>
 
                 <!-- Monthly Need Breakdown -->
-                <div class="expense-transfer-section" style="margin-top:16px">
+                <div class="expense-transfer-section">
                     <h3>Monthly Need Breakdown</h3>
                     <div id="emergencyFundBreakdown" class="ef-breakdown"></div>
                 </div>
@@ -1032,6 +1073,190 @@
     </div>
 </div>
 
+</div>
+
+<!-- ── HELP PANEL ─────────────────────────────────────── -->
+<div id="helpOverlay" class="settings-overlay" hidden></div>
+<div id="helpPanel" class="settings-panel help-panel" aria-hidden="true">
+    <div class="settings-header">
+        <h2>Help & User Guide</h2>
+        <button type="button" id="closeHelpBtn" class="btn-icon-only" aria-label="Close help">✕</button>
+    </div>
+    <div class="help-content">
+
+        <!-- Quick Start -->
+        <details class="help-section" open>
+            <summary class="help-section-title">Quick Start Guide</summary>
+            <div class="help-body">
+                <ol>
+                    <li><strong>Accounts</strong> — Add a <em>Primary (Expenditure)</em> + <em>Salary</em> account to unlock all tabs</li>
+                    <li><strong>Accounts</strong> — Optionally add Saving &amp; Investment accounts</li>
+                    <li><strong>Outflow</strong> — Add ALL fixed deductions (EMIs, rent, insurance, savings, investments)</li>
+                    <li><strong>Budget</strong> — Enter Primary Income → Review breakdown → Execute Transfer</li>
+                    <li><strong>Mid-month</strong> — Quick Update: enter current expenditure balance + CC spending</li>
+                    <li><strong>Month end</strong> — Close Month → carries balance forward</li>
+                </ol>
+                <div class="help-warning">⚠️ Add ALL outflow items <strong>before</strong> Execute Transfer. Items added after won't be deducted from salary.</div>
+            </div>
+        </details>
+
+        <!-- Monthly Budget -->
+        <details class="help-section">
+            <summary class="help-section-title">Monthly Budget</summary>
+            <div class="help-body">
+                <h4>Flow</h4>
+                <p>Enter Income → Execute Transfer → Quick Update (mid-month) → Close Month</p>
+                <h4>Key Fields</h4>
+                <table class="help-table">
+                    <tr><td><strong>Total Inflow</strong></td><td>Sum of all Cash Inflow fields</td></tr>
+                    <tr><td><strong>Total Outflow</strong></td><td>Recurring outflow only (excludes On-Demand)</td></tr>
+                    <tr><td><strong>Total Spendable</strong></td><td>Inflow − Fixed Outflow</td></tr>
+                    <tr><td><strong>Variable Expenditure</strong></td><td>totalFunded − current exp balance (auto)</td></tr>
+                    <tr><td><strong>Variable Expenses</strong></td><td>Variable Expenditure + CC Spending</td></tr>
+                </table>
+                <h4>Transfer Mismatch</h4>
+                <p>If outflows change after transfer, a red warning appears. Click <strong>Recalculate Transfer</strong> to fix.</p>
+                <h4>Pie Chart</h4>
+                <p>6 categories: Investment, Liability, Savings, Expenditure, Insurance, Others. Recurring only — excludes one-time/on-demand.</p>
+            </div>
+        </details>
+
+        <!-- Accounts -->
+        <details class="help-section">
+            <summary class="help-section-title">Accounts</summary>
+            <div class="help-body">
+                <table class="help-table">
+                    <tr><td><strong>Primary (Expenditure)</strong></td><td>⭐ Exactly one. isPrimary = Yes</td></tr>
+                    <tr><td><strong>Salary</strong></td><td>💼 Exactly one. Transit account (auto-managed)</td></tr>
+                    <tr><td><strong>Saving</strong></td><td>💰 At most one. Credited on transfer</td></tr>
+                    <tr><td><strong>Investment</strong></td><td>Credited on transfer</td></tr>
+                    <tr><td><strong>Others</strong></td><td>Custom purpose (Travel Fund, Family Fund, etc.)</td></tr>
+                </table>
+                <p><strong>Tip:</strong> Set balance to 0 if starting fresh. Enter actual bank balance otherwise.</p>
+            </div>
+        </details>
+
+        <!-- Outflow -->
+        <details class="help-section">
+            <summary class="help-section-title">Outflow (Fixed Deductions)</summary>
+            <div class="help-body">
+                <p>Recurring deductions auto-debited from Salary during Execute Transfer.</p>
+                <h4>Routing by Type</h4>
+                <table class="help-table">
+                    <tr><td>Liability</td><td>Leaves system (lender)</td></tr>
+                    <tr><td>Insurance</td><td>Leaves system (insurer)</td></tr>
+                    <tr><td>Saving</td><td>→ Saving account</td></tr>
+                    <tr><td>Investment</td><td>→ Investment account</td></tr>
+                    <tr><td>Expenditure</td><td>→ Primary account</td></tr>
+                </table>
+                <h4>Frequency Conversion</h4>
+                <p>Quarterly ÷ 3, Semi-Annual ÷ 6, Annual ÷ 12. <strong>One-Time items excluded</strong> from auto-debit.</p>
+            </div>
+        </details>
+
+        <!-- Variable Expenditure -->
+        <details class="help-section">
+            <summary class="help-section-title">Variable Expenditure Formula</summary>
+            <div class="help-body">
+                <pre class="help-formula">Variable Expenditure = totalFunded − current exp balance</pre>
+                <p>Where:</p>
+                <pre class="help-formula">totalFunded = carry forward + salary leftover + pre-existing balance</pre>
+                <p>This snapshot (<code>_initialBalance</code>) is captured at Execute Transfer and doesn't change during the month.</p>
+                <p>Click the <strong>auto</strong> badge to see the breakdown.</p>
+            </div>
+        </details>
+
+        <!-- Investments -->
+        <details class="help-section">
+            <summary class="help-section-title">Investments</summary>
+            <div class="help-body">
+                <p><strong>Existing</strong> — Lump sum (FDs, stocks, bonds, real estate)</p>
+                <p><strong>Monthly</strong> — Recurring (SIPs, RDs)</p>
+                <p><strong>Portfolio Summary</strong> — Consolidated view from all sources</p>
+                <p>Monthly frequency investments from Inflow auto-populate the On-Demand Investment field in Budget.</p>
+            </div>
+        </details>
+
+        <!-- Emergency Fund, Net Worth, etc. -->
+        <details class="help-section">
+            <summary class="help-section-title">Emergency Fund</summary>
+            <div class="help-body">
+                <p><strong>Minimum Monthly Need</strong> = Fixed Liabilities/Insurance + Fixed Expenditure + Avg Variable Expenses</p>
+                <p>Saving/Investment excluded (can be paused in emergency).</p>
+                <p>Status: EXCELLENT (≥12 mo), READY (6–12), ADEQUATE (3–6), LOW (&lt;3)</p>
+            </div>
+        </details>
+
+        <details class="help-section">
+            <summary class="help-section-title">Net Worth</summary>
+            <div class="help-body">
+                <p>Each item shows: <strong>Current</strong>, <strong>@ 70 yrs</strong> (projected), <strong>@ 70 yrs real</strong> (inflation-adjusted at 6%).</p>
+                <p>Auto-imports account balances and outflow liabilities.</p>
+            </div>
+        </details>
+
+        <!-- Precautions -->
+        <details class="help-section">
+            <summary class="help-section-title">⚠️ Precautions</summary>
+            <div class="help-body">
+                <h4>Before Transfer</h4>
+                <ul>
+                    <li>Add ALL outflow items first — transfer uses items that exist at the moment</li>
+                    <li>Verify Primary Income matches actual salary</li>
+                    <li>Ensure Saving/Investment accounts exist if applicable</li>
+                </ul>
+                <h4>During Month</h4>
+                <ul>
+                    <li>Update expenditure balance regularly via Quick Update</li>
+                    <li>If outflows change after transfer → use Recalculate Transfer</li>
+                    <li>Don't manually edit salary account balance</li>
+                </ul>
+                <h4>Month End</h4>
+                <ul>
+                    <li>Always Close Month before starting next</li>
+                    <li>Update exp balance before closing (affects carry forward)</li>
+                    <li>Export backup monthly for safety</li>
+                </ul>
+                <h4>Data Safety</h4>
+                <ul>
+                    <li>Always Export Backup before Reset All Data or Delete Account</li>
+                    <li>Import overwrites ALL data — export current data first</li>
+                </ul>
+            </div>
+        </details>
+
+        <!-- FAQ -->
+        <details class="help-section">
+            <summary class="help-section-title">Frequently Asked Questions</summary>
+            <div class="help-body">
+                <div class="help-faq">
+                    <strong>Q: I added outflows after Execute Transfer. What do I do?</strong>
+                    <p>A: A red "Transfer Mismatch Detected" banner will appear. Click Recalculate Transfer to fix.</p>
+                </div>
+                <div class="help-faq">
+                    <strong>Q: What is Variable Expenditure?</strong>
+                    <p>A: Auto-calculated as totalFunded − current exp balance. It tracks how much has left your expenditure account since transfer.</p>
+                </div>
+                <div class="help-faq">
+                    <strong>Q: Are One-Time items included in budget?</strong>
+                    <p>A: No. One-Time frequency items are excluded from auto-debit, pie charts, and Total Outflow. Tracked for reference only.</p>
+                </div>
+                <div class="help-faq">
+                    <strong>Q: How do I fix wrong data?</strong>
+                    <p>A: Export backup → edit the JSON → import the corrected file. For transfer issues, use the Recalculate button.</p>
+                </div>
+                <div class="help-faq">
+                    <strong>Q: What's the difference between Outflow and Insurance tabs?</strong>
+                    <p>A: Outflow = premium payments (auto-debited from salary). Insurance = policy details (coverage, nominees). Both should have matching entries for active policies.</p>
+                </div>
+                <div class="help-faq">
+                    <strong>Q: Can multiple users use this app?</strong>
+                    <p>A: Yes. Each user has their own account. Data is completely separate per user.</p>
+                </div>
+            </div>
+        </details>
+
+    </div>
 </div>
 
 <!-- ── FOOTER ───────────────────────────────────────────── -->

@@ -15,10 +15,11 @@
     --red:     #e63946;
     --investment: #3b82f6;
     --liability: #ef4444;
+    --savings: #22c55e;
     --saving: #22c55e;
     --expenditure: #f97316;
-    --insurance: #eab308;
-    --others: #a855f7;
+    --insurance: #a855f7;
+    --others: #eab308;
     --radius:  10px;
     --shadow:  0 8px 40px rgba(0,0,0,.7);
     /* Safe area insets for notched/Dynamic-Island phones */
@@ -143,6 +144,7 @@ body {
     color: var(--muted);
     letter-spacing: 0.4px;
     text-transform: uppercase;
+    line-height: 1.3;
 }
 
 .field input,
@@ -378,6 +380,7 @@ body {
     position: sticky;
     top: calc(64px + var(--safe-top));
     z-index: 90;
+    margin-bottom: 12px;
 }
 
 /* Desktop: scrollable row */
@@ -477,7 +480,7 @@ body {
 /* ── Dashboard Grid ───────────────────────────────────── */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     margin: 20px 24px;
     border-radius: 12px;
     overflow: hidden;
@@ -490,8 +493,11 @@ body {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    border-left: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
 }
-.metric + .metric { border-left: 1px solid var(--border); }
+.metric:first-child { border-left: none; }
+.metric:last-child { border-bottom: none; }
 
 .metric-label {
     font-size: 0.7rem;
@@ -702,24 +708,33 @@ td.amount {
     padding: 3px 9px;
     border-radius: 999px;
     border: 1px solid currentColor;
-    margin-right: 8px;
+    margin: 2px 6px 2px 0;
     vertical-align: middle;
+    line-height: 1.3;
 }
 .semantic-investment { background: rgba(59, 130, 246, .18); color: #93c5fd; border-color: var(--investment); }
 .semantic-liability { background: rgba(239, 68, 68, .18); color: #fca5a5; border-color: var(--liability); }
-.semantic-saving { background: rgba(34, 197, 94, .18); color: #86efac; border-color: var(--saving); }
+.semantic-saving, .semantic-savings { background: rgba(34, 197, 94, .18); color: #86efac; border-color: var(--savings); }
 .semantic-expenditure { background: rgba(249, 115, 22, .18); color: #fdba74; border-color: var(--expenditure); }
-.semantic-insurance { background: rgba(234, 179, 8, .18); color: #fde68a; border-color: var(--insurance); }
-.semantic-others { background: rgba(168, 85, 247, .18); color: #d8b4fe; border-color: var(--others); }
+.semantic-insurance { background: rgba(168, 85, 247, .18); color: #d8b4fe; border-color: var(--insurance); }
+.semantic-others { background: rgba(234, 179, 8, .18); color: #fde68a; border-color: var(--others); }
 .semantic-badge.is-paid {
     background: rgba(59, 130, 246, .05);
 }
 .semantic-investment.is-paid { background: rgba(59, 130, 246, .05); }
 .semantic-liability.is-paid { background: rgba(239, 68, 68, .05); }
-.semantic-saving.is-paid { background: rgba(34, 197, 94, .05); }
+.semantic-saving.is-paid, .semantic-savings.is-paid { background: rgba(34, 197, 94, .05); }
 .semantic-expenditure.is-paid { background: rgba(249, 115, 22, .05); }
-.semantic-insurance.is-paid { background: rgba(234, 179, 8, .05); }
-.semantic-others.is-paid { background: rgba(168, 85, 247, .05); }
+.semantic-insurance.is-paid { background: rgba(168, 85, 247, .05); }
+.semantic-others.is-paid { background: rgba(234, 179, 8, .05); }
+
+/* Light mode: use darker text colors for semantic badges */
+[data-theme="light"] .semantic-investment { background: rgba(59, 130, 246, .12); color: #2563eb; border-color: #3b82f6; }
+[data-theme="light"] .semantic-liability { background: rgba(239, 68, 68, .12); color: #dc2626; border-color: #ef4444; }
+[data-theme="light"] .semantic-saving, [data-theme="light"] .semantic-savings { background: rgba(34, 197, 94, .12); color: #16a34a; border-color: #22c55e; }
+[data-theme="light"] .semantic-expenditure { background: rgba(249, 115, 22, .12); color: #ea580c; border-color: #f97316; }
+[data-theme="light"] .semantic-insurance { background: rgba(168, 85, 247, .12); color: #7c3aed; border-color: #a855f7; }
+[data-theme="light"] .semantic-others { background: rgba(234, 179, 8, .12); color: #ca8a04; border-color: #eab308; }
 .auto-badge:hover {
     background: var(--surf3);
     color: var(--text);
@@ -979,8 +994,8 @@ td.amount {
 
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
 }
 
 .summary-item {
@@ -1253,8 +1268,8 @@ td.amount {
 
 .goal-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
 }
 
 .goal-summary-item {
@@ -1400,10 +1415,10 @@ td.amount {
 .expense-summary {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 12px;
 }
 .expense-summary-grid {
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 .expense-summary-item {
@@ -1567,22 +1582,23 @@ td.amount {
 .expense-card-details {
     font-size: 0.85rem;
     color: var(--muted);
-    line-height: 1.5;
+    line-height: 1.8;
 }
 
 .expense-card-type {
     display: inline-block;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 4px 10px;
+    letter-spacing: 0.4px;
+    padding: 3px 9px;
     border-radius: 12px;
-    margin-right: 8px;
+    margin: 2px 6px 2px 0;
+    line-height: 1.3;
 }
-.expense-card-type.insurance { background: rgba(234, 179, 8, .18); color: #fde68a; border: 1px solid var(--insurance); }
+.expense-card-type.insurance { background: rgba(168, 85, 247, .18); color: #d8b4fe; border: 1px solid var(--insurance); }
 .expense-card-type.investment { background: rgba(59, 130, 246, .18); color: #93c5fd; border: 1px solid var(--investment); }
-.expense-card-type.saving { background: rgba(34, 197, 94, .18); color: #86efac; border: 1px solid var(--saving); }
+.expense-card-type.saving, .expense-card-type.savings { background: rgba(34, 197, 94, .18); color: #86efac; border: 1px solid var(--savings); }
 .expense-card-type.liability { background: rgba(239, 68, 68, .18); color: #fca5a5; border: 1px solid var(--liability); }
 .expense-card-type.expenditure { background: rgba(249, 115, 22, .18); color: #fdba74; border: 1px solid var(--expenditure); }
 
@@ -1609,8 +1625,8 @@ td.amount {
 
 .investment-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
 }
 
 .investment-summary-item {
@@ -1675,21 +1691,22 @@ td.amount {
 .investment-card-details {
     font-size: 0.85rem;
     color: var(--muted);
-    line-height: 1.5;
+    line-height: 1.8;
 }
 
 .investment-card-frequency {
     display: inline-block;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 4px 10px;
+    letter-spacing: 0.4px;
+    padding: 3px 9px;
     border-radius: 12px;
-    margin-right: 8px;
+    margin: 2px 6px 2px 0;
     background: var(--surf2);
     color: var(--muted);
     border: 1px solid currentColor;
+    line-height: 1.3;
 }
 
 .investment-card-amount {
@@ -1779,7 +1796,7 @@ td.amount {
 .insurance-card-details {
     font-size: 0.85rem;
     color: var(--muted);
-    line-height: 1.5;
+    line-height: 1.8;
 }
 
 .insurance-card-nir {
@@ -1861,8 +1878,8 @@ td.amount {
 
 .card-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
 }
 
 .card-summary-item {
@@ -1925,18 +1942,19 @@ td.amount {
 .card-item-details {
     font-size: 0.85rem;
     color: var(--muted);
-    line-height: 1.5;
+    line-height: 1.8;
 }
 
 .card-item-badge {
     display: inline-block;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 4px 10px;
+    letter-spacing: 0.4px;
+    padding: 3px 9px;
     border-radius: 12px;
-    margin-right: 8px;
+    margin: 2px 6px 2px 0;
+    line-height: 1.3;
 }
 .card-item-badge.yes { background: rgba(34, 197, 94, .18); color: #86efac; border: 1px solid var(--saving); }
 .card-item-badge.no { background: rgba(239, 68, 68, .18); color: #fca5a5; border: 1px solid var(--liability); }
@@ -2001,8 +2019,8 @@ td.amount {
 
 .net-worth-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
 }
 
 .net-worth-summary-item {
@@ -2058,9 +2076,12 @@ td.amount {
 .asset-liability-item {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 12px 0;
     border-bottom: 1px solid var(--border);
     font-size: 0.9rem;
+    flex-wrap: wrap;
+    gap: 4px 12px;
 }
 .asset-liability-item:last-child {
     border-bottom: none;
@@ -2070,12 +2091,41 @@ td.amount {
 }
 .asset-liability-item .value {
     font-weight: 600;
+    font-size: 0.92rem;
     color: var(--white);
 }
+.asset-liability-item .projected-value {
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: #3b82f6;
+}
+.asset-liability-item .inflation-adj-value {
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: #f97316;
+}
 .asset-liability-item .growth {
-    font-size: 0.8rem;
-    color: var(--muted);
-    margin-left: 10px;
+    font-size: 0.75rem;
+    color: var(--dim);
+}
+.nw-values {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.nw-val-row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+}
+.nw-val-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--dim);
+    font-weight: 600;
 }
 
 .asset-label-group {
@@ -2118,8 +2168,8 @@ td.amount {
 
 .projection-details {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
 }
 
 .projection-detail-item {
@@ -2171,8 +2221,8 @@ td.amount {
 
 .tax-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
 }
 
 .tax-summary-item {
@@ -2312,8 +2362,8 @@ td.amount {
 
 .gifts-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
 }
 
 .gifts-summary-item {
@@ -2381,13 +2431,14 @@ td.amount {
 
 .gift-item-category {
     display: inline-block;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 4px 10px;
+    letter-spacing: 0.4px;
+    padding: 3px 9px;
     border-radius: 12px;
-    margin-right: 8px;
+    margin: 2px 6px 2px 0;
+    line-height: 1.3;
 }
 .gift-item-category.fixed { background: rgba(59, 130, 246, .2); color: #3b82f6; }
 .gift-item-category.demand { background: rgba(234, 179, 8, .2); color: #eab308; }
@@ -2409,7 +2460,12 @@ td.amount {
 .emergency-fund-ui {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
+}
+#emergencyFundPreview {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .emergency-fund-summary {
@@ -2669,10 +2725,11 @@ td.amount {
     background: var(--surf2);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 16px;
+    padding: 14px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
 }
 
 .annual-month-name {
@@ -2683,12 +2740,14 @@ td.amount {
 
 .annual-month-details {
     display: flex;
-    gap: 20px;
-    font-size: 0.9rem;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    font-size: 0.85rem;
 }
 
 .annual-month-detail {
     color: var(--muted);
+    white-space: nowrap;
 }
 
 .annual-month-detail strong {
@@ -2727,10 +2786,8 @@ td.amount {
         grid-template-columns: repeat(2, 1fr);
         margin: 14px 16px;
     }
-    .metric + .metric            { border-left: none; }
+    .metric                      { border-left: none; border-bottom: 1px solid var(--border); }
     .metric:nth-child(odd)       { border-right: 1px solid var(--border); }
-    .metric:nth-child(1),
-    .metric:nth-child(2)         { border-bottom: 1px solid var(--border); }
 
     .work-area                   { margin: 0 16px; }
     .tab-bar, .app-header        { padding-left: 16px; padding-right: 16px; }
@@ -2752,6 +2809,11 @@ td.amount {
     .insurance-summary,
     .card-summary,
     .investment-summary          { grid-template-columns: repeat(2, 1fr); }
+
+    .tax-regime-section          { grid-template-columns: 1fr; }
+
+    .emergency-fund-status       { flex-direction: column; text-align: center; }
+    .status-badge                { width: 100px; height: 100px; font-size: 1.2rem; }
 }
 
 /* ── Mobile phone (≤ 520px) ─────────────────────────── */
@@ -2853,32 +2915,63 @@ td.amount {
 
     /* Net worth */
     .net-worth-summary           { grid-template-columns: 1fr; gap: 10px; }
+    .projection-details          { grid-template-columns: 1fr; gap: 10px; }
+    .asset-liability-item        { flex-direction: column; align-items: flex-start; }
+    .nw-values                   { gap: 12px; width: 100%; justify-content: flex-start; }
+    .nw-val-row                  { align-items: flex-start; }
 
     /* Tax plan */
     .tax-summary                 { grid-template-columns: 1fr; gap: 10px; }
+    .tax-regime-section          { grid-template-columns: 1fr; padding: 14px 16px; }
     .tax-controls                { flex-direction: column; gap: 10px; }
     .tax-controls select         { width: 100%; }
 
     /* Gifts summary */
     .gifts-summary               { grid-template-columns: 1fr; gap: 10px; }
 
+    /* Emergency fund */
+    .emergency-fund-summary      { grid-template-columns: 1fr; gap: 10px; }
+    .emergency-fund-status       { padding: 16px; gap: 14px; }
+    .status-badge                { width: 80px; height: 80px; font-size: 1.1rem; }
+
     /* Preview cards */
     .goal-card,
     .expense-card,
     .investment-card,
     .insurance-card,
-    .card-card,
-    .gift-card                   { padding: 14px 16px; }
+    .card-item,
+    .gift-item                   { padding: 14px 16px; }
 
     .expense-card,
-    .investment-card {
+    .investment-card,
+    .insurance-card,
+    .card-item,
+    .gift-item {
         align-items: flex-start;
         flex-direction: column;
     }
     .expense-card-amount,
-    .investment-card-amount {
+    .investment-card-amount,
+    .insurance-card-amount,
+    .card-item-limit,
+    .gift-item-amount {
         margin-left: 0;
+        margin-top: 8px;
         font-size: 1.15rem;
+    }
+    .insurance-card-amounts,
+    .card-item-amounts {
+        margin-left: 0;
+        margin-top: 8px;
+        text-align: left;
+    }
+    .income-field-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .income-field-input {
+        width: 100%;
     }
 
     /* Buttons touch targets (min 44px) */
@@ -3034,6 +3127,127 @@ td.amount {
 .btn-danger-action:hover { background: rgba(239,68,68,.22); }
 
 .danger-section { border-bottom: none; }
+
+/* ── Help Panel ──────────────────────────────────────── */
+.help-panel { width: 440px; }
+@media (max-width: 500px) { .help-panel { width: 100vw; } }
+
+.help-content {
+    padding: 8px 0;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.help-section {
+    border-bottom: 1px solid var(--border2);
+}
+
+.help-section-title {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--white);
+    padding: 14px 24px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    transition: background .15s;
+}
+.help-section-title:hover { background: var(--surf2); }
+.help-section-title::before {
+    content: "▸ ";
+    display: inline-block;
+    transition: transform .2s;
+    margin-right: 4px;
+    font-size: 0.7rem;
+}
+.help-section[open] > .help-section-title::before { transform: rotate(90deg); }
+.help-section-title::-webkit-details-marker { display: none; }
+
+.help-body {
+    padding: 0 24px 16px;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: var(--dim);
+}
+.help-body h4 {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 12px 0 6px;
+}
+.help-body p { margin: 6px 0; }
+.help-body ol, .help-body ul {
+    padding-left: 20px;
+    margin: 6px 0;
+}
+.help-body li { margin: 4px 0; }
+.help-body li strong { color: var(--white); }
+.help-body code {
+    background: var(--surf2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.78rem;
+}
+
+.help-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 0.8rem;
+}
+.help-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border2);
+    vertical-align: top;
+}
+.help-table td:first-child {
+    white-space: nowrap;
+    width: 40%;
+    color: var(--white);
+}
+
+.help-warning {
+    background: rgba(234,179,8,0.1);
+    border: 1px solid rgba(234,179,8,0.35);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 10px;
+    font-size: 0.82rem;
+    color: #eab308;
+}
+
+.help-formula {
+    background: var(--surf2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: #93c5fd;
+    white-space: pre-wrap;
+    margin: 6px 0;
+    overflow-x: auto;
+}
+
+.help-faq {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border2);
+}
+.help-faq:last-child { border-bottom: none; }
+.help-faq strong {
+    display: block;
+    color: var(--white);
+    font-size: 0.82rem;
+    margin-bottom: 4px;
+}
+.help-faq p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--dim);
+}
 
 /* ── Dependency Notice ───────────────────────────────── */
 .dependency-notice {
@@ -3201,10 +3415,10 @@ td.amount {
 /* ── Summary Hints & Field Hints ─────────────────────── */
 .summary-hint, .field-hint {
     display: block;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     color: var(--muted);
     font-weight: 400;
-    margin-top: 1px;
+    margin-top: 2px;
     line-height: 1.3;
 }
 .field-hint { margin-bottom: 4px; }
@@ -3293,11 +3507,20 @@ td.amount {
 }
 
 /* ── Insurance Tab ───────────────────────────────────── */
+.insurance-ui {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.insurance-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
 .insurance-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 12px;
-    margin-bottom: 16px;
 }
 .insurance-summary-item {
     background: var(--surf1);
@@ -3334,19 +3557,24 @@ td.amount {
     font-size: 0.7rem;
     padding: 2px 8px;
     border-radius: 10px;
-    margin-right: 4px;
+    margin: 2px 4px 2px 0;
+    line-height: 1.3;
 }
 .insurance-card .premium-badge {
     display: inline-block;
     font-size: 0.7rem;
     padding: 2px 8px;
     border-radius: 10px;
+    margin: 2px 4px 2px 0;
+    line-height: 1.3;
 }
 .insurance-card .no-premium-badge {
     display: inline-block;
     font-size: 0.7rem;
     padding: 2px 8px;
     border-radius: 10px;
+    margin: 2px 4px 2px 0;
+    line-height: 1.3;
 }
 
 /* ── Quick Update Result ─────────────────────────────── */

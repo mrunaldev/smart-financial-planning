@@ -13,6 +13,12 @@
     --dim:     #444;
     --white:   #fff;
     --red:     #e63946;
+    --investment: #3b82f6;
+    --liability: #ef4444;
+    --saving: #22c55e;
+    --expenditure: #f97316;
+    --insurance: #eab308;
+    --others: #a855f7;
     --radius:  10px;
     --shadow:  0 8px 40px rgba(0,0,0,.7);
     /* Safe area insets for notched/Dynamic-Island phones */
@@ -686,6 +692,34 @@ td.amount {
     cursor: help;
     white-space: nowrap;
 }
+
+.semantic-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+.semantic-investment { background: rgba(59, 130, 246, .18); color: #93c5fd; border-color: var(--investment); }
+.semantic-liability { background: rgba(239, 68, 68, .18); color: #fca5a5; border-color: var(--liability); }
+.semantic-saving { background: rgba(34, 197, 94, .18); color: #86efac; border-color: var(--saving); }
+.semantic-expenditure { background: rgba(249, 115, 22, .18); color: #fdba74; border-color: var(--expenditure); }
+.semantic-insurance { background: rgba(234, 179, 8, .18); color: #fde68a; border-color: var(--insurance); }
+.semantic-others { background: rgba(168, 85, 247, .18); color: #d8b4fe; border-color: var(--others); }
+.semantic-badge.is-paid {
+    background: rgba(59, 130, 246, .05);
+}
+.semantic-investment.is-paid { background: rgba(59, 130, 246, .05); }
+.semantic-liability.is-paid { background: rgba(239, 68, 68, .05); }
+.semantic-saving.is-paid { background: rgba(34, 197, 94, .05); }
+.semantic-expenditure.is-paid { background: rgba(249, 115, 22, .05); }
+.semantic-insurance.is-paid { background: rgba(234, 179, 8, .05); }
+.semantic-others.is-paid { background: rgba(168, 85, 247, .05); }
 .auto-badge:hover {
     background: var(--surf3);
     color: var(--text);
@@ -945,7 +979,7 @@ td.amount {
 
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 14px;
 }
 
@@ -1219,7 +1253,7 @@ td.amount {
 
 .goal-summary {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 14px;
 }
 
@@ -1369,7 +1403,7 @@ td.amount {
     gap: 14px;
 }
 .expense-summary-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
 .expense-summary-item {
@@ -1445,7 +1479,7 @@ td.amount {
 
 .charts-container {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
 }
 
@@ -1520,6 +1554,7 @@ td.amount {
 
 .expense-card-info {
     flex: 1;
+    min-width: 0;
 }
 
 .expense-card-title {
@@ -1545,17 +1580,18 @@ td.amount {
     border-radius: 12px;
     margin-right: 8px;
 }
-.expense-card-type.insurance { background: rgba(168, 85, 247, .2); color: #a855f7; }
-.expense-card-type.investment { background: rgba(59, 130, 246, .2); color: #3b82f6; }
-.expense-card-type.saving { background: rgba(34, 197, 94, .2); color: #22c55e; }
-.expense-card-type.liability { background: rgba(249, 115, 22, .2); color: #f97316; }
-.expense-card-type.expenditure { background: rgba(249, 115, 22, .2); color: #f97316; }
+.expense-card-type.insurance { background: rgba(234, 179, 8, .18); color: #fde68a; border: 1px solid var(--insurance); }
+.expense-card-type.investment { background: rgba(59, 130, 246, .18); color: #93c5fd; border: 1px solid var(--investment); }
+.expense-card-type.saving { background: rgba(34, 197, 94, .18); color: #86efac; border: 1px solid var(--saving); }
+.expense-card-type.liability { background: rgba(239, 68, 68, .18); color: #fca5a5; border: 1px solid var(--liability); }
+.expense-card-type.expenditure { background: rgba(249, 115, 22, .18); color: #fdba74; border: 1px solid var(--expenditure); }
 
 .expense-card-amount {
     font-size: 1.3rem;
     font-weight: 700;
     color: var(--white);
     margin-left: 20px;
+    overflow-wrap: anywhere;
 }
 
 .expense-edit {
@@ -1573,7 +1609,7 @@ td.amount {
 
 .investment-summary {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 14px;
 }
 
@@ -1621,10 +1657,12 @@ td.amount {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 16px;
 }
 
 .investment-card-info {
     flex: 1;
+    min-width: 0;
 }
 
 .investment-card-title {
@@ -1651,6 +1689,7 @@ td.amount {
     margin-right: 8px;
     background: var(--surf2);
     color: var(--muted);
+    border: 1px solid currentColor;
 }
 
 .investment-card-amount {
@@ -1658,6 +1697,7 @@ td.amount {
     font-weight: 700;
     color: var(--white);
     margin-left: 20px;
+    overflow-wrap: anywhere;
 }
 
 .investment-edit {
@@ -1675,7 +1715,7 @@ td.amount {
 
 .insurance-summary {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 14px;
 }
 
@@ -1821,7 +1861,7 @@ td.amount {
 
 .card-summary {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 14px;
 }
 
@@ -1898,8 +1938,8 @@ td.amount {
     border-radius: 12px;
     margin-right: 8px;
 }
-.card-item-badge.yes { background: rgba(34, 197, 94, .2); color: #22c55e; }
-.card-item-badge.no { background: rgba(239, 68, 68, .2); color: #ef4444; }
+.card-item-badge.yes { background: rgba(34, 197, 94, .18); color: #86efac; border: 1px solid var(--saving); }
+.card-item-badge.no { background: rgba(239, 68, 68, .18); color: #fca5a5; border: 1px solid var(--liability); }
 
 .card-item-limit {
     font-size: 1.3rem;
@@ -1961,7 +2001,7 @@ td.amount {
 
 .net-worth-summary {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 14px;
 }
 
@@ -2131,7 +2171,7 @@ td.amount {
 
 .tax-summary {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 14px;
 }
 
@@ -2272,7 +2312,7 @@ td.amount {
 
 .gifts-summary {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 14px;
 }
 
@@ -2516,7 +2556,7 @@ td.amount {
 
 .annual-summary {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     gap: 14px;
 }
 
@@ -2830,6 +2870,17 @@ td.amount {
     .card-card,
     .gift-card                   { padding: 14px 16px; }
 
+    .expense-card,
+    .investment-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+    .expense-card-amount,
+    .investment-card-amount {
+        margin-left: 0;
+        font-size: 1.15rem;
+    }
+
     /* Buttons touch targets (min 44px) */
     .btn-add                     { padding: 13px 16px; font-size: 0.85rem; }
     .btn-nav                     { padding: 10px 14px; min-height: 40px; }
@@ -2871,7 +2922,7 @@ td.amount {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 24px;
+    padding: calc(16px + var(--safe-top)) calc(24px + var(--safe-right)) 16px calc(24px + var(--safe-left));
     border-bottom: 1px solid var(--border2);
     position: sticky;
     top: 0;
@@ -3044,6 +3095,27 @@ td.amount {
     letter-spacing: 0.5px;
     margin-left: 8px;
     vertical-align: middle;
+}
+
+.calculated-field {
+    justify-content: flex-end;
+}
+.calculated-value {
+    min-height: 39px;
+    display: flex;
+    align-items: center;
+    padding: 10px 13px;
+    border: 1px solid rgba(59, 130, 246, .35);
+    border-radius: 8px;
+    background: rgba(59, 130, 246, .05);
+    color: #93c5fd;
+    font-weight: 700;
+}
+.summary-notes {
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
 }
 
 /* ── Sort/Filter Toolbar ─────────────────────────────── */
@@ -3262,8 +3334,6 @@ td.amount {
     font-size: 0.7rem;
     padding: 2px 8px;
     border-radius: 10px;
-    background: rgba(168, 85, 247, 0.15);
-    color: #a855f7;
     margin-right: 4px;
 }
 .insurance-card .premium-badge {
@@ -3271,16 +3341,12 @@ td.amount {
     font-size: 0.7rem;
     padding: 2px 8px;
     border-radius: 10px;
-    background: rgba(34, 197, 94, 0.15);
-    color: #22c55e;
 }
 .insurance-card .no-premium-badge {
     display: inline-block;
     font-size: 0.7rem;
     padding: 2px 8px;
     border-radius: 10px;
-    background: rgba(234, 179, 8, 0.15);
-    color: #eab308;
 }
 
 /* ── Quick Update Result ─────────────────────────────── */

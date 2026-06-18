@@ -24,17 +24,46 @@ function getChartThemeColors() {
     };
 }
 
+const SEMANTIC_COLORS = {
+    investment: { color: "#3b82f6", bg: "rgba(59, 130, 246, .18)", paidBg: "rgba(59, 130, 246, .05)", text: "#93c5fd" },
+    liability: { color: "#ef4444", bg: "rgba(239, 68, 68, .18)", paidBg: "rgba(239, 68, 68, .05)", text: "#fca5a5" },
+    saving: { color: "#22c55e", bg: "rgba(34, 197, 94, .18)", paidBg: "rgba(34, 197, 94, .05)", text: "#86efac" },
+    savings: { color: "#22c55e", bg: "rgba(34, 197, 94, .18)", paidBg: "rgba(34, 197, 94, .05)", text: "#86efac" },
+    expenditure: { color: "#f97316", bg: "rgba(249, 115, 22, .18)", paidBg: "rgba(249, 115, 22, .05)", text: "#fdba74" },
+    insurance: { color: "#eab308", bg: "rgba(234, 179, 8, .18)", paidBg: "rgba(234, 179, 8, .05)", text: "#fde68a" },
+    others: { color: "#a855f7", bg: "rgba(168, 85, 247, .18)", paidBg: "rgba(168, 85, 247, .05)", text: "#d8b4fe" },
+    other: { color: "#a855f7", bg: "rgba(168, 85, 247, .18)", paidBg: "rgba(168, 85, 247, .05)", text: "#d8b4fe" }
+};
+
+function semanticKey(value) {
+    return String(value || "others").trim().toLowerCase().replace(/[^a-z]/g, "") || "others";
+}
+
+function getSemanticColor(value, paid = false) {
+    const palette = SEMANTIC_COLORS[semanticKey(value)] || SEMANTIC_COLORS.others;
+    return {
+        background: paid ? palette.paidBg : palette.bg,
+        color: palette.text,
+        borderColor: palette.color
+    };
+}
+
+function semanticBadgeStyle(value, paid = false) {
+    const c = getSemanticColor(value, paid);
+    return `background:${c.background};color:${c.color};border-color:${c.borderColor}`;
+}
+
 const DEFAULT_TABS = [
-    { id: "cards",               label: "Accounts",              color: "#444", text: "#fff", core: true },
-    { id: "inflow",              label: "Investments",           color: "#444", text: "#fff", core: true },
-    { id: "outflow",             label: "Fixed Outflow",          color: "#444", text: "#fff", core: true },
-    { id: "insurance",           label: "Insurance",             color: "#444", text: "#fff", core: true },
-    { id: "monthlyBudget",       label: "Budget",                color: "#444", text: "#fff", core: true },
-    { id: "financialGoal",       label: "Goals",                 color: "#444", text: "#fff", core: true },
-    { id: "netWorth",            label: "Net Worth",             color: "#444", text: "#fff" },
-    { id: "taxPlan",             label: "Tax Plan",              color: "#444", text: "#fff" },
-    { id: "gifts",               label: "Gifts",                 color: "#444", text: "#fff" },
-    { id: "emergencyFund",       label: "Emergency Fund",        color: "#444", text: "#fff" }
+    { id: "cards",               label: "Accounts",              semantic: "Others", core: true },
+    { id: "inflow",              label: "Investments",           semantic: "Investment", core: true },
+    { id: "outflow",             label: "Fixed Outflow",          semantic: "Liability", core: true },
+    { id: "insurance",           label: "Insurance",             semantic: "Insurance", core: true },
+    { id: "monthlyBudget",       label: "Budget",                semantic: "Expenditure", core: true },
+    { id: "financialGoal",       label: "Goals",                 semantic: "Saving", core: true },
+    { id: "netWorth",            label: "Net Worth",             semantic: "Others" },
+    { id: "taxPlan",             label: "Tax Plan",              semantic: "Saving" },
+    { id: "gifts",               label: "Gifts",                 semantic: "Others" },
+    { id: "emergencyFund",       label: "Emergency Fund",        semantic: "Saving" }
 ];
 
 // ── Tab-specific field configurations ───────────────────────────────────────
@@ -57,12 +86,10 @@ const TAB_FIELDS = {
     ],
     inflow: [
         { id: "name",         label: "Investment Name",     type: "text",   placeholder: "e.g. HDFC SIP, Axis FD", required: true },
-        { id: "type",         label: "Type",               type: "select", options: ["Mutual Fund", "SIP", "FD", "RD", "Stocks", "PPF", "EPF", "NPS", "Bonds", "Gold", "Real Estate", "Saving", "Other"] },
-        { id: "category",     label: "Category",           type: "select", options: ["Existing", "Monthly"] },
+        { id: "type",         label: "Type",               type: "select", options: ["Mutual Fund", "SIP", "ELSS", "Index Fund", "ETF", "FD", "RD", "PPF", "EPF", "VPF", "NPS", "NSC", "KVP", "Sovereign Gold Bond", "Gold ETF", "Digital Gold", "Stocks", "Bonds", "Corporate FD", "REIT", "InvIT", "Real Estate", "P2P Lending", "ULIP", "Saving", "Other"] },
         { id: "amount",       label: "Invested Amount (₹)", type: "number", placeholder: "Total amount invested", required: true },
-        { id: "currentValue", label: "Current Value (₹)",  type: "number", placeholder: "Market value today" },
         { id: "interestRate", label: "Expected Return (%)", type: "number", placeholder: "Annual return rate" },
-        { id: "frequency",    label: "Frequency",           type: "select", options: ["Monthly", "Quarterly", "Semi-Annual", "Annual", "One-Time"] },
+        { id: "frequency",    label: "Frequency",           type: "select", options: ["One-Time", "Monthly", "Quarterly", "Semi-Annual", "Annual"] },
         { id: "startDate",    label: "Start Date",          type: "date",   placeholder: "" },
         { id: "endDate",      label: "Maturity Date",       type: "date",   placeholder: "" },
         { id: "details",      label: "Notes",               type: "text",   placeholder: "Optional notes" }
@@ -621,6 +648,7 @@ importFileInput.addEventListener("change", (e) => {
                 .then(() => {
                     // Update local state immediately
                     appData = safeImport;
+                    normalizeAppDataModel();
                     // Re-check onboarding based on imported accounts
                     const cards = (appData.tabData || {}).cards || [];
                     const hasPrimaryImp = cards.some(c => c.isPrimary === "Yes");
@@ -732,6 +760,7 @@ function startListening() {
                 if (!appData.dataMigrated) {
                     migrateToNewTabStructure();
                 }
+                normalizeAppDataModel();
 
                 // Landing tab logic on first load
                 if (firstLoad) {
@@ -769,6 +798,15 @@ function doSave() {
     db.collection("users").doc(currentUser.uid)
         .set(appData)
         .catch(err => { localWritePending = false; console.error("Save failed:", err); });
+}
+
+function normalizeAppDataModel() {
+    if (!appData.tabData) appData.tabData = {};
+    if (Array.isArray(appData.tabData.inflow)) {
+        const before = JSON.stringify(appData.tabData.inflow);
+        appData.tabData.inflow = normalizeInvestmentEntries(appData.tabData.inflow);
+        if (JSON.stringify(appData.tabData.inflow) !== before) scheduleSave();
+    }
 }
 
 // ── Data migration: old tabs → new inflow/outflow ────────────────────────────
@@ -857,6 +895,7 @@ function migrateToNewTabStructure() {
 
     td.inflow  = newInflow;
     td.outflow = newOutflow;
+    td.inflow = normalizeInvestmentEntries(td.inflow);
 
     // Clean up old keys
     delete td.investments;
@@ -1048,6 +1087,7 @@ function getSectionEntries(tabId) {
 }
 
 function setSectionEntries(tabId, entries) {
+    if (tabId === "inflow") entries = normalizeInvestmentEntries(entries);
     if (tabId === "standard") {
         setActiveEntries(entries);
         return;
@@ -1095,6 +1135,7 @@ function readSectionFormEntry(tabId) {
 function populateSectionForm(tabId, entry) {
     const cfg = sectionConfig[tabId];
     const fields = TAB_FIELDS[tabId === "standard" ? activeTabId : tabId] || TAB_FIELDS.monthlyBudget;
+    if (tabId === "inflow") entry = normalizeInvestmentEntry(entry);
     fields.forEach(f => {
         const input = document.getElementById(`${cfg.prefix}_${f.id}`);
         if (!input) return;
@@ -1131,6 +1172,11 @@ function upsertSectionEntry(tabId, entry) {
 function resetSectionForm(tabId) {
     const cfg = sectionConfig[tabId];
     cfg.form()?.reset();
+    if (tabId === "inflow") {
+        const frequency = document.getElementById("inflow_frequency");
+        if (frequency) frequency.value = "One-Time";
+        updateInflowCalculatedValuePreview();
+    }
     updateSectionSubmitButton(tabId);
 }
 
@@ -1167,14 +1213,42 @@ function monthsBetween(startDate, endDate = new Date()) {
     return Math.max(0, (endDate.getFullYear() - start.getFullYear()) * 12 + (endDate.getMonth() - start.getMonth()));
 }
 
-function getInflowCurrentValue(item) {
+function normalizeInvestmentFrequency(item = {}) {
+    if (item.frequency) return item.frequency === "Annually" ? "Annual" : item.frequency;
+    if (item.category === "Monthly") return "Monthly";
+    return "One-Time";
+}
+
+function normalizeInvestmentEntry(entry = {}) {
+    const normalized = { ...entry };
+    normalized.frequency = normalizeInvestmentFrequency(normalized);
+    delete normalized.category;
+    normalized.currentValue = calculateInvestmentCurrentValue(normalized);
+    return normalized;
+}
+
+function normalizeInvestmentEntries(entries = []) {
+    return entries.map(normalizeInvestmentEntry);
+}
+
+function yearsBetweenDates(startDate, endDate = new Date()) {
+    if (!startDate) return 0;
+    const start = new Date(startDate);
+    const end = endDate instanceof Date ? endDate : new Date(endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return 0;
+    return Math.max(0, (end - start) / (365.25 * 24 * 60 * 60 * 1000));
+}
+
+function calculateInvestmentCurrentValue(item = {}) {
     const amount = Number(item.amount || 0);
-    const currentVal = item.currentValue === "" || item.currentValue == null ? 0 : Number(item.currentValue || 0);
-    const base = Math.max(amount, currentVal || amount);
     const annualRate = Number(item.interestRate || 0) / 100;
-    const years = monthsBetween(item.startDate) / 12;
-    if (base <= 0 || annualRate <= 0 || years <= 0) return base;
-    return base * Math.pow(1 + annualRate, years);
+    const years = yearsBetweenDates(item.startDate, new Date());
+    if (amount <= 0 || annualRate <= 0 || years <= 0) return amount;
+    return amount * Math.pow(1 + annualRate, years);
+}
+
+function getInflowCurrentValue(item) {
+    return calculateInvestmentCurrentValue(item);
 }
 
 function getOutflowAnnualAmount(item) {
@@ -1201,9 +1275,7 @@ function normalizeEntry(tabId, entry) {
         entry.status = normalizeGoalStatus(entry);
     }
     if (tabId === "inflow") {
-        if (entry.currentValue === "" || Number(entry.currentValue || 0) <= 0) {
-            entry.currentValue = Number(entry.amount || 0);
-        }
+        entry = normalizeInvestmentEntry(entry);
     }
     if (tabId === "cards" && entry.isPrimary === "Yes") {
         entry.purpose = "Expenditure";
@@ -1262,16 +1334,26 @@ function buildMonthlyAutoValues(monthKey) {
     });
 
     // Inflow tab items → auto-populate budget investing
-    const inflowItems = (appData.tabData || {}).inflow || [];
+    const inflowItems = normalizeInvestmentEntries((appData.tabData || {}).inflow || []);
     inflowItems.forEach(inv => {
         const amount = Number(inv.amount || 0);
         if (amount <= 0) return;
         if (inv.startDate && monthKey < inv.startDate.slice(0, 7)) return;
         if (inv.endDate && monthKey > inv.endDate.slice(0, 7)) return;
-        if (inv.frequency === "Annual" && (!inv.startDate || monthKey.slice(5) === inv.startDate.slice(5, 7))) {
+        const freq = normalizeInvestmentFrequency(inv);
+        if (freq === "Monthly") {
             values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
         }
-        if (inv.frequency === "One-Time" && inv.startDate && monthKey === inv.startDate.slice(0, 7)) {
+        if (freq === "Quarterly" && inv.startDate && ((Number(monthKey.slice(5, 7)) - Number(inv.startDate.slice(5, 7)) + 12) % 3 === 0)) {
+            values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
+        }
+        if (freq === "Semi-Annual" && inv.startDate && ((Number(monthKey.slice(5, 7)) - Number(inv.startDate.slice(5, 7)) + 12) % 6 === 0)) {
+            values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
+        }
+        if (freq === "Annual" && inv.startDate && monthKey.slice(5) === inv.startDate.slice(5, 7)) {
+            values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
+        }
+        if (freq === "One-Time" && inv.startDate && monthKey === inv.startDate.slice(0, 7)) {
             values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
         }
     });
@@ -1761,7 +1843,7 @@ function calculateGoalSummary(entries) {
 
 // ── Investments Tab (was Inflow) ──────────────────────────────────────────────
 function renderInflow() {
-    const entries = (appData.tabData || {}).inflow || [];
+    const entries = normalizeInvestmentEntries((appData.tabData || {}).inflow || []);
 
     if (toggleInflowEdit) toggleInflowEdit.textContent = isInflowEditMode ? "✓ Done" : "✎ Edit";
 
@@ -1786,12 +1868,12 @@ function renderInflow() {
         const sortFilterEl = document.getElementById("inflowSortFilter");
 
         if (activeInvestmentView === "existing") {
-            displayEntries = entries.filter(e => (e.category || "Existing") === "Existing" && e.frequency !== "Monthly");
+            displayEntries = entries.filter(e => e.frequency === "One-Time");
             if (portfolioEl) portfolioEl.hidden = true;
             if (chartSection) chartSection.hidden = false;
             if (inflowList) inflowList.hidden = false;
         } else if (activeInvestmentView === "monthly") {
-            displayEntries = entries.filter(e => e.category === "Monthly" || e.frequency === "Monthly");
+            displayEntries = entries.filter(e => e.frequency === "Monthly");
             if (portfolioEl) portfolioEl.hidden = true;
             if (chartSection) chartSection.hidden = false;
             if (inflowList) inflowList.hidden = false;
@@ -1816,15 +1898,16 @@ function renderInflow() {
 }
 
 function renderPortfolioSummary(entries) {
-    const existingEntries = entries.filter(e => (e.category || "Existing") === "Existing" && e.frequency !== "Monthly");
-    const monthlyEntries = entries.filter(e => e.category === "Monthly" || e.frequency === "Monthly");
+    entries = normalizeInvestmentEntries(entries);
+    const existingEntries = entries.filter(e => e.frequency === "One-Time");
+    const monthlyEntries = entries.filter(e => e.frequency === "Monthly");
 
     // One-time investments from budget
     const budgetData = appData.monthlyBudgetData || {};
     const oneTimeInvestments = [];
     Object.entries(budgetData).forEach(([monthKey, md]) => {
         const amt = Number(md?.investing?.onetimeInvestment || 0);
-        if (amt > 0) oneTimeInvestments.push({ name: `Budget Investment (${monthKey})`, amount: amt, currentValue: amt });
+            if (amt > 0) oneTimeInvestments.push({ name: `Budget Investment (${monthKey})`, amount: amt, currentValue: amt, frequency: "One-Time" });
     });
 
     function renderList(containerEl, items) {
@@ -1837,7 +1920,7 @@ function renderPortfolioSummary(entries) {
         items.forEach(item => {
             const div = document.createElement("div");
             div.className = "portfolio-item";
-            div.innerHTML = `<span>${esc(item.name)} <span style="color:var(--muted);font-size:0.75rem;">${esc(item.type || "")}</span></span><span>${formatMoney(Number(item.currentValue || item.amount || 0))}</span>`;
+            div.innerHTML = `<span>${esc(item.name)} <span class="semantic-badge semantic-investment">${esc(item.type || "Investment")}</span></span><span>${formatMoney(getInflowCurrentValue(item))}</span>`;
             containerEl.appendChild(div);
         });
     }
@@ -1846,9 +1929,9 @@ function renderPortfolioSummary(entries) {
     renderList(document.getElementById("portfolioMonthly"), monthlyEntries);
     renderList(document.getElementById("portfolioOneTime"), oneTimeInvestments);
 
-    const existingTotal = existingEntries.reduce((s, e) => s + Number(e.currentValue || e.amount || 0), 0);
-    const monthlyTotal = monthlyEntries.reduce((s, e) => s + Number(e.currentValue || e.amount || 0), 0);
-    const oneTimeTotal = oneTimeInvestments.reduce((s, e) => s + Number(e.currentValue || e.amount || 0), 0);
+    const existingTotal = existingEntries.reduce((s, e) => s + getInflowCurrentValue(e), 0);
+    const monthlyTotal = monthlyEntries.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const oneTimeTotal = oneTimeInvestments.reduce((s, e) => s + Number(e.amount || 0), 0);
     const grandTotal = existingTotal + monthlyTotal + oneTimeTotal;
 
     const el1 = document.getElementById("portfolioExistingTotal");
@@ -1891,6 +1974,32 @@ function renderInflowDynamicFields() {
         div.appendChild(input);
         inflowDynamicFields.appendChild(div);
     });
+    const calculated = document.createElement("div");
+    calculated.className = "field calculated-field";
+    calculated.innerHTML = `
+        <label>Calculated Current Value</label>
+        <div id="inflowCalculatedCurrentValue" class="calculated-value">₹0</div>
+    `;
+    inflowDynamicFields.appendChild(calculated);
+    inflowDynamicFields.oninput = updateInflowCalculatedValuePreview;
+    inflowDynamicFields.onchange = updateInflowCalculatedValuePreview;
+    updateInflowCalculatedValuePreview();
+}
+
+function getInflowDraftFromForm() {
+    return {
+        amount: Number(document.getElementById("inflow_amount")?.value || 0),
+        interestRate: Number(document.getElementById("inflow_interestRate")?.value || 0),
+        startDate: document.getElementById("inflow_startDate")?.value || "",
+        endDate: document.getElementById("inflow_endDate")?.value || "",
+        frequency: document.getElementById("inflow_frequency")?.value || "One-Time"
+    };
+}
+
+function updateInflowCalculatedValuePreview() {
+    const el = document.getElementById("inflowCalculatedCurrentValue");
+    if (!el) return;
+    el.textContent = formatMoney(calculateInvestmentCurrentValue(getInflowDraftFromForm()));
 }
 
 function renderInflowTable(entries) {
@@ -1899,6 +2008,7 @@ function renderInflowTable(entries) {
     inflowTableHead.innerHTML = "";
     const tr = document.createElement("tr");
     fields.forEach(f => { const th = document.createElement("th"); th.textContent = f.label; tr.appendChild(th); });
+    const valueTh = document.createElement("th"); valueTh.textContent = "Current Value"; tr.appendChild(valueTh);
     const actionTh = document.createElement("th"); actionTh.textContent = ""; tr.appendChild(actionTh);
     inflowTableHead.appendChild(tr);
     inflowTableBody.innerHTML = "";
@@ -1911,6 +2021,10 @@ function renderInflowTable(entries) {
             else { td.textContent = esc(item[f.id] || "—"); }
             row.appendChild(td);
         });
+        const currentTd = document.createElement("td");
+        currentTd.textContent = formatMoney(getInflowCurrentValue(item));
+        currentTd.className = "amount";
+        row.appendChild(currentTd);
         const actionTd = document.createElement("td");
         actionTd.innerHTML = renderRowActions(item.id);
         row.appendChild(actionTd);
@@ -1934,14 +2048,15 @@ function renderInflowPreviewCards(entries) {
         const card = document.createElement("div");
         card.className = "investment-card";
         const curVal = getInflowCurrentValue(item);
+        const frequency = normalizeInvestmentFrequency(item);
         card.innerHTML = `
             <div class="investment-card-info">
                 <div class="investment-card-title">${esc(item.name)}</div>
                 <div class="investment-card-details">
-                    <span class="investment-card-frequency">${esc(item.type || "Other")}</span>
-                    <span style="color:var(--muted);font-size:0.75rem;">${esc(item.frequency || "One-Time")}</span><br>
+                    <span class="investment-card-frequency" style="${semanticBadgeStyle("Investment", false)}">${esc(item.type || "Other")}</span>
+                    <span class="semantic-badge semantic-investment ${frequency === "One-Time" ? "is-paid" : ""}">${esc(frequency)}</span><br>
                     Amount: ${formatMoney(Number(item.amount || 0))}<br>
-                    Current Value: ${formatMoney(Number(item.currentValue || 0))}<br>
+                    Current Value: ${formatMoney(curVal)}<br>
                     Net Worth Today: ${formatMoney(curVal)}<br>
                     Interest: ${Number(item.interestRate || 0)}% p.a.<br>
                     Start: ${esc(item.startDate || "—")} | End: ${esc(item.endDate || "—")}<br>
@@ -1954,6 +2069,7 @@ function renderInflowPreviewCards(entries) {
 }
 
 function calculateInflowSummary(entries) {
+    entries = normalizeInvestmentEntries(entries);
     const totalAmount = entries.reduce((s, i) => s + Number(i.amount || 0), 0);
     const totalCurrent = entries.reduce((s, i) => s + getInflowCurrentValue(i), 0);
     const el1 = document.getElementById("totalInflowAmount");
@@ -1964,8 +2080,8 @@ function calculateInflowSummary(entries) {
     if (el3) el3.textContent = entries.length;
 
     // Monthly vs Existing breakdown
-    const monthlyEntries = entries.filter(e => e.category === "Monthly" || e.frequency === "Monthly");
-    const existingEntries = entries.filter(e => (e.category || "Existing") === "Existing" && e.frequency !== "Monthly");
+    const monthlyEntries = entries.filter(e => e.frequency === "Monthly");
+    const existingEntries = entries.filter(e => e.frequency === "One-Time");
     const monthlyTotal = monthlyEntries.reduce((s, i) => s + Number(i.amount || 0), 0);
     const existingTotal = existingEntries.reduce((s, i) => s + getInflowCurrentValue(i), 0);
     const el4 = document.getElementById("totalMonthlyInvestments");
@@ -1977,8 +2093,15 @@ function calculateInflowSummary(entries) {
 function renderInflowChart(entries) {
     if (inflowBarChart) { inflowBarChart.destroy(); inflowBarChart = null; }
     if (!inflowBarChartCanvas || entries.length === 0) return;
-    const labels = entries.map(e => e.name || "Unnamed");
-    const values = entries.map(e => getInflowCurrentValue(e));
+    const byType = {};
+    normalizeInvestmentEntries(entries).forEach(e => {
+        const type = e.type || "Other";
+        byType[type] = (byType[type] || 0) + getInflowCurrentValue(e);
+    });
+    const rows = Object.entries(byType).sort((a, b) => b[1] - a[1]);
+    const labels = rows.map(([type]) => type);
+    const values = rows.map(([, value]) => value);
+    if (values.length === 0) return;
     const ctx = inflowBarChartCanvas.getContext("2d");
     inflowBarChart = new Chart(ctx, {
         type: "bar",
@@ -2104,8 +2227,9 @@ function renderOutflowPreviewCards(entries) {
         const groupDiv = document.createElement("div");
         groupDiv.className = "outflow-group";
         const typeLower = type.toLowerCase().replace(/\s+/g, "");
+        const isPaid = items.every(item => item.endDate && new Date(item.endDate) < new Date());
         groupDiv.innerHTML = `<div class="outflow-group-header">
-            <span class="expense-card-type ${typeLower}">${esc(type)}</span>
+            <span class="expense-card-type ${typeLower}" style="${semanticBadgeStyle(type, isPaid)}">${esc(type)}</span>
             <span class="outflow-group-count">${items.length} item${items.length > 1 ? "s" : ""}</span>
             <strong class="outflow-group-total">${formatMoney(groupTotal)}</strong>
         </div>`;
@@ -2163,7 +2287,7 @@ function renderOutflowCharts(entries) {
     }
 
     // Type chart
-    const typeData = { "Insurance": { amount: 0, color: "#a855f7" }, "Investment": { amount: 0, color: "#3b82f6" }, "Saving": { amount: 0, color: "#22c55e" }, "Liability": { amount: 0, color: "#f97316" }, "Expenditure": { amount: 0, color: "#f97316" } };
+    const typeData = { "Insurance": { amount: 0, color: SEMANTIC_COLORS.insurance.color }, "Investment": { amount: 0, color: SEMANTIC_COLORS.investment.color }, "Saving": { amount: 0, color: SEMANTIC_COLORS.saving.color }, "Liability": { amount: 0, color: SEMANTIC_COLORS.liability.color }, "Expenditure": { amount: 0, color: SEMANTIC_COLORS.expenditure.color } };
     entries.forEach(e => { const type = e.type || "Expenditure"; if (typeData[type]) typeData[type].amount += Number(e.amount || 0); });
     if (outflowTypeChartCanvas) {
         const typeCtx = outflowTypeChartCanvas.getContext("2d");
@@ -2379,20 +2503,20 @@ function renderCardPreviewCards(entries) {
         const kycClass      = card.kycUpdated?.toLowerCase()      === "yes" ? "yes" : "no";
         const nomineeClass  = card.nomineeAdded?.toLowerCase()    === "yes" ? "yes" : "no";
         const primaryBadge  = card.isPrimary === "Yes"
-            ? `<span class="card-item-badge primary-badge">⭐ PRIMARY (Expenditure)</span>` : "";
+            ? `<span class="card-item-badge semantic-expenditure">⭐ PRIMARY (Expenditure)</span>` : "";
         const salaryBadge = card.purpose === "Salary"
-            ? `<span class="card-item-badge primary-badge" style="background:rgba(234,179,8,0.15);color:#eab308">💼 SALARY</span>` : "";
+            ? `<span class="card-item-badge semantic-insurance">💼 SALARY</span>` : "";
         const savingBadge = card.purpose === "Saving"
-            ? `<span class="card-item-badge saving-badge">💰 SAVING</span>` : "";
+            ? `<span class="card-item-badge semantic-saving">💰 SAVING</span>` : "";
 
         item.innerHTML = `
             <div class="card-item-info">
                 <div class="card-item-title">${esc(card.bankName)}${primaryBadge}${salaryBadge}${savingBadge}</div>
                 <div class="card-item-details">
-                    <span class="card-item-badge ${accountClass}">Account: ${esc(card.accountPresent || "No")}</span>
-                    <span class="card-item-badge ${creditCardClass}">Credit Card: ${esc(card.creditCardPresent || "No")}</span>
-                    <span class="card-item-badge ${kycClass}">KYC: ${esc(card.kycUpdated || "No")}</span>
-                    <span class="card-item-badge ${nomineeClass}">Nominee: ${esc(card.nomineeAdded || "No")}</span><br>
+                    <span class="card-item-badge ${accountClass} ${accountClass === "yes" ? "semantic-saving" : "semantic-liability"}">Account: ${esc(card.accountPresent || "No")}</span>
+                    <span class="card-item-badge ${creditCardClass} ${creditCardClass === "yes" ? "semantic-liability" : "semantic-saving"}">Credit Card: ${esc(card.creditCardPresent || "No")}</span>
+                    <span class="card-item-badge ${kycClass} ${kycClass === "yes" ? "semantic-saving" : "semantic-insurance"}">KYC: ${esc(card.kycUpdated || "No")}</span>
+                    <span class="card-item-badge ${nomineeClass} ${nomineeClass === "yes" ? "semantic-saving" : "semantic-insurance"}">Nominee: ${esc(card.nomineeAdded || "No")}</span><br>
                     Purpose: ${esc(card.purpose === "Others" && card.purposeOther ? card.purposeOther : (card.purpose || "—"))}
                 </div>
             </div>
@@ -2425,7 +2549,7 @@ function calculateCardSummary(entries) {
 function getAutoNetWorthEntries() {
     const auto = [];
     // Inflow items → Assets
-    const inflowItems = (appData.tabData || {}).inflow || [];
+    const inflowItems = normalizeInvestmentEntries((appData.tabData || {}).inflow || []);
     inflowItems.forEach(item => {
         const val = getInflowCurrentValue(item);
         if (val > 0) {
@@ -2770,7 +2894,7 @@ function getAutoTaxDeductions() {
         if (annual > 0) auto.push({ id: 'atax_ins_' + item.id, name: item.name || 'Insurance', amount: annual, section: '80D', details: 'From Outflow tab', auto: true });
     });
     // Inflow items → 80C
-    const inflowItems = (appData.tabData || {}).inflow || [];
+    const inflowItems = normalizeInvestmentEntries((appData.tabData || {}).inflow || []);
     inflowItems.forEach(item => {
         const freq = (item.frequency || '').toLowerCase();
         const base = Number(item.amount || 0);
@@ -3347,8 +3471,8 @@ function renderInsurancePreviewCards(entries) {
             <div class="insurance-card-info">
                 <div class="insurance-card-title">${esc(item.name)}</div>
                 <div class="insurance-card-details">
-                    <span class="policy-badge">${esc(item.policyType || "Other")}</span>
-                    ${hasPremium ? `<span class="premium-badge">${esc(item.premiumFrequency)} Premium</span>` : `<span class="no-premium-badge">No Active Premium</span>`}
+                    <span class="policy-badge semantic-insurance">${esc(item.policyType || "Other")}</span>
+                    ${hasPremium ? `<span class="premium-badge semantic-liability">${esc(item.premiumFrequency)} Premium</span>` : `<span class="no-premium-badge semantic-insurance is-paid">No Active Premium</span>`}
                     <br>Provider: ${esc(item.provider || "—")}
                     | Policy #: ${esc(item.policyNumber || "—")}
                     <br>Sum Assured: ${formatMoney(Number(item.sumAssured || 0))}
@@ -3448,6 +3572,12 @@ function calculateEmergencyFundSummary(entries) {
         currentFund = Number(entries[0].currentFund || 0);
     }
     currentEmergencyFundDisplay.textContent = formatMoney(currentFund);
+    const notesEl = document.getElementById("currentEmergencyFundNotes");
+    if (notesEl) {
+        const notes = entries[0]?.details || "";
+        notesEl.textContent = notes;
+        notesEl.hidden = !notes;
+    }
 
     // Update summary display
     const breakdownEl = document.getElementById("emergencyFundBreakdown");
@@ -4142,8 +4272,10 @@ function renderTabs() {
         const disabled = !accountsReady && tab.id !== "cards";
         btn.className = "tab" + (tab.id === activeTabId ? " active" : "") + (disabled ? " tab-disabled" : "");
         btn.textContent = tab.label;
-        btn.style.background = tab.color;
-        btn.style.color = tab.text;
+        const tabColor = getSemanticColor(tab.semantic || "Others", false);
+        btn.style.borderColor = tab.id === activeTabId ? tabColor.borderColor : "transparent";
+        btn.style.background = tab.id === activeTabId ? tabColor.background : "transparent";
+        btn.style.color = tab.id === activeTabId ? tabColor.color : "var(--text)";
         if (disabled) {
             btn.title = "Set up a Primary (Expenditure) + Salary account first";
             btn.style.opacity = "0.4";

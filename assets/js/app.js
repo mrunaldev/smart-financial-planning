@@ -174,7 +174,7 @@ const MONTHLY_BUDGET_CATEGORIES = {
         { id: "fixedExpenditure", label: "Auto-calculated Fixed Expenditure", type: "number" },
         { id: "variableExpenditure", label: "Auto-calculated Variable Expenditure", type: "number" },
         { id: "creditCardOutstanding", label: "Previous Month CC Bill (Unpaid)", type: "number" },
-        { id: "midMonthCCOutstanding", label: "Current Month CC Spending", type: "number" },
+        { id: "midMonthCCOutstanding", label: "Current Month CC Spending (from Quick Update)", type: "number" },
         { id: "debtRepayment", label: "Debt Repayment / Lending", type: "number" },
         { id: "utilityBills", label: "Utility Bills (electricity, water, gas, internet)", type: "number" },
         { id: "familyExpenditure", label: "Family Expenditure (groceries, household)", type: "number" },
@@ -182,7 +182,7 @@ const MONTHLY_BUDGET_CATEGORIES = {
     ],
     investing: [
         { id: "onetimeSaving", label: "On-Demand Saving", type: "number" },
-        { id: "onetimeInvestment", label: "On-Demand Investment", type: "number" },
+        { id: "onetimeInvestment", label: "On-Demand Investment)", type: "number" },
         { id: "ondemandExpenditure", label: "On-Demand Expenditure", type: "number" },
         { id: "ondemandLiability", label: "On-Demand Liability", type: "number" }
     ]
@@ -1376,6 +1376,7 @@ function buildMonthlyAutoValues(monthKey) {
     });
 
     // Inflow tab items → auto-populate budget investing
+    // NOTE: onetimeInvestment is now fully editable for ad-hoc investments, not auto-calculated
     const inflowItems = normalizeInvestmentEntries((appData.tabData || {}).inflow || []);
     inflowItems.forEach(inv => {
         const amount = Number(inv.amount || 0);
@@ -1383,18 +1384,20 @@ function buildMonthlyAutoValues(monthKey) {
         if (inv.startDate && monthKey < inv.startDate.slice(0, 7)) return;
         if (inv.endDate && monthKey > inv.endDate.slice(0, 7)) return;
         const freq = normalizeInvestmentFrequency(inv);
-        if (freq === "Monthly") {
-            values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
-        }
-        if (freq === "Quarterly" && inv.startDate && ((Number(monthKey.slice(5, 7)) - Number(inv.startDate.slice(5, 7)) + 12) % 3 === 0)) {
-            values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
-        }
-        if (freq === "Semi-Annual" && inv.startDate && ((Number(monthKey.slice(5, 7)) - Number(inv.startDate.slice(5, 7)) + 12) % 6 === 0)) {
-            values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
-        }
-        if (freq === "Annual" && inv.startDate && monthKey.slice(5) === inv.startDate.slice(5, 7)) {
-            values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
-        }
+        // On-Demand Investment is now fully editable - removed auto-calculation
+        // Users can manually enter ad-hoc investments in the budget edit page
+        // if (freq === "Monthly") {
+        //     values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
+        // }
+        // if (freq === "Quarterly" && inv.startDate && ((Number(monthKey.slice(5, 7)) - Number(inv.startDate.slice(5, 7)) + 12) % 3 === 0)) {
+        //     values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
+        // }
+        // if (freq === "Semi-Annual" && inv.startDate && ((Number(monthKey.slice(5, 7)) - Number(inv.startDate.slice(5, 7)) + 12) % 6 === 0)) {
+        //     values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
+        // }
+        // if (freq === "Annual" && inv.startDate && monthKey.slice(5) === inv.startDate.slice(5, 7)) {
+        //     values.investing.onetimeInvestment = (values.investing.onetimeInvestment || 0) + amount;
+        // }
         // One-time inflow items excluded from recurring monthly budget
     });
 
@@ -1404,9 +1407,15 @@ function buildMonthlyAutoValues(monthKey) {
 function applyMonthlyAutoValues(monthKey, monthData) {
     monthData.autoLinkedFields = monthData.autoLinkedFields || {};
     monthData.autoLinkedBreakdown = monthData.autoLinkedBreakdown || {};
+    
+    // Preserve Current Month CC Spending value from Quick Update before clearing
+    const preservedCCValue = Number(monthData.outflow?.midMonthCCOutstanding || 0);
+    
     if (!isCurrentOrFutureMonth(monthKey)) return monthData.autoLinkedFields;
     Object.keys(monthData.autoLinkedFields).forEach(key => {
         const [category, fieldId] = key.split(".");
+        // Skip clearing midMonthCCOutstanding - it's managed by Quick Update
+        if (fieldId === "midMonthCCOutstanding") return;
         if (monthData[category]) monthData[category][fieldId] = 0;
         delete monthData.autoLinkedFields[key];
         delete monthData.autoLinkedBreakdown[key];
@@ -1428,12 +1437,26 @@ function applyMonthlyAutoValues(monthKey, monthData) {
     const prevData = (appData.monthlyBudgetData || {})[prevKey];
     if (prevData && prevData._monthClosed) {
         const prevCC = Number(prevData.outflow?.midMonthCCOutstanding || 0);
+        if (!monthData.outflow) monthData.outflow = {};
+        monthData.outflow.creditCardOutstanding = prevCC;
+        // Always mark as auto-linked to prevent editing, even if value is 0
+        monthData.autoLinkedFields["outflow.creditCardOutstanding"] = true;
         if (prevCC > 0) {
-            if (!monthData.outflow) monthData.outflow = {};
-            monthData.outflow.creditCardOutstanding = prevCC;
-            monthData.autoLinkedFields["outflow.creditCardOutstanding"] = true;
             monthData.autoLinkedBreakdown["outflow.creditCardOutstanding"] = [
                 { name: "CC Outstanding from " + prevDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" }), amount: prevCC, source: "Previous Month Close" }
+            ];
+        } else {
+            monthData.autoLinkedBreakdown["outflow.creditCardOutstanding"] = [
+                { name: "No CC outstanding from previous month", amount: 0, source: "Previous Month Close" }
+            ];
+        }
+    } else {
+        // If there's a value but it wasn't auto-calculated (legacy data), still mark as auto-linked to prevent editing
+        const existingCC = Number(monthData.outflow?.creditCardOutstanding || 0);
+        if (existingCC > 0) {
+            monthData.autoLinkedFields["outflow.creditCardOutstanding"] = true;
+            monthData.autoLinkedBreakdown["outflow.creditCardOutstanding"] = [
+                { name: "CC Outstanding (existing value)", amount: existingCC, source: "Existing Data" }
             ];
         }
     }
@@ -1484,6 +1507,16 @@ function applyMonthlyAutoValues(monthKey, monthData) {
     monthData.autoLinkedBreakdown["outflow.variableExpenditure"] = breakdownItems.length > 0
         ? breakdownItems.filter(b => b.amount !== 0)
         : [{ name: "No transfer done yet", amount: 0, source: "Pending" }];
+
+    // Auto-calculate Current Month CC Spending from Quick Update data (applies to all months)
+    // Restore the preserved value to prevent it from being reset to 0
+    if (!monthData.outflow) monthData.outflow = {};
+    monthData.outflow.midMonthCCOutstanding = preservedCCValue;
+    // Mark as auto-linked to show it comes from Quick Update
+    monthData.autoLinkedFields["outflow.midMonthCCOutstanding"] = true;
+    monthData.autoLinkedBreakdown["outflow.midMonthCCOutstanding"] = [
+        { name: "Current Month CC Spending", amount: preservedCCValue, source: "Quick Update (Mid-Month)" }
+    ];
 
     return monthData.autoLinkedFields;
 }
@@ -3982,6 +4015,14 @@ function renderCategoryFields(container, fields, data, autoLinkedFields = {}, au
             }
             label.appendChild(autoBadge);
         }
+        // Special case: Always add auto-calculated badge for creditCardOutstanding
+        if (field.id === "creditCardOutstanding" && !isAutoLinked) {
+            const autoBadge = document.createElement("span");
+            autoBadge.className = "auto-badge";
+            autoBadge.textContent = "auto-calculated";
+            autoBadge.title = "Auto-calculated from previous month's CC spending upon month close";
+            label.appendChild(autoBadge);
+        }
         div.appendChild(label);
         
         const input = document.createElement("input");
@@ -3994,7 +4035,20 @@ function renderCategoryFields(container, fields, data, autoLinkedFields = {}, au
         input.dataset.category = container.id;
         if (isAutoLinked) {
             input.disabled = true;
-            input.title = "Auto-populated from Inflow or Outflow tab. Edit the source item to change current/future months.";
+            // Custom tooltip for specific auto-linked fields
+            if (field.id === "midMonthCCOutstanding") {
+                input.title = "Auto-populated from Quick Update section. Update the value there to change it.";
+            } else if (field.id === "creditCardOutstanding") {
+                input.title = "Auto-calculated from previous month's CC spending. Use 'Settle from Saving' button to pay it off.";
+            } else {
+                input.title = "Auto-populated from Inflow or Outflow tab. Edit the source item to change current/future months.";
+            }
+            div.classList.add("auto-linked-field");
+        }
+        // Special case: Always disable creditCardOutstanding as it should only be auto-calculated
+        if (field.id === "creditCardOutstanding") {
+            input.disabled = true;
+            input.title = "Auto-calculated from previous month's CC spending upon month close. Use 'Settle from Saving' button to pay it off.";
             div.classList.add("auto-linked-field");
         }
         
@@ -4184,9 +4238,16 @@ function calculateAndDisplaySummary(monthData) {
     const transferDone = Number(monthData._transferDone || 0);
     window._budgetTrackedExpenses = untracked;
 
-    // Budget status banner — based on spendable vs untracked
+    // Budget status banner — based on spendable vs untracked (hidden in edit mode)
     const isMonthClosed = Boolean(monthData._monthClosed);
-    if (!isMonthClosed && budgetStatus) {
+    if (isBudgetEditMode) {
+        // Completely hide budget status in edit mode
+        if (budgetStatus) {
+            budgetStatus.hidden = true;
+            budgetStatus.textContent = "";
+        }
+    } else if (!isMonthClosed && budgetStatus) {
+        budgetStatus.hidden = false;
         budgetStatus.className = "budget-status";
         // Guard: no accounts set up
         if (!salaryAccount || !expenditureAccount) {

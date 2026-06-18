@@ -86,7 +86,7 @@ const TAB_FIELDS = {
     ],
     inflow: [
         { id: "name",         label: "Investment Name",     type: "text",   placeholder: "e.g. HDFC SIP, Axis FD", required: true },
-        { id: "type",         label: "Type",               type: "select", options: ["Mutual Fund", "SIP", "ELSS", "Index Fund", "ETF", "FD", "RD", "PPF", "EPF", "VPF", "NPS", "NSC", "KVP", "Sovereign Gold Bond", "Gold ETF", "Digital Gold", "Stocks", "Bonds", "Corporate FD", "REIT", "InvIT", "Real Estate", "P2P Lending", "ULIP", "Saving", "Other"] },
+                { id: "type",         label: "Type",               type: "select", options: ["Mutual Fund", "ELSS", "Index Fund", "ETF", "FD", "RD", "PPF", "EPF", "VPF", "NPS", "NSC", "SSY", "SGB", "Gold ETF", "Digital Gold", "Stocks", "Bonds", "REIT", "Real Estate", "P2P Lending", "ULIP", "Saving", "Others"] },
         { id: "amount",       label: "Invested Amount (₹)", type: "number", placeholder: "Total amount invested", required: true },
         { id: "interestRate", label: "Expected Return (%)", type: "number", placeholder: "Annual return rate" },
         { id: "frequency",    label: "Frequency",           type: "select", options: ["One-Time", "Monthly", "Quarterly", "Semi-Annual", "Annual"] },

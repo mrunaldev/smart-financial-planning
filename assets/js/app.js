@@ -89,7 +89,7 @@ const TAB_FIELDS = {
         { id: "name",         label: "Investment Name",     type: "text",   placeholder: "e.g. HDFC SIP, Axis FD", required: true },
         { id: "type",         label: "Type",               type: "select", options: ["Mutual Fund", "SIP", "ELSS", "Index Fund", "ETF", "FD", "RD", "PPF", "EPF", "VPF", "NPS", "NSC", "SSY", "SGB", "Gold ETF", "Digital Gold", "Stocks", "Bonds", "REIT", "Real Estate", "P2P Lending", "ULIP", "Savings", "Others"] },
         { id: "amount",       label: "Invested Amount (₹)", type: "number", placeholder: "Total amount invested", required: true },
-        { id: "interestRate", label: "Expected Return (%)", type: "number", placeholder: "Annual return rate" },
+        { id: "interestRate", label: "Expected Return (%)", type: "number", placeholder: "Annual return rate", step: "0.01" },
         { id: "frequency",    label: "Frequency",           type: "select", options: ["One-Time", "Monthly", "Quarterly", "Semi-Annual", "Annual"] },
         { id: "startDate",    label: "Start Date",          type: "date",   placeholder: "" },
         { id: "endDate",      label: "Maturity Date",       type: "date",   placeholder: "" },
@@ -121,7 +121,7 @@ const TAB_FIELDS = {
         { id: "name",      label: "Asset/Liability Name", type: "text",   placeholder: "e.g. House, Car, Loan", required: true },
         { id: "type",      label: "Type",               type: "select", options: ["Asset", "Liability"] },
         { id: "value",     label: "Value Today (₹)",    type: "number", placeholder: "0", required: true },
-        { id: "growthRate", label: "Expected Annual Growth (%)", type: "number", placeholder: "0" },
+        { id: "growthRate", label: "Expected Annual Growth (%)", type: "number", placeholder: "0", step: "0.01" },
         { id: "details",   label: "Details",            type: "text",   placeholder: "Optional" }
     ],
     taxPlan: [
@@ -473,7 +473,7 @@ auth.onAuthStateChanged(user => {
     if (user) {
         currentUser = user;
         authScreen.hidden = true;
-        appScreen.hidden  = false;
+        // Don't show app screen yet — wait for first Firestore snapshot to avoid flash
         startListening();
     } else {
         currentUser = null;
@@ -793,6 +793,12 @@ function startListening() {
                         activeTabId = "cards";
                     } else {
                         activeTabId = "monthlyBudget";
+                        // Auto-advance to next month if current month is closed
+                        const todayKey = getMonthKey(new Date());
+                        const todayMonthData = (appData.monthlyBudgetData || {})[todayKey];
+                        if (todayMonthData && todayMonthData._monthClosed) {
+                            currentMonth.setMonth(currentMonth.getMonth() + 1);
+                        }
                     }
                 }
             } else {
@@ -803,6 +809,8 @@ function startListening() {
                     activeTabId = "cards";
                 }
             }
+            // Show app screen now that data is ready (prevents flash of intermediate content)
+            appScreen.hidden = false;
             render();
         }, err => console.error("Firestore listen error:", err));
 }
@@ -1597,7 +1605,54 @@ function renderMonthlyBudget() {
     const budgetStatusEl = document.getElementById("budgetStatus");
     if (budgetStatusEl) {
         if (isMonthClosed) {
-            budgetStatusEl.innerHTML = `<div class="month-end-banner" style="background:rgba(34,197,94,0.08);border-color:rgba(34,197,94,0.3);">
+            let savedStatus = monthData._closedBudgetStatus || "";
+            let savedStatusType = monthData._closedBudgetStatusType || "neutral";
+            
+            // Fallback: if status wasn't saved (month closed before fix), recalculate it
+            if (!savedStatus) {
+                const inflowTotal = Object.values(monthData.inflow || {}).reduce((s, v) => s + Number(v || 0), 0);
+                const allOutflows = ((appData.tabData || {}).outflow || []);
+                let fixedMonthlyOutflow = 0;
+                allOutflows.forEach(e => {
+                    const amount = Number(e.amount || 0);
+                    if (amount <= 0) return;
+                    const freq = e.frequency || "Monthly";
+                    let monthlyAmt = 0;
+                    if (freq === "Monthly")      monthlyAmt = amount;
+                    else if (freq === "Quarterly")   monthlyAmt = amount / 3;
+                    else if (freq === "Semi-Annual") monthlyAmt = amount / 6;
+                    else if (freq === "Annual")      monthlyAmt = amount / 12;
+                    fixedMonthlyOutflow += monthlyAmt;
+                });
+                const spendable = inflowTotal - fixedMonthlyOutflow;
+                const variableExp = Number(monthData.outflow?.variableExpenditure || 0);
+                const midMonthCC = Number(monthData.outflow?.midMonthCCOutstanding || 0);
+                const untracked = variableExp + midMonthCC;
+                const budgetBalance = spendable - untracked;
+                
+                if (budgetBalance > 0) {
+                    savedStatus = `Budget Surplus: +${formatMoney(budgetBalance)} remaining`;
+                    savedStatusType = "positive";
+                } else if (budgetBalance < 0) {
+                    savedStatus = `Over Budget: ${formatMoney(Math.abs(budgetBalance))} overspent`;
+                    savedStatusType = "negative";
+                } else {
+                    savedStatus = `Budget Balanced — all income allocated`;
+                    savedStatusType = "neutral";
+                }
+                
+                // Save the recalculated status for future reference
+                monthData._closedBudgetStatus = savedStatus;
+                monthData._closedBudgetStatusType = savedStatusType;
+                scheduleSave();
+            }
+            
+            let statusColor = "rgba(34,197,94,0.08)";
+            let statusBorder = "rgba(34,197,94,0.3)";
+            if (savedStatusType === "negative") { statusColor = "rgba(239,68,68,0.08)"; statusBorder = "rgba(239,68,68,0.3)"; }
+            else if (savedStatusType === "neutral") { statusColor = "rgba(234,179,8,0.08)"; statusBorder = "rgba(234,179,8,0.3)"; }
+            budgetStatusEl.innerHTML = `<div class="month-end-banner" style="background:${statusColor};border-color:${statusBorder};">
+                ${savedStatus ? `<span style="display:block;margin-bottom:4px;">${savedStatus}</span>` : ""}
                 <span>🔒 This month's budget is closed and read-only.</span>
             </div>`;
         } else {
@@ -1812,7 +1867,7 @@ function renderGoalDynamicFields() {
             input.placeholder = field.placeholder || "";
             if (field.type === "number") {
                 input.min = "0";
-                input.step = "1";
+                input.step = field.step || "1";
             }
         }
         input.id = `goal_${field.id}`;
@@ -2050,7 +2105,7 @@ function renderInflowDynamicFields() {
             input = document.createElement("input");
             input.type = field.type;
             input.placeholder = field.placeholder || "";
-            if (field.type === "number") { input.min = "0"; input.step = "1"; }
+            if (field.type === "number") { input.min = "0"; input.step = field.step || "1"; }
         }
         input.id = `inflow_${field.id}`;
         if (field.required) input.required = true;
@@ -2141,7 +2196,7 @@ function renderInflowPreviewCards(entries) {
                     Amount: ${formatMoney(Number(item.amount || 0))}<br>
                     Current Value: ${formatMoney(curVal)}<br>
                     Net Worth Today: ${formatMoney(curVal)}<br>
-                    Interest: ${Number(item.interestRate || 0)}% p.a.<br>
+                    Interest: ${Number(item.interestRate || 0).toFixed(2)}% p.a.<br>
                     Start: ${esc(item.startDate || "—")} | End: ${esc(item.endDate || "—")}<br>
                     ${item.details ? esc(item.details) : ""}
                 </div>
@@ -2259,7 +2314,7 @@ function renderOutflowDynamicFields() {
             input = document.createElement("input");
             input.type = field.type;
             input.placeholder = field.placeholder || "";
-            if (field.type === "number") { input.min = "0"; input.step = "1"; }
+            if (field.type === "number") { input.min = "0"; input.step = field.step || "1"; }
         }
         input.id = `outflow_${field.id}`;
         if (field.required && field.id !== "bankName") input.required = true;
@@ -2476,7 +2531,7 @@ function renderCardDynamicFields() {
             input.placeholder = field.placeholder || "";
             if (field.type === "number") {
                 input.min = "0";
-                input.step = "1";
+                input.step = field.step || "1";
             }
         }
         input.id = `card_${field.id}`;
@@ -2755,7 +2810,7 @@ function renderNetWorthDynamicFields() {
             input.placeholder = field.placeholder || "";
             if (field.type === "number") {
                 input.min = "0";
-                input.step = "1";
+                input.step = field.step || "1";
             }
         }
         input.id = `netWorth_${field.id}`;
@@ -3126,7 +3181,7 @@ function renderTaxPlanDynamicFields() {
             input.placeholder = field.placeholder || "";
             if (field.type === "number") {
                 input.min = "0";
-                input.step = "1";
+                input.step = field.step || "1";
             }
         }
         input.id = `taxPlan_${field.id}`;
@@ -3354,7 +3409,7 @@ function renderGiftsDynamicFields() {
             input.placeholder = field.placeholder || "";
             if (field.type === "number") {
                 input.min = "0";
-                input.step = "1";
+                input.step = field.step || "1";
             }
         }
         input.id = `gifts_${field.id}`;
@@ -3509,7 +3564,7 @@ function renderEmergencyFundDynamicFields() {
             input.placeholder = field.placeholder || "";
             if (field.type === "number") {
                 input.min = "0";
-                input.step = "1";
+                input.step = field.step || "1";
             }
         }
         input.id = `emergencyFund_${field.id}`;
@@ -3563,7 +3618,7 @@ function renderInsuranceDynamicFields() {
             input = document.createElement("input");
             input.type = field.type;
             input.placeholder = field.placeholder || "";
-            if (field.type === "number") { input.min = "0"; input.step = "1"; }
+            if (field.type === "number") { input.min = "0"; input.step = field.step || "1"; }
         }
         input.id = `insurance_${field.id}`;
         if (field.required) input.required = true;
@@ -3859,10 +3914,31 @@ function calculateAnnualSummary() {
             const date = new Date(month.month + "-01");
             const monthName = date.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
             
+            // Calculate budget status for this month
+            const storedMd = monthlyBudgetData[month.month] || {};
+            const totalOutflowMonth = month.expenditure + month.saving + month.investment + month.liability + month.insurance + month.other;
+            const budgetDiff = month.income - totalOutflowMonth;
+            let budgetStatusHtml = "";
+            if (storedMd._closedBudgetStatus) {
+                // Use saved status from when month was closed
+                const statusType = storedMd._closedBudgetStatusType || "neutral";
+                const statusColor = statusType === "positive" ? "#22c55e" : statusType === "negative" ? "#ef4444" : "#eab308";
+                budgetStatusHtml = `<span class="annual-month-budget-status" style="color:${statusColor};font-weight:600;font-size:0.78rem;">${storedMd._closedBudgetStatus}</span>`;
+            } else if (month.income > 0) {
+                // Compute budget status: income vs total outflow
+                if (budgetDiff > 0) {
+                    budgetStatusHtml = `<span class="annual-month-budget-status" style="color:#22c55e;font-weight:600;font-size:0.78rem;">Under Budget: +${formatMoney(budgetDiff)}</span>`;
+                } else if (budgetDiff < 0) {
+                    budgetStatusHtml = `<span class="annual-month-budget-status" style="color:#ef4444;font-weight:600;font-size:0.78rem;">Over Budget: ${formatMoney(Math.abs(budgetDiff))}</span>`;
+                } else {
+                    budgetStatusHtml = `<span class="annual-month-budget-status" style="color:#eab308;font-weight:600;font-size:0.78rem;">Balanced</span>`;
+                }
+            }
+
             const div = document.createElement("div");
             div.className = "annual-month-item";
             div.innerHTML = `
-                <span class="annual-month-name">${monthName}</span>
+                <span class="annual-month-name">${monthName}${storedMd._monthClosed ? ' 🔒' : ''}</span>
                 <div class="annual-month-details">
                     <span class="annual-month-detail">Income: <strong>${formatMoney(month.income)}</strong></span>
                     <span class="annual-month-detail">Expenditure: <strong>${formatMoney(month.expenditure)}</strong></span>
@@ -3871,6 +3947,7 @@ function calculateAnnualSummary() {
                     <span class="annual-month-detail">Liability: <strong>${formatMoney(month.liability)}</strong></span>
                     <span class="annual-month-detail">Insurance: <strong>${formatMoney(month.insurance)}</strong></span>
                     <span class="annual-month-detail">Others: <strong>${formatMoney(month.other)}</strong></span>
+                    ${budgetStatusHtml}
                 </div>
             `;
             annualMonthsList.appendChild(div);
@@ -4216,11 +4293,22 @@ function calculateAndDisplaySummary(monthData) {
     const availableEl = document.getElementById("amountAvailableToSpend");
     const availableLabelEl = document.getElementById("amountAvailableLabel");
     if (availableEl) {
-        availableEl.textContent = formatMoney(Math.abs(spendable));
-        availableEl.style.color = spendable >= 0 ? "#22c55e" : "#ef4444";
+        // Don't show amount until income is entered
+        if (inflowTotal === 0) {
+            availableEl.textContent = "₹0";
+            availableEl.style.color = "var(--dim)";
+        } else {
+            availableEl.textContent = formatMoney(Math.abs(spendable));
+            availableEl.style.color = spendable >= 0 ? "#22c55e" : "#ef4444";
+        }
     }
     if (availableLabelEl) {
-        availableLabelEl.textContent = spendable >= 0 ? "Total Spendable This Month" : "Amount Overspent";
+        // Don't show label until income is entered
+        if (inflowTotal === 0) {
+            availableLabelEl.textContent = "";
+        } else {
+            availableLabelEl.textContent = spendable >= 0 ? "Total Spendable This Month" : "Amount Overspent";
+        }
     }
 
     // UNTRACKED EXPENSES = variable expenditure (spent from exp account) + CC outstanding this month
@@ -4246,6 +4334,9 @@ function calculateAndDisplaySummary(monthData) {
             budgetStatus.hidden = true;
             budgetStatus.textContent = "";
         }
+    } else if (isMonthClosed && budgetStatus) {
+        // For closed months, the status banner is already rendered in renderMonthlyBudget
+        // Don't overwrite it here
     } else if (!isMonthClosed && budgetStatus) {
         budgetStatus.hidden = false;
         budgetStatus.className = "budget-status";
@@ -4462,7 +4553,7 @@ function renderDynamicFields() {
             input.placeholder = field.placeholder || "";
             if (field.type === "number") {
                 input.min = "0";
-                input.step = "1";
+                input.step = field.step || "1";
             }
         }
         input.id = `field_${field.id}`;
@@ -4755,11 +4846,30 @@ nextMonthBtn.addEventListener("click", () => {
     const step = isAnnualBudgetView ? 12 : 1;
     const proposed = new Date(currentMonth);
     proposed.setMonth(proposed.getMonth() + step);
+    
     // Block navigation beyond next month (or next FY)
     const maxDate = new Date();
     maxDate.setMonth(maxDate.getMonth() + 1); // next month from today
     maxDate.setDate(1);
-    if (!isAnnualBudgetView && proposed > maxDate) return;
+
+    if (!isAnnualBudgetView) {
+        // Allow viewing next month if the current viewed month is closed
+        const currentViewedMonthKey = getMonthKey(currentMonth);
+        const currentViewedMonthData = (appData.monthlyBudgetData || {})[currentViewedMonthKey];
+        const isCurrentViewedClosed = currentViewedMonthData && currentViewedMonthData._monthClosed;
+
+        if (isCurrentViewedClosed) {
+            // If current viewed month is closed, allow going to the very next month
+            // But block going further than that
+            const nextMonthAfterClosed = new Date(currentMonth);
+            nextMonthAfterClosed.setMonth(nextMonthAfterClosed.getMonth() + 1);
+            const maxAllowed = new Date(nextMonthAfterClosed.getFullYear(), nextMonthAfterClosed.getMonth() + 1, 1);
+            if (proposed >= maxAllowed) return;
+        } else {
+            // Normal case: allow up to next month from today
+            if (proposed > maxDate) return;
+        }
+    }
     if (isAnnualBudgetView) {
         const proposedFYStart = proposed.getMonth() >= 3 ? proposed.getFullYear() : proposed.getFullYear() - 1;
         const currentFYStart = new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1;
@@ -5005,6 +5115,37 @@ if (btnCarryForward) btnCarryForward.addEventListener("click", () => {
     confirmMsg += `• Navigate to next month\n\nProceed?`;
     if (!confirm(confirmMsg)) return;
 
+    // Save the budget status before closing
+    const inflowTotalClose = Object.values(monthData.inflow || {}).reduce((s, v) => s + Number(v || 0), 0);
+    const allOutflowsClose = ((appData.tabData || {}).outflow || []);
+    let fixedMonthlyOutflowClose = 0;
+    allOutflowsClose.forEach(e => {
+        const amount = Number(e.amount || 0);
+        if (amount <= 0) return;
+        const freq = e.frequency || "Monthly";
+        let monthlyAmt = 0;
+        if (freq === "Monthly")      monthlyAmt = amount;
+        else if (freq === "Quarterly")   monthlyAmt = amount / 3;
+        else if (freq === "Semi-Annual") monthlyAmt = amount / 6;
+        else if (freq === "Annual")      monthlyAmt = amount / 12;
+        fixedMonthlyOutflowClose += monthlyAmt;
+    });
+    const spendableClose = inflowTotalClose - fixedMonthlyOutflowClose;
+    const variableExpClose = Number(monthData.outflow?.variableExpenditure || 0);
+    const midMonthCCClose = Number(monthData.outflow?.midMonthCCOutstanding || 0);
+    const untrackedClose = variableExpClose + midMonthCCClose;
+    const budgetBalanceClose = spendableClose - untrackedClose;
+    if (budgetBalanceClose > 0) {
+        monthData._closedBudgetStatus = `Budget Surplus: +${formatMoney(budgetBalanceClose)} remaining`;
+        monthData._closedBudgetStatusType = "positive";
+    } else if (budgetBalanceClose < 0) {
+        monthData._closedBudgetStatus = `Over Budget: ${formatMoney(Math.abs(budgetBalanceClose))} overspent`;
+        monthData._closedBudgetStatusType = "negative";
+    } else {
+        monthData._closedBudgetStatus = `Budget Balanced — all income allocated`;
+        monthData._closedBudgetStatusType = "neutral";
+    }
+
     // Close the current month
     monthData._monthClosed = true;
     monthData._carryForwardDone = balance;
@@ -5204,11 +5345,20 @@ giftsTableBody.addEventListener("click", e => {
 
 // Emergency Fund event bindings
 toggleEmergencyFundEdit.addEventListener("click", () => {
+    if (isEmergencyFundEditMode) {
+        // Exiting edit mode (Done) — save the emergency fund data
+        saveEmergencyFundFromForm();
+    }
     isEmergencyFundEditMode = !isEmergencyFundEditMode;
     renderEmergencyFund();
 });
 
-emergencyFundForm.addEventListener("submit", addEmergencyFundEntry);
+emergencyFundForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    saveEmergencyFundFromForm();
+    isEmergencyFundEditMode = false;
+    renderEmergencyFund();
+});
 
 // Insurance event bindings
 if (toggleInsuranceEdit) toggleInsuranceEdit.addEventListener("click", () => {
@@ -5392,13 +5542,14 @@ function addGiftsEntry(event) {
     renderGifts();
 }
 
-function addEmergencyFundEntry(event) {
-    event.preventDefault();
+function saveEmergencyFundFromForm() {
     const fields = TAB_FIELDS.emergencyFund || TAB_FIELDS.monthlyBudget;
-    const entry = { id: String(Date.now()) };
+    const existingEntries = activeEntries();
+    const entry = { id: (existingEntries.length > 0 ? existingEntries[0].id : String(Date.now())) };
     
     fields.forEach(f => {
         const input = document.getElementById(`emergencyFund_${f.id}`);
+        if (!input) return;
         if (f.type === "number") {
             entry[f.id] = Number(input.value || 0);
         } else {
@@ -5407,11 +5558,14 @@ function addEmergencyFundEntry(event) {
     });
     
     // Emergency fund is a single entry, replace existing
-    const entries = [entry];
-    setActiveEntries(entries);
+    setActiveEntries([entry]);
     emergencyFundForm.reset();
+}
+
+function addEmergencyFundEntry(event) {
+    event.preventDefault();
+    saveEmergencyFundFromForm();
     isEmergencyFundEditMode = false;
-    // cancelEmergencyFundEdit removed
     renderEmergencyFund();
 }
 

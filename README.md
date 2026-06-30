@@ -17,8 +17,10 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
    - **Mid-Month Quick Update**: update Expenditure Account balance and CC outstanding from budget edit mode (salary is auto-managed, not editable)
    - Summary: Total Inflow, Total Outflow (recurring monthly obligations only), Salary Balance, Expenditure Balance, Total Spendable, Variable Expenses
    - Budget status banner: **Surplus** / **Over Budget** / **Balanced** + edge cases (no accounts, no income, closed month)
-   - Month navigation restricted: cannot go before April of onboarding FY or beyond next month from today
+   - Budget status preserved when month is closed (shows surplus/deficit along with lock indicator)
+   - Month navigation: cannot go before onboarding month; next month viewable if current month is closed
    - Financial-year annual view with Apr–Mar calculations (averages based on months with data)
+   - Annual monthly breakdown shows under/over budget status per month with lock icon for closed months
    - Pie chart: 6 categories (Investment, Liability, Savings, Expenditure, Insurance, Others) — recurring instruments only, excludes on-demand/one-time items
    - Edit mode with snapshot/restore on Cancel
 
@@ -29,7 +31,7 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
    - Preview/Edit mode with summary
 
 3. **Inflow** – Track income sources & investments (replaces old Investments tab)
-   - Name, Type (FD/RD/MF/Stocks/PPF/NPS/Gold/Real Estate/Other), Frequency, Amount, Current Value, Interest Rate, Start/End Date, Details
+   - Name, Type (FD/RD/MF/Stocks/PPF/NPS/Gold/Real Estate/Other), Frequency, Amount, Current Value, Interest Rate (decimal supported, e.g., 7.5%), Start/End Date, Details
    - Current value calculation based on start date, amount, and annual interest rate
    - Bar chart visualization; grouped preview cards
    - Auto-populates budget investing fields for Monthly frequency items
@@ -44,6 +46,7 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
 
 5. **Accounts** – Manage bank accounts
    - Bank/NBFC Name, Primary Account, Balance, Debit/Credit Card, Credit Limit, Purpose (Salary/Expenditure/Saving/Investment/Loan/Others)
+   - Summary cards: No of Accounts, No of Debit Cards, Total Balance, No of Credit Cards, Total Credit Limit
    - **Primary account** = Expenditure account (mandatory, one only, purpose auto-set to "Expenditure") — your main daily-use spending account
    - **Salary account** = mandatory, non-primary, purpose "Salary" — where salary is credited, then transferred to Primary
    - **Saving account**: max one, shown with 💰 SAVING badge
@@ -74,6 +77,7 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
    - Practical scenarios: 3-month (bare min), 6-month (recommended), 12-month (ideal)
    - Monthly need breakdown with component details
    - Status: EXCELLENT (≥12), READY (6–12), ADEQUATE (3–6), LOW (<3)
+   - Click **Done** to save changes (removed separate Update button)
 
 ### Additional Features
 

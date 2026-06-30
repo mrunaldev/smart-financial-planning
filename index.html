@@ -268,6 +268,9 @@
                         </div>
                     </div>
                     <div class="transfer-action-row">
+                        <div class="transfer-warning" style="background:rgba(234,179,8,0.10);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:0.82rem;color:#eab308;">
+                            <strong>Warning:</strong> Add ALL outflow items before Execute Transfer. Items added after won't be deducted from salary.
+                        </div>
                         <button type="button" id="btnDoTransfer" class="btn-do-transfer">Execute Transfer</button>
                         <small class="transfer-note">Deducts all obligations from Salary, credits Expenditure/Saving/Investment accounts.</small>
                     </div>
@@ -450,7 +453,7 @@
                     <strong id="totalMonthlyInvestments">₹0</strong>
                 </div>
                 <div class="investment-summary-item">
-                    <span class="investment-summary-label">One-time (Lump Sum)</span>
+                    <span class="investment-summary-label">Total Existing Asset Value</span>
                     <span class="summary-hint">FDs, PPF, Stocks, Bonds, etc.</span>
                     <strong id="totalExistingInvestments">₹0</strong>
                 </div>
@@ -652,11 +655,11 @@
             <!-- Card Summary -->
             <div class="card-summary">
                 <div class="card-summary-item">
-                    <span class="card-summary-label">No. of Bank Accounts</span>
+                    <span class="card-summary-label">No of Accounts</span>
                     <strong id="totalBanks">0</strong>
                 </div>
                 <div class="card-summary-item">
-                    <span class="card-summary-label">No. of Debit Cards</span>
+                    <span class="card-summary-label">No of Debit Cards</span>
                     <strong id="totalDebitCards">0</strong>
                 </div>
                 <div class="card-summary-item">
@@ -664,12 +667,12 @@
                     <strong id="totalBalance">₹0</strong>
                 </div>
                 <div class="card-summary-item">
-                    <span class="card-summary-label">Total Credit Limit</span>
-                    <strong id="totalCreditLimit">₹0</strong>
+                    <span class="card-summary-label">No of Credit Cards</span>
+                    <strong id="totalCreditCards">0</strong>
                 </div>
                 <div class="card-summary-item">
-                    <span class="card-summary-label">Accounts with Credit Cards</span>
-                    <strong id="totalCreditCards">0</strong>
+                    <span class="card-summary-label">Total Credit Limit</span>
+                    <strong id="totalCreditLimit">₹0</strong>
                 </div>
             </div>
 
@@ -964,15 +967,12 @@
             <div id="emergencyFundEdit" class="emergency-fund-edit" hidden>
                 <form class="entry-form" id="emergencyFundForm" autocomplete="off">
                     <div id="emergencyFundDynamicFields"></div>
-                    <div class="field field-btn">
-                        <button type="submit" class="btn-add">Update Emergency Fund</button>
-                    </div>
                 </form>
             </div>
         </div>
 
         <!-- Standard UI for other tabs -->
-        <div id="standardUI">
+        <div id="standardUI" hidden>
             <form class="entry-form" id="entryForm" autocomplete="off">
                 <div id="dynamicFields"></div>
                 <div class="field field-btn">

@@ -994,7 +994,7 @@ td.amount {
 
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(6, 1fr);
     gap: 12px;
 }
 
@@ -1167,6 +1167,15 @@ td.amount {
         text-align: center;
         font-size: 0.7rem;
     }
+}
+
+/* ── Very small screens (≤ 400px) ───────────────────────────── */
+@media (max-width: 400px) {
+    .summary-grid                { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .summary-item                { padding: 10px 8px; }
+    .summary-item strong         { font-size: 0.95rem; }
+    .summary-label               { font-size: 0.68rem; }
+    .summary-hint               { display: none; }
 }
 
 .chart-container {
@@ -2612,7 +2621,7 @@ td.amount {
 
 .annual-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    grid-template-columns: repeat(7, 1fr);
     gap: 14px;
 }
 
@@ -2774,10 +2783,10 @@ td.amount {
         grid-template-columns: repeat(3, 1fr);
     }
 
-    .annual-summary { grid-template-columns: repeat(5, 1fr); }
+    .annual-summary { grid-template-columns: repeat(7, 1fr); }
 
     .goal-summary    { grid-template-columns: repeat(3, 1fr); }
-    .summary-grid    { grid-template-columns: repeat(4, 1fr); }
+    .summary-grid    { grid-template-columns: repeat(6, 1fr); }
 }
 
 /* ── Narrow tablet / large phone (≤ 860px) ──────────── */
@@ -2799,7 +2808,7 @@ td.amount {
     .user-email                  { display: none; }
 
     .goal-summary                { grid-template-columns: repeat(2, 1fr); }
-    .summary-grid                { grid-template-columns: repeat(2, 1fr); }
+    .summary-grid                { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
     .annual-summary              { grid-template-columns: repeat(2, 1fr); }
 
     .annual-month-item           { flex-direction: column; align-items: flex-start; gap: 8px; }
@@ -2874,20 +2883,20 @@ td.amount {
     .month-display               { order: -1; width: 100%; text-align: center; }
     .btn-icon                    { margin-left: 0 !important; }
 
-    /* Summaries: all go 1-col on mobile */
-    .summary-grid                { grid-template-columns: 1fr; gap: 10px; }
+    /* Summaries: all in single row on mobile with auto-adjusting widths */
+    .summary-grid                { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
     .goal-summary                { grid-template-columns: 1fr; gap: 10px; }
-    .annual-summary              { grid-template-columns: 1fr; gap: 10px; }
+    .annual-summary              { grid-template-columns: repeat(2, 1fr); gap: 10px; }
     .expense-summary,
     .insurance-summary,
     .card-summary,
     .investment-summary          { grid-template-columns: 1fr; gap: 10px; }
     .summary-item,
     .goal-summary-item,
-    .annual-summary-item         { padding: 14px 16px; }
+    .annual-summary-item         { padding: 12px 10px; }
     .summary-item strong,
     .goal-summary-item strong,
-    .annual-summary-item strong  { font-size: 1.1rem; }
+    .annual-summary-item strong  { font-size: 1rem; }
 
     /* Annual breakdown months */
     .annual-month-item           { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }

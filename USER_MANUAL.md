@@ -72,7 +72,7 @@ All data syncs in real-time across devices via Firebase Firestore.
 | 2 | **Accounts** | Add Saving, Investment accounts if applicable | Transfer will credit these |
 | 3 | **Outflow** | Add ALL fixed deductions (EMIs, rent, insurance premiums, savings, investments) | These must exist BEFORE Execute Transfer |
 | 4 | **Insurance** | Add policy details (separate from outflow premiums) | For tracking coverage |
-| 5 | **Investments** | Add existing investments (FDs, stocks, MFs, etc.) | For portfolio tracking |
+| 5 | **Investments** | Add existing investments (FDs, stocks, MFs, etc.) with expected return rate (decimal allowed, e.g., 7.5) | For portfolio tracking |
 | 6 | **Budget** | Enter Primary Income → Execute Transfer | Only after steps 1–3 are complete |
 
 > **⚠️ CRITICAL:** Add ALL outflow items **before** clicking Execute Transfer. The transfer uses the outflow items that exist *at the moment you click the button*. If you add outflow items afterward, those deductions will NOT have been taken from salary, causing incorrect variable expenditure calculations.
@@ -160,6 +160,8 @@ The Budget tab is the central financial cockpit. It shows monthly income vs. exp
 
 - **Monthly view** — Current month's budget (navigate with ◀ ▶)
 - **Annual view** — Financial year summary with pie chart (toggle with 📊 button)
+  - Shows monthly breakdown with under/over budget status for each month
+  - Closed months are marked with a lock icon 🔒
 
 ### Budget Summary Grid
 
@@ -182,7 +184,7 @@ The Budget tab is the central financial cockpit. It shows monthly income vs. exp
 | 🟢 **Budget Surplus** | Spendable > Variable Expenses |
 | 🔴 **Over Budget** | Variable Expenses > Spendable |
 | ⚪ **Budget Balanced** | Spendable = Variable Expenses |
-| 🟢🔒 **Closed** | Month is closed and read-only |
+| 🟢🔒 **Closed** | Month is closed and read-only — budget status (surplus/deficit) is preserved |
 
 ### Budget Categories
 
@@ -266,9 +268,11 @@ Shown after Execute Transfer is done (current or past months only).
 
 Clicking **Close Month** will:
 - Mark the month as **read-only** (no more edits)
+- Save the budget status (surplus/deficit) for future reference
 - Carry forward the remaining expenditure balance to next month
 - Set current month's CC spending as next month's "Previous Month CC Bill (Unpaid)"
 - Navigate to the next month
+- Allow viewing the next month's budget even if it hasn't started (for planning ahead)
 
 **Requires:** Transfer must be executed first. Cannot close an already-closed month.
 
@@ -467,6 +471,7 @@ Each goal shows a progress bar with percentage and status badge.
 ### How It Works
 
 - Enter your current emergency fund amount
+- Click **Done** to save your changes
 - System calculates **Minimum Monthly Need** = Fixed Liabilities/Insurance + Fixed Expenditure + Average Variable Expenses
 - Saving and Investment outflows are excluded (can be stopped in an emergency)
 - Shows practical scenarios: 3 months (bare minimum), 6 months (recommended), 12 months (ideal)

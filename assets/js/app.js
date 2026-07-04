@@ -322,7 +322,6 @@ const outflowEmptyState     = document.getElementById("outflowEmptyState");
 const outflowBankChartCanvas = document.getElementById("outflowBankChart");
 const outflowTypeChartCanvas = document.getElementById("outflowTypeChart");
 const monthlyIncomeInput   = document.getElementById("monthlyIncomeInput");
-const saveMonthlyIncome    = document.getElementById("saveMonthlyIncome");
 
 // Cards refs
 const cardsUI           = document.getElementById("cardsUI");
@@ -812,7 +811,12 @@ function startListening() {
             // Show app screen now that data is ready (prevents flash of intermediate content)
             appScreen.hidden = false;
             render();
-        }, err => console.error("Firestore listen error:", err));
+        }, err => {
+            console.error("Firestore listen error:", err);
+            if (err.code === 'unavailable' || err.code === 'permission-denied') {
+                alert("Connection to database lost. Please check your internet connection and refresh the page.");
+            }
+        });
 }
 
 function stopListening() {
@@ -829,7 +833,26 @@ function doSave() {
     localWritePending = true;
     db.collection("users").doc(currentUser.uid)
         .set(appData)
-        .catch(err => { localWritePending = false; console.error("Save failed:", err); });
+        .then(() => {
+            localWritePending = false;
+        })
+        .catch(err => { 
+            localWritePending = false; 
+            console.error("Save failed:", err);
+            // Show user-friendly error message
+            if (err.code === 'unavailable' || err.code === 'failed-precondition') {
+                console.warn("Network issue detected. Data will be retried automatically.");
+                // Retry after 2 seconds
+                setTimeout(() => {
+                    if (currentUser) {
+                        console.log("Retrying save...");
+                        scheduleSave();
+                    }
+                }, 2000);
+            } else {
+                alert("Failed to save data. Please check your internet connection and try again.");
+            }
+        });
 }
 
 function normalizeAppDataModel() {
@@ -1649,9 +1672,14 @@ function renderMonthlyBudget() {
             
             let statusColor = "rgba(34,197,94,0.08)";
             let statusBorder = "rgba(34,197,94,0.3)";
-            if (savedStatusType === "negative") { statusColor = "rgba(239,68,68,0.08)"; statusBorder = "rgba(239,68,68,0.3)"; }
-            else if (savedStatusType === "neutral") { statusColor = "rgba(234,179,8,0.08)"; statusBorder = "rgba(234,179,8,0.3)"; }
-            budgetStatusEl.innerHTML = `<div class="month-end-banner" style="background:${statusColor};border-color:${statusBorder};">
+            if (savedStatusType === "negative") { 
+                statusColor = "rgba(239,68,68,0.08)"; 
+                statusBorder = "rgba(239,68,68,0.3)"; 
+            } else if (savedStatusType === "neutral") { 
+                statusColor = "rgba(234,179,8,0.08)"; 
+                statusBorder = "rgba(234,179,8,0.3)"; 
+            }
+            budgetStatusEl.innerHTML = `<div class="month-end-banner" style="background:${statusColor};border:1px solid ${statusBorder};">
                 ${savedStatus ? `<span style="display:block;margin-bottom:4px;">${savedStatus}</span>` : ""}
                 <span>🔒 This month's budget is closed and read-only.</span>
             </div>`;
@@ -2155,8 +2183,18 @@ function renderInflowTable(entries) {
         const row = document.createElement("tr");
         fields.forEach(f => {
             const td = document.createElement("td");
-            if (f.type === "number") { td.textContent = formatMoney(Number(item[f.id] || 0)); td.className = "amount"; }
-            else { td.textContent = esc(item[f.id] || "—"); }
+            if (f.type === "number") { 
+                // Special handling for percentage fields
+                if (f.id === "interestRate") {
+                    td.textContent = Number(item[f.id] || 0).toFixed(2) + "%";
+                    td.className = "amount";
+                } else {
+                    td.textContent = formatMoney(Number(item[f.id] || 0)); 
+                    td.className = "amount";
+                }
+            } else { 
+                td.textContent = esc(item[f.id] || "—"); 
+            }
             row.appendChild(td);
         });
         const currentTd = document.createElement("td");
@@ -2195,7 +2233,6 @@ function renderInflowPreviewCards(entries) {
                     <span class="semantic-badge semantic-investment ${frequency === "One-Time" ? "is-paid" : ""}">${esc(frequency)}</span><br>
                     Amount: ${formatMoney(Number(item.amount || 0))}<br>
                     Current Value: ${formatMoney(curVal)}<br>
-                    Net Worth Today: ${formatMoney(curVal)}<br>
                     Interest: ${Number(item.interestRate || 0).toFixed(2)}% p.a.<br>
                     Start: ${esc(item.startDate || "—")} | End: ${esc(item.endDate || "—")}<br>
                     ${item.details ? esc(item.details) : ""}
@@ -2844,8 +2881,14 @@ function renderNetWorthTable(entries) {
         fields.forEach(f => {
             const td = document.createElement("td");
             if (f.type === "number") {
-                td.textContent = formatMoney(Number(item[f.id] || 0));
-                td.className = "amount";
+                // Special handling for percentage fields
+                if (f.id === "growthRate") {
+                    td.textContent = Number(item[f.id] || 0).toFixed(2) + "%";
+                    td.className = "amount";
+                } else {
+                    td.textContent = formatMoney(Number(item[f.id] || 0));
+                    td.className = "amount";
+                }
             } else {
                 td.textContent = esc(item[f.id] || "—");
             }
@@ -4166,14 +4209,36 @@ function settleCreditCardFromSaving() {
         alert("Saving account has no balance to settle from.");
         return;
     }
-    const settleAmount = Math.min(outstanding, savingBalance);
+    
+    // Ask user for settlement amount (default to full settlement or available balance, whichever is less)
+    const maxSettleAmount = Math.min(outstanding, savingBalance);
+    const userInput = prompt(
+        `Enter amount to settle from Saving account:\n\n` +
+        `Outstanding CC Bill: ${formatMoney(outstanding)}\n` +
+        `Saving Balance: ${formatMoney(savingBalance)}\n` +
+        `Max you can settle: ${formatMoney(maxSettleAmount)}\n\n` +
+        `Enter amount (or leave blank to settle maximum):`,
+        maxSettleAmount.toString()
+    );
+    
+    if (userInput === null) return; // User cancelled
+    
+    const settleAmount = userInput.trim() === "" ? maxSettleAmount : Number(userInput);
+    
+    if (isNaN(settleAmount) || settleAmount <= 0) {
+        alert("Please enter a valid amount greater than 0.");
+        return;
+    }
+    
+    if (settleAmount > maxSettleAmount) {
+        alert(`Cannot settle ₹${settleAmount.toLocaleString("en-IN")}. Maximum available is ${formatMoney(maxSettleAmount)}.`);
+        return;
+    }
+    
     const confirmed = confirm(
-        `Settle ₹${settleAmount.toLocaleString("en-IN")} from your Saving account (${savingAccount.bankName})?\n\n` +
-        `Outstanding: ${formatMoney(outstanding)}\n` +
-        `Saving balance: ${formatMoney(savingBalance)}\n` +
-        `Amount to settle: ${formatMoney(settleAmount)}\n\n` +
-        `This will:\n• Reduce outstanding to ${formatMoney(outstanding - settleAmount)}\n` +
-        `• Reduce saving balance to ${formatMoney(savingBalance - settleAmount)}`
+        `Confirm settlement of ₹${settleAmount.toLocaleString("en-IN")} from your Saving account (${savingAccount.bankName})?\n\n` +
+        `This will:\n• Reduce CC outstanding from ${formatMoney(outstanding)} to ${formatMoney(outstanding - settleAmount)}\n` +
+        `• Reduce saving balance from ${formatMoney(savingBalance)} to ${formatMoney(savingBalance - settleAmount)}`
     );
     if (!confirmed) return;
 
@@ -4187,7 +4252,9 @@ function settleCreditCardFromSaving() {
     appData.tabData.cards = updatedCards;
 
     scheduleSave();
+    // Re-render to update the UI immediately
     renderMonthlyBudget();
+    alert(`Successfully settled ${formatMoney(settleAmount)} from Saving account.`);
 }
 
 function calculateAndDisplaySummary(monthData) {
@@ -4332,7 +4399,8 @@ function calculateAndDisplaySummary(monthData) {
         // Completely hide budget status in edit mode
         if (budgetStatus) {
             budgetStatus.hidden = true;
-            budgetStatus.textContent = "";
+            budgetStatus.innerHTML = "";
+            budgetStatus.className = "budget-status"; // Remove any status classes
         }
     } else if (isMonthClosed && budgetStatus) {
         // For closed months, the status banner is already rendered in renderMonthlyBudget
@@ -5278,13 +5346,17 @@ if (inflowTableBody) inflowTableBody.addEventListener("click", e => handleTableA
 // Outflow event bindings
 if (toggleOutflowEdit) toggleOutflowEdit.addEventListener("click", () => {
     isOutflowEditMode = !isOutflowEditMode;
-    if (isOutflowEditMode && monthlyIncomeInput) monthlyIncomeInput.value = appData.fixedMonthlyIncome || "";
-    if (!isOutflowEditMode) scheduleSave();
-    renderOutflow();
-});
-if (saveMonthlyIncome) saveMonthlyIncome.addEventListener("click", () => {
-    appData.fixedMonthlyIncome = Number(monthlyIncomeInput.value || 0);
-    scheduleSave();
+    if (isOutflowEditMode && monthlyIncomeInput) {
+        // Entering edit mode - populate the field
+        monthlyIncomeInput.value = appData.fixedMonthlyIncome || "";
+    }
+    if (!isOutflowEditMode) {
+        // Exiting edit mode (Done clicked) - save the income
+        if (monthlyIncomeInput) {
+            appData.fixedMonthlyIncome = Number(monthlyIncomeInput.value || 0);
+        }
+        scheduleSave();
+    }
     renderOutflow();
 });
 if (outflowForm) outflowForm.addEventListener("submit", addOutflowEntry);

@@ -324,7 +324,7 @@ Since creditCardOutstanding is already reduced by settlements when the user clic
 
 ---
 
-## 16. Hidden Edit/Close Buttons in Annual View ✅
+## 20. Hidden Edit/Close Buttons in Annual View ✅
 
 **Issue:** The Edit (✎) and Close Month buttons were visible in both monthly and annual views, but they only make sense in the monthly view.
 
@@ -347,6 +347,63 @@ Since creditCardOutstanding is already reduced by settlements when the user clic
 **Files Modified:**
 - `assets/js/app.js` (lines 1594-1611 - renderMonthlyBudget function)
 - `assets/js/app.js` (lines 4963-4975 - toggleBudgetView handler)
+
+---
+
+## 18. Fixed Borrowing from Savings Affecting Spendable Calculation ✅
+
+**Issue:** When users borrowed from their own savings and entered it as "Borrowing/Money Back" in the inflow section, it was incorrectly increasing the spendable amount. This created a false sense of available income since borrowing from savings is not new income - it's just moving money from one account to another.
+
+**Example of the problem:**
+```
+Salary: ₹50,000
+Borrowing from savings: ₹10,000
+inflowTotal = ₹60,000  ← Includes borrowing!
+fixedMonthlyOutflow = ₹30,000
+spendable = ₹30,000  ← But ₹10,000 is from own savings!
+Real spendable should be: ₹20,000
+```
+
+**Fix:** Excluded borrowing from spendable calculation in all budget calculations:
+
+### Spendable Calculation
+```javascript
+// Before:
+spendable = inflowTotal - fixedMonthlyOutflow
+
+// After:
+borrowing = Number(monthData.inflow?.borrowing || 0)
+inflowWithoutBorrowing = inflowTotal - borrowing
+spendable = inflowWithoutBorrowing - fixedMonthlyOutflow
+```
+
+### Budget Balance Calculation
+```javascript
+// Before:
+budgetBalance = spendable - untracked
+
+// After:
+spendableWithoutBorrowing = spendable - borrowing
+budgetBalance = spendableWithoutBorrowing - untracked
+```
+
+### Affected Locations
+- Main budget summary display (line 4381-4384)
+- Budget status banner (line 4451-4454)
+- Closed month budget status (line 1656-1668)
+- Month close budget status (line 5244-5256)
+
+**Impact:**
+- Borrowing from savings no longer increases spendable amount
+- Budget calculations now reflect true available income
+- Users get accurate budget position
+- Prevents false sense of spending capacity
+
+**Files Modified:**
+- `assets/js/app.js` (lines 1656-1668 - closed month budget status)
+- `assets/js/app.js` (lines 4381-4384 - main spendable calculation)
+- `assets/js/app.js` (lines 4451-4454 - budget status banner)
+- `assets/js/app.js` (lines 5244-5256 - month close budget status)
 
 ---
 
@@ -453,7 +510,7 @@ Before deploying these changes, please test the following scenarios:
 - [ ] Verify closed month banner styling matches current month banner
 - [ ] Enter budget edit mode - verify no empty banner or borders visible
 
-### 13. Annual View Button Visibility
+### 14. Annual View Button Visibility
 - [ ] Go to Budget tab in monthly view
 - [ ] Verify Edit (✎) button is visible
 - [ ] Verify Close Month button is visible
@@ -464,18 +521,26 @@ Before deploying these changes, please test the following scenarios:
 - [ ] Verify Edit (✎) button is visible again ✅
 - [ ] Verify Close Month button is visible again ✅
 
-### 14. Navigation Alignment
+### 15. Navigation Alignment
 - [ ] Go to Budget tab in monthly view
 - [ ] Verify navigation buttons are left-aligned (not centered) ✅
 - [ ] Switch to annual view
 - [ ] Verify navigation buttons remain left-aligned ✅
 - [ ] Check on mobile view - verify left-alignment works responsively ✅
 
+### 16. Borrowing from Savings
+- [ ] Enter salary income: ₹50,000
+- [ ] Enter borrowing from savings: ₹10,000
+- [ ] Verify "Total Income" shows ₹60,000 (includes borrowing) ✅
+- [ ] Verify "Total Spendable" shows ₹20,000 (excludes borrowing) ✅
+- [ ] Verify budget status calculation excludes borrowing ✅
+- [ ] Test with zero borrowing - verify spendable calculation works normally
+
 ---
 
 ## Files Changed Summary
 
-1. **assets/js/app.js** - Main application logic (16 fixes applied)
+1. **assets/js/app.js** - Main application logic (18 fixes applied)
 2. **index.html** - Help panel contact section + removed Save button (2 changes)
 3. **assets/css/styles.css** - Navigation alignment fix (2 changes)
 
@@ -502,11 +567,17 @@ Before deploying these changes, please test the following scenarios:
 
 **Developer:** Devin AI Assistant  
 **Date:** July 4, 2026  
-**Version:** 4.8
+**Version:** 4.9
 
 ---
 
 ## Changelog
+
+### Version 4.9 (July 4, 2026 - Ninth Update)
+- Fixed borrowing from savings affecting spendable calculation
+- Borrowing from savings is now excluded from spendable amount
+- Budget calculations now reflect true available income
+- Prevents false sense of spending capacity
 
 ### Version 4.8 (July 4, 2026 - Eighth Update)
 - Fixed CC bill carry forward calculation to avoid double subtraction of settlements

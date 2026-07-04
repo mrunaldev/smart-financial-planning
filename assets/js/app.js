@@ -1654,7 +1654,10 @@ function renderMonthlyBudget() {
                     else if (freq === "Annual")      monthlyAmt = amount / 12;
                     fixedMonthlyOutflow += monthlyAmt;
                 });
-                const spendable = inflowTotal - fixedMonthlyOutflow;
+                // Exclude borrowing from spendable as it's not new income
+                const borrowing = Number(monthData.inflow?.borrowing || 0);
+                const inflowWithoutBorrowing = inflowTotal - borrowing;
+                const spendable = inflowWithoutBorrowing - fixedMonthlyOutflow;
                 const variableExp = Number(monthData.outflow?.variableExpenditure || 0);
                 const creditCardOutstanding = Number(monthData.outflow?.creditCardOutstanding || 0);
                 const midMonthCC = Number(monthData.outflow?.midMonthCCOutstanding || 0);
@@ -4172,7 +4175,7 @@ function renderCategoryFields(container, fields, data, autoLinkedFields = {}, au
             if (field.id === "midMonthCCOutstanding") {
                 input.title = "Auto-populated from Quick Update section. Update the value there to change it.";
             } else if (field.id === "creditCardOutstanding") {
-                input.title = "Auto-calculated from previous month's CC spending. Use 'Settle from Saving' button to pay it off.";
+                input.title = "Auto-calculated from previous month's CC spending. Updated immediately when you settle from savings.";
             } else {
                 input.title = "Auto-populated from Inflow or Outflow tab. Edit the source item to change current/future months.";
             }
@@ -4181,7 +4184,7 @@ function renderCategoryFields(container, fields, data, autoLinkedFields = {}, au
         // Special case: Always disable creditCardOutstanding as it should only be auto-calculated
         if (field.id === "creditCardOutstanding") {
             input.disabled = true;
-            input.title = "Auto-calculated from previous month's CC spending upon month close. Use 'Settle from Saving' button to pay it off.";
+            input.title = "Auto-calculated from previous month's CC spending. Updated immediately when you settle from savings.";
             div.classList.add("auto-linked-field");
         }
         
@@ -4375,7 +4378,10 @@ function calculateAndDisplaySummary(monthData) {
     }
 
     // TOTAL SPENDABLE = total cash inflow - all fixed obligations/outflows
-    const spendable = inflowTotal - fixedMonthlyOutflow;
+    // Note: Borrowing from savings is excluded from spendable as it's not new income
+    const borrowing = Number(monthData.inflow?.borrowing || 0);
+    const inflowWithoutBorrowing = inflowTotal - borrowing;
+    const spendable = inflowWithoutBorrowing - fixedMonthlyOutflow;
     const availableEl = document.getElementById("amountAvailableToSpend");
     const availableLabelEl = document.getElementById("amountAvailableLabel");
     if (availableEl) {
@@ -4442,7 +4448,10 @@ function calculateAndDisplaySummary(monthData) {
             budgetStatus.classList.add("neutral");
             budgetStatus.textContent = "Enter your Primary Income to see budget status";
         } else {
-            const budgetBalance = spendable - untracked;
+            // Exclude borrowing from spendable as it's not new income
+            const borrowing = Number(monthData.inflow?.borrowing || 0);
+            const spendableWithoutBorrowing = spendable - borrowing;
+            const budgetBalance = spendableWithoutBorrowing - untracked;
             if (budgetBalance > 0) {
                 budgetStatus.classList.add("positive");
                 budgetStatus.textContent = `Budget Surplus: +${formatMoney(budgetBalance)} remaining`;
@@ -5243,7 +5252,10 @@ if (btnCarryForward) btnCarryForward.addEventListener("click", () => {
     // Note: creditCardOutstanding is already reduced by settlements when user clicks "Settle from Saving"
     const actualCCOutstandingClose = creditCardOutstandingClose + midMonthCCClose;
     const untrackedClose = variableExpClose + actualCCOutstandingClose;
-    const budgetBalanceClose = spendableClose - untrackedClose;
+    // Exclude borrowing from spendable as it's not new income
+    const borrowingClose = Number(monthData.inflow?.borrowing || 0);
+    const spendableCloseWithoutBorrowing = spendableClose - borrowingClose;
+    const budgetBalanceClose = spendableCloseWithoutBorrowing - untrackedClose;
     if (budgetBalanceClose > 0) {
         monthData._closedBudgetStatus = `Budget Surplus: +${formatMoney(budgetBalanceClose)} remaining`;
         monthData._closedBudgetStatusType = "positive";

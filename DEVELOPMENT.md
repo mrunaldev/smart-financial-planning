@@ -545,6 +545,9 @@ Currently instrumented with logging:
 3. **CC Settlement** - Logs settlement operations with amounts
 4. **Data Export** - Logs export initiation and success
 5. **Data Import** - Logs import with filename, file path, file size
+6. **Quick Update - Salary Balance** - Logs balance updates with old/new values
+7. **Quick Update - Expenditure Balance** - Logs balance updates and variable expenditure calculation
+8. **Quick Update - CC Spending** - Logs CC spending updates with old/new amounts
 
 ### Adding More Logging
 

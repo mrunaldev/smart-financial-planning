@@ -234,6 +234,11 @@ function openLogsPanel() {
     const logsPanel = document.getElementById('logsPanel');
     const logsOverlay = document.getElementById('logsOverlay');
     
+    if (!logsPanel || !logsOverlay) {
+        console.error('Logs panel or overlay not found');
+        return;
+    }
+    
     logsPanel.classList.remove('hidden');
     logsPanel.setAttribute('aria-hidden', 'false');
     logsOverlay.classList.remove('hidden');
@@ -246,6 +251,11 @@ function closeLogsPanel() {
     logger.info('Logs panel closed');
     const logsPanel = document.getElementById('logsPanel');
     const logsOverlay = document.getElementById('logsOverlay');
+    
+    if (!logsPanel || !logsOverlay) {
+        console.error('Logs panel or overlay not found');
+        return;
+    }
     
     logsPanel.classList.add('hidden');
     logsPanel.setAttribute('aria-hidden', 'true');
@@ -379,50 +389,48 @@ function clearLocalLogs() {
 }
 
 // Initialize logs panel event listeners
-document.addEventListener('DOMContentLoaded', () => {
-    const logsBtn = document.getElementById('logsBtn');
-    const closeLogsBtn = document.getElementById('closeLogsBtn');
-    const logRefreshBtn = document.getElementById('logRefreshBtn');
-    const logExportBtn = document.getElementById('logExportBtn');
-    const logClearBtn = document.getElementById('logClearBtn');
-    const logLevelFilter = document.getElementById('logLevelFilter');
-    
-    if (logsBtn) {
-        logsBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            openLogsPanel();
-        });
-    }
-    
-    if (closeLogsBtn) {
-        closeLogsBtn.addEventListener('click', closeLogsPanel);
-    }
-    
-    if (logRefreshBtn) {
-        logRefreshBtn.addEventListener('click', () => {
-            logger.info('Manual log refresh');
-            loadLogs();
-        });
-    }
-    
-    if (logExportBtn) {
-        logExportBtn.addEventListener('click', exportLogs);
-    }
-    
-    if (logClearBtn) {
-        logClearBtn.addEventListener('click', clearLocalLogs);
-    }
-    
-    if (logLevelFilter) {
-        logLevelFilter.addEventListener('change', loadLogs);
-    }
-    
-    // Close logs panel when clicking overlay
-    const logsOverlay = document.getElementById('logsOverlay');
-    if (logsOverlay) {
-        logsOverlay.addEventListener('click', closeLogsPanel);
-    }
-});
+const logsBtn = document.getElementById('logsBtn');
+const closeLogsBtn = document.getElementById('closeLogsBtn');
+const logRefreshBtn = document.getElementById('logRefreshBtn');
+const logExportBtn = document.getElementById('logExportBtn');
+const logClearBtn = document.getElementById('logClearBtn');
+const logLevelFilter = document.getElementById('logLevelFilter');
+
+if (logsBtn) {
+    logsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        openLogsPanel();
+    });
+}
+
+if (closeLogsBtn) {
+    closeLogsBtn.addEventListener('click', closeLogsPanel);
+}
+
+if (logRefreshBtn) {
+    logRefreshBtn.addEventListener('click', () => {
+        logger.info('Manual log refresh');
+        loadLogs();
+    });
+}
+
+if (logExportBtn) {
+    logExportBtn.addEventListener('click', exportLogs);
+}
+
+if (logClearBtn) {
+    logClearBtn.addEventListener('click', clearLocalLogs);
+}
+
+if (logLevelFilter) {
+    logLevelFilter.addEventListener('change', loadLogs);
+}
+
+// Close logs panel when clicking overlay
+const logsOverlay = document.getElementById('logsOverlay');
+if (logsOverlay) {
+    logsOverlay.addEventListener('click', closeLogsPanel);
+}
 
 // ── Theme-based favicon switching ─────────────────────────────────────────────
 function updateFaviconForTheme() {
@@ -2029,6 +2037,14 @@ function applyMonthlyAutoValues(monthKey, monthData) {
     monthData.autoLinkedBreakdown["outflow.variableExpenditure"] = breakdownItems.length > 0
         ? breakdownItems.filter(b => b.amount !== 0)
         : [{ name: "No transfer done yet", amount: 0, source: "Pending" }];
+    
+    logger.info('Variable expenditure auto-calculated with breakdown', { 
+        monthKey, 
+        totalFunded, 
+        expBalance, 
+        variableExpenditure: varExp,
+        breakdown: breakdownItems
+    });
 
     // Auto-calculate Current Month CC Spending from Quick Update data (applies to all months)
     // Restore the preserved value to prevent it from being reset to 0
@@ -5869,36 +5885,71 @@ if (btnCarryForward) btnCarryForward.addEventListener("click", () => {
 // ── Mid-Month Quick Updates ──────────────────────────────────────────────────
 const btnUpdateSalaryBalance = document.getElementById("btnUpdateSalaryBalance");
 if (btnUpdateSalaryBalance) btnUpdateSalaryBalance.addEventListener("click", () => {
+    logger.info('Salary balance quick update initiated');
     const input = document.getElementById("midMonthSalaryBalance");
     const newBalance = Number(input?.value);
-    if (isNaN(newBalance) || newBalance < 0) { alert("Enter a valid salary balance."); return; }
+    if (isNaN(newBalance) || newBalance < 0) { 
+        logger.warning('Invalid salary balance entered', { newBalance });
+        alert("Enter a valid salary balance."); 
+        return; 
+    }
     const cards = (appData.tabData || {}).cards || [];
     const salary = cards.find(c => c.purpose === "Salary" && c.isPrimary !== "Yes");
-    if (!salary) { alert("No Salary account found."); return; }
+    if (!salary) { 
+        logger.warning('No salary account found for quick update');
+        alert("No Salary account found."); 
+        return; 
+    }
+    const oldBalance = salary.balance;
     salary.balance = newBalance;
     appData.tabData.cards = cards.map(c => c.id === salary.id ? salary : c);
+    
     scheduleSave();
     input.value = "";
+    // Re-render to update the summary cards
     if (!isBudgetEditMode) renderMonthlyBudget();
+    
+    logger.info('Salary balance updated successfully', { 
+        oldBalance, 
+        newBalance,
+        savedToFirebase: true
+    });
     alert(`Salary account balance updated to ${formatMoney(newBalance)}`);
 });
 
 // Quick Update: Expenditure Account Balance
 const btnUpdateExpBalance = document.getElementById("btnUpdateExpBalance");
 if (btnUpdateExpBalance) btnUpdateExpBalance.addEventListener("click", () => {
+    logger.info('Expenditure balance quick update initiated');
     const input = document.getElementById("midMonthExpBalance");
     const newBalance = Number(input?.value);
-    if (isNaN(newBalance) || newBalance < 0) { alert("Enter a valid expenditure balance."); return; }
+    if (isNaN(newBalance) || newBalance < 0) { 
+        logger.warning('Invalid expenditure balance entered', { newBalance });
+        alert("Enter a valid expenditure balance."); 
+        return; 
+    }
     const cards = (appData.tabData || {}).cards || [];
     const exp = cards.find(c => c.isPrimary === "Yes");
-    if (!exp) { alert("No Primary (Expenditure) account found."); return; }
+    if (!exp) { 
+        logger.warning('No expenditure account found for quick update');
+        alert("No Primary (Expenditure) account found."); 
+        return; 
+    }
+    const oldBalance = exp.balance;
     exp.balance = newBalance;
     appData.tabData.cards = cards.map(c => c.id === exp.id ? exp : c);
-    scheduleSave();
-    input.value = "";
-    // Calculate and show variable expenditure: totalFunded - currentBalance
+    
+    // Calculate and update variable expenditure in monthData
     const monthKey = getMonthKey(currentMonth);
-    const monthData = (appData.monthlyBudgetData || {})[monthKey] || {};
+    if (!appData.monthlyBudgetData) appData.monthlyBudgetData = {};
+    const monthData = appData.monthlyBudgetData[monthKey] || {
+        inflow: {},
+        outflow: {},
+        investing: {},
+        monthEndBalance: 0
+    };
+    appData.monthlyBudgetData[monthKey] = monthData;
+    
     const transferDone = Number(monthData._transferDone || 0);
     const initialBalance = Number(monthData._initialBalance || 0);
     const prevMonthForCarry = new Date(currentMonth);
@@ -5908,27 +5959,100 @@ if (btnUpdateExpBalance) btnUpdateExpBalance.addEventListener("click", () => {
     // totalFunded = exp account balance right after transfer
     const totalFunded = initialBalance > 0 ? initialBalance : (transferDone + prevCarryForward);
     const varExp = totalFunded > 0 ? Math.max(0, totalFunded - newBalance) : 0;
+    
+    // Update monthData with the new variable expenditure
+    if (!monthData.outflow) monthData.outflow = {};
+    monthData.outflow.variableExpenditure = varExp;
+    monthData.autoLinkedFields["outflow.variableExpenditure"] = true;
+    
+    // Update breakdown for variable expenditure
+    const breakdownItems = [];
+    if (totalFunded > 0) {
+        if (initialBalance > 0) {
+            if (prevCarryForward > 0) {
+                breakdownItems.push({ name: "Carry Forward (Last Month)", amount: prevCarryForward, source: "Previous Month Close" });
+            }
+            if (transferDone > 0) {
+                breakdownItems.push({ name: "Salary Leftover Transferred", amount: transferDone, source: "Execute Transfer" });
+            }
+            const accountInitial = initialBalance - transferDone - prevCarryForward;
+            if (accountInitial > 0) {
+                breakdownItems.push({ name: "Account Pre-existing Balance", amount: accountInitial, source: "Account Balance" });
+            }
+            if (breakdownItems.length === 0) {
+                breakdownItems.push({ name: "Balance After Transfer", amount: totalFunded, source: "Post-Transfer Balance" });
+            }
+        } else {
+            if (transferDone > 0) breakdownItems.push({ name: "Salary Leftover Transferred", amount: transferDone, source: "Execute Transfer" });
+            if (prevCarryForward > 0) breakdownItems.push({ name: "Carry Forward (Last Month)", amount: prevCarryForward, source: "Previous Month Close" });
+        }
+        breakdownItems.push({ name: "Current Exp Balance", amount: -newBalance, source: "Account Balance" });
+    }
+    monthData.autoLinkedBreakdown["outflow.variableExpenditure"] = breakdownItems.length > 0
+        ? breakdownItems.filter(b => b.amount !== 0)
+        : [{ name: "No transfer done yet", amount: 0, source: "Pending" }];
+    
+    // Ensure monthData is saved back to appData
+    appData.monthlyBudgetData[monthKey] = monthData;
+    
+    scheduleSave();
+    input.value = "";
+    // Show variable expenditure in quick update result
     const resultEl = document.getElementById("quickUpdateResult");
     const untrackedEl = document.getElementById("quickUpdateUntracked");
     if (resultEl) resultEl.hidden = false;
     if (untrackedEl) { untrackedEl.textContent = formatMoney(varExp); untrackedEl.style.color = varExp > 0 ? "#eab308" : "#22c55e"; }
+    
+    // Re-render to update the summary cards
     if (!isBudgetEditMode) renderMonthlyBudget();
+    
+    logger.info('Expenditure balance updated successfully', { 
+        oldBalance, 
+        newBalance, 
+        variableExpenditure: varExp,
+        totalFunded,
+        monthKey,
+        savedToFirebase: true
+    });
+    
     alert(`Expenditure account balance updated to ${formatMoney(newBalance)}`);
 });
 
 // Quick Update: Current Month CC Spending (stored as midMonthCCOutstanding)
 const btnUpdateCCOutstanding = document.getElementById("btnUpdateCCOutstanding");
 if (btnUpdateCCOutstanding) btnUpdateCCOutstanding.addEventListener("click", () => {
+    logger.info('CC spending quick update initiated');
     const input = document.getElementById("midMonthCCOutstanding");
     const newCC = Number(input?.value);
-    if (isNaN(newCC) || newCC < 0) { alert("Enter a valid CC spending amount."); return; }
+    if (isNaN(newCC) || newCC < 0) { 
+        logger.warning('Invalid CC spending amount entered', { newCC });
+        alert("Enter a valid CC spending amount."); 
+        return; 
+    }
     const monthKey = getMonthKey(currentMonth);
     if (!appData.monthlyBudgetData) appData.monthlyBudgetData = {};
     if (!appData.monthlyBudgetData[monthKey]) appData.monthlyBudgetData[monthKey] = { inflow: {}, outflow: {}, investing: {} };
+    const oldCC = appData.monthlyBudgetData[monthKey].outflow.midMonthCCOutstanding || 0;
     appData.monthlyBudgetData[monthKey].outflow.midMonthCCOutstanding = newCC;
+    
+    // Update breakdown for CC spending
+    appData.monthlyBudgetData[monthKey].autoLinkedFields = appData.monthlyBudgetData[monthKey].autoLinkedFields || {};
+    appData.monthlyBudgetData[monthKey].autoLinkedFields["outflow.midMonthCCOutstanding"] = true;
+    appData.monthlyBudgetData[monthKey].autoLinkedBreakdown = appData.monthlyBudgetData[monthKey].autoLinkedBreakdown || {};
+    appData.monthlyBudgetData[monthKey].autoLinkedBreakdown["outflow.midMonthCCOutstanding"] = [
+        { name: "Current Month CC Spending", amount: newCC, source: "Quick Update (Mid-Month)" }
+    ];
+    
     scheduleSave();
     input.value = "";
     renderMonthlyBudget();
+    
+    logger.info('CC spending updated successfully', { 
+        oldCC, 
+        newCC, 
+        monthKey,
+        savedToFirebase: true
+    });
     alert(`Current month CC spending for ${currentMonth.toLocaleDateString("en-IN", { month: "long", year: "numeric" })} updated to ${formatMoney(newCC)}`);
 });
 

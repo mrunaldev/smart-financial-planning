@@ -641,7 +641,7 @@ td.amount {
 .month-nav {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 20px;
     padding: 16px 24px;
     background: var(--surf1);
@@ -2878,7 +2878,7 @@ td.amount {
         flex-wrap: wrap;
         gap: 10px;
         padding: 14px 16px;
-        justify-content: center;
+        justify-content: flex-start;
     }
     .month-display               { order: -1; width: 100%; text-align: center; }
     .btn-icon                    { margin-left: 0 !important; }

@@ -252,6 +252,84 @@ The export/import functionality correctly handles all data fields:
 
 ---
 
+## 14. Fixed Closed Month Banner Color and Border Issues ✅
+
+**Issue:** 
+- Closed month banner always showed green regardless of budget status
+- Banner had double borders due to nested div structure
+- Inconsistent styling between current month and closed month banners
+
+**Fix:** Unified banner styling approach:
+
+### Color Logic Fix
+- Changed from defaulting to green to properly checking status type
+- Now correctly shows: Red for over budget, Green for under budget, Yellow for neutral
+- Consistent with current month banner behavior
+
+### Border Fix
+- Removed nested div structure that caused double borders
+- Now uses the same CSS class approach as current month
+- Closed month banner uses `.budget-status.positive/negative/neutral` classes
+- These classes already have proper border styling defined in CSS
+
+### Consistency
+- Both current month and closed month banners now use the same CSS classes
+- Both use the parent div for styling instead of nested divs
+- Consistent visual appearance across all month states
+
+**Files Modified:**
+- `assets/js/app.js` (lines 1629-1690 - closed month banner rendering)
+
+---
+
+## 15. Hidden Edit/Close Buttons in Annual View ✅
+
+**Issue:** The Edit (✎) and Close Month buttons were visible in both monthly and annual views, but they only make sense in the monthly view.
+
+**Fix:** Added logic to hide/show buttons based on current view:
+
+### Button Visibility Logic
+- When switching to Annual view: Hide Edit and Close Month buttons
+- When switching to Monthly view: Show Edit and Close Month buttons
+- Applied in both the toggle handler and render function for consistency
+
+### Affected Buttons
+- `toggleBudgetEdit` (✎ Edit button)
+- `btnCarryForward` (Close Month button)
+
+### Benefits
+- Cleaner UI in annual view (no irrelevant actions)
+- Prevents confusion about what actions are available
+- Users can only edit/close the currently viewed month (not the entire year)
+
+**Files Modified:**
+- `assets/js/app.js` (lines 1594-1611 - renderMonthlyBudget function)
+- `assets/js/app.js` (lines 4963-4975 - toggleBudgetView handler)
+
+---
+
+## 16. Fixed Navigation Alignment ✅
+
+**Issue:** Navigation buttons appeared centered due to `justify-content: center` CSS, especially noticeable when fewer buttons were visible in annual view.
+
+**Fix:** Changed navigation alignment from `center` to `flex-start` (left-aligned):
+
+### CSS Changes
+- Changed `.month-nav` `justify-content` from `center` to `flex-start`
+- Applied to both desktop and mobile responsive styles
+- Navigation now consistently left-aligned regardless of button count
+
+### Result
+- Navigation buttons stay on the left in both monthly and annual views
+- Consistent layout regardless of which buttons are hidden/shown
+- Better visual consistency
+
+**Files Modified:**
+- `assets/css/styles.css` (line 641 - desktop month-nav)
+- `assets/css/styles.css` (line 2876 - mobile month-nav)
+
+---
+
 ## Testing Recommendations
 
 Before deploying these changes, please test the following scenarios:
@@ -315,12 +393,39 @@ Before deploying these changes, please test the following scenarios:
 - [ ] Test with full settlement (settle entire amount)
 - [ ] Verify next month's CC bill is ₹0 after full settlement
 
+### 11. Closed Month Banner Colors and Borders
+- [ ] Close a month with surplus - verify banner shows GREEN
+- [ ] Close a month with deficit - verify banner shows RED (not green!)
+- [ ] Close a month balanced - verify banner shows YELLOW
+- [ ] Verify closed month banner has single border (no double border)
+- [ ] Verify closed month banner styling matches current month banner
+- [ ] Enter budget edit mode - verify no empty banner or borders visible
+
+### 12. Annual View Button Visibility
+- [ ] Go to Budget tab in monthly view
+- [ ] Verify Edit (✎) button is visible
+- [ ] Verify Close Month button is visible
+- [ ] Click "📊 Annual" to switch to annual view
+- [ ] Verify Edit (✎) button is hidden ✅
+- [ ] Verify Close Month button is hidden ✅
+- [ ] Click "📅 Monthly" to switch back
+- [ ] Verify Edit (✎) button is visible again ✅
+- [ ] Verify Close Month button is visible again ✅
+
+### 13. Navigation Alignment
+- [ ] Go to Budget tab in monthly view
+- [ ] Verify navigation buttons are left-aligned (not centered) ✅
+- [ ] Switch to annual view
+- [ ] Verify navigation buttons remain left-aligned ✅
+- [ ] Check on mobile view - verify left-alignment works responsively ✅
+
 ---
 
 ## Files Changed Summary
 
-1. **assets/js/app.js** - Main application logic (13 fixes applied)
+1. **assets/js/app.js** - Main application logic (15 fixes applied)
 2. **index.html** - Help panel contact section + removed Save button (2 changes)
+3. **assets/css/styles.css** - Navigation alignment fix (2 changes)
 
 ---
 
@@ -345,11 +450,27 @@ Before deploying these changes, please test the following scenarios:
 
 **Developer:** Devin AI Assistant  
 **Date:** July 4, 2026  
-**Version:** 4.3
+**Version:** 4.6
 
 ---
 
 ## Changelog
+
+### Version 4.6 (July 4, 2026 - Sixth Update)
+- Fixed navigation alignment from center to left-aligned
+- Navigation now consistently left-aligned in both monthly and annual views
+- Applied fix to both desktop and mobile responsive styles
+
+### Version 4.5 (July 4, 2026 - Fifth Update)
+- Hidden Edit and Close Month buttons in annual view
+- Buttons now only visible in monthly view where they are relevant
+- Cleaner UI and prevents confusion about available actions
+
+### Version 4.4 (July 4, 2026 - Fourth Update)
+- Fixed closed month banner colors (now correctly shows red for over budget)
+- Fixed double border issue on closed month banner
+- Unified banner styling between current month and closed month
+- Removed nested div structure causing visual inconsistencies
 
 ### Version 4.3 (July 4, 2026 - Third Update)
 - Fixed CC bill auto-calculation to respect settlements from savings

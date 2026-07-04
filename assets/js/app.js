@@ -1597,11 +1597,17 @@ function renderMonthlyBudget() {
         annualSummarySection.hidden = false;
         monthlyViewSection.hidden = true;
         calculateAnnualSummary();
+        // Hide edit and close buttons in annual view
+        if (toggleBudgetEdit) toggleBudgetEdit.hidden = true;
+        if (btnCarryForward) btnCarryForward.hidden = true;
         return;
     } else {
         annualSummarySection.hidden = true;
         monthlyViewSection.hidden = false;
         if (annualPieChart) { annualPieChart.destroy(); annualPieChart = null; }
+        // Show edit and close buttons in monthly view
+        if (toggleBudgetEdit) toggleBudgetEdit.hidden = false;
+        if (btnCarryForward) btnCarryForward.hidden = false;
     }
 
     const monthKey = getMonthKey(currentMonth);
@@ -1673,21 +1679,23 @@ function renderMonthlyBudget() {
                 scheduleSave();
             }
             
-            let statusColor = "rgba(34,197,94,0.08)";
-            let statusBorder = "rgba(34,197,94,0.3)";
-            if (savedStatusType === "negative") { 
-                statusColor = "rgba(239,68,68,0.08)"; 
-                statusBorder = "rgba(239,68,68,0.3)"; 
-            } else if (savedStatusType === "neutral") { 
-                statusColor = "rgba(234,179,8,0.08)"; 
-                statusBorder = "rgba(234,179,8,0.3)"; 
+            // Clear any CSS classes from parent and set the appropriate status class
+            budgetStatusEl.className = "budget-status";
+            if (savedStatusType === "negative") {
+                budgetStatusEl.classList.add("negative");
+            } else if (savedStatusType === "neutral") {
+                budgetStatusEl.classList.add("neutral");
+            } else { // positive
+                budgetStatusEl.classList.add("positive");
             }
-            budgetStatusEl.innerHTML = `<div class="month-end-banner" style="background:${statusColor};border:1px solid ${statusBorder};">
-                ${savedStatus ? `<span style="display:block;margin-bottom:4px;">${savedStatus}</span>` : ""}
-                <span>🔒 This month's budget is closed and read-only.</span>
-            </div>`;
+            
+            budgetStatusEl.innerHTML = `
+                ${savedStatus ? `<div style="margin-bottom: 8px;">${savedStatus}</div>` : ""}
+                <div>🔒 This month's budget is closed and read-only.</div>
+            `;
         } else {
             budgetStatusEl.innerHTML = "";
+            budgetStatusEl.className = "budget-status";
         }
     }
     
@@ -4963,6 +4971,11 @@ toggleBudgetView.addEventListener("click", () => {
     toggleBudgetView.textContent = isAnnualBudgetView ? "📅 Monthly" : "📊 Annual";
     prevMonthBtn.textContent = isAnnualBudgetView ? "← Previous FY" : "← Previous";
     nextMonthBtn.textContent = isAnnualBudgetView ? "Next FY →" : "Next →";
+    
+    // Hide edit and close buttons in annual view
+    if (toggleBudgetEdit) toggleBudgetEdit.hidden = isAnnualBudgetView;
+    if (btnCarryForward) btnCarryForward.hidden = isAnnualBudgetView;
+    
     renderMonthlyBudget();
 });
 

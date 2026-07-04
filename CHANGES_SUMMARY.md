@@ -152,7 +152,7 @@ This document summarizes all the changes made to fix various issues in the Smart
 **Fix:** Enhanced the budget edit mode logic to:
 - Clear the innerHTML (not just textContent) when hiding the banner
 - Reset the className to remove any status classes (positive/negative/neutral) that add borders
-- Ensure the banner is completely hidden with no visual artifacts
+- Ensure the banner is completely hidden with no visual artifacts in edit mode
 
 **Files Modified:**
 - `assets/js/app.js` (lines 4399-4406)
@@ -161,10 +161,10 @@ This document summarizes all the changes made to fix various issues in the Smart
 
 ## 11. Removed Save Button from Fixed Outflow Page ✅
 
-**Issue:** The Fixed Outflow edit page had a separate "Save" button (💾) for updating Fixed Monthly Income, which was redundant and confusing.
+**Issue:** The Fixed Outflow edit page had a redundant "Save" button (💾) next to the Fixed Monthly Income field.
 
 **Fix:** Streamlined the user experience:
-- Removed the "Save" button from the UI
+- Removed the "Save" button from the HTML completely
 - Fixed Monthly Income now auto-saves when clicking "Done" button
 - Logic moved from separate button handler to the toggle edit mode handler
 - When entering edit mode: field is populated with current value
@@ -175,7 +175,7 @@ This document summarizes all the changes made to fix various issues in the Smart
 - Consistent with other tabs' behavior
 - Less confusion about when data is saved
 
-**Files Modified:**
+**Files Modified:** 
 - `index.html` (line 577 - removed button)
 - `assets/js/app.js` (lines 324-325, 5347-5365 - removed button reference and moved save logic)
 
@@ -220,9 +220,12 @@ The export/import functionality correctly handles all data fields:
 ### Settlement Tracking
 - When settling from savings, the amount is now tracked in `_ccSettlementAmount` field
 - This accumulates all settlements made during the month
+- Settlement immediately reduces `creditCardOutstanding` in the UI
 
 ### Month Close Logic
-- When closing the month, calculates the actual outstanding as: `midMonthCCOutstanding - _ccSettlementAmount`
+- When closing the month, calculates the actual outstanding as: `creditCardOutstanding + midMonthCCOutstanding`
+- Note: `creditCardOutstanding` is already reduced by settlements when user clicks "Settle from Saving"
+- Settlements only apply to previous month's CC bill, not to current month's spending
 - Stores this actual outstanding in `_actualCCOutstanding` field
 - Confirmation message shows both the original amount and settlement amount
 
@@ -235,24 +238,63 @@ The export/import functionality correctly handles all data fields:
 - This ensures budget surplus/deficit reflects the real financial position
 
 **Example Flow:**
-1. User has ₹10,000 CC outstanding (midMonthCCOutstanding)
-2. User settles ₹3,000 from savings
-3. Current month's creditCardOutstanding becomes ₹7,000
-4. When month closes, `_actualCCOutstanding` is stored as ₹7,000
-5. Next month's CC bill auto-calculates as ₹7,000 (not ₹10,000)
+1. User has ₹10,000 CC outstanding from previous month (creditCardOutstanding)
+2. User spends ₹8,000 more this month (midMonthCCOutstanding)
+3. User settles ₹6,000 from savings
+4. UI shows: creditCardOutstanding = ₹4,000 (reduced immediately)
+5. When month closes: actual outstanding = ₹4,000 + ₹8,000 = ₹12,000
+6. Next month's CC bill auto-calculates as ₹12,000 (not ₹18,000)
 
 **Files Modified:**
 - `assets/js/app.js` (lines 1464-1484 - auto-calculation logic)
-- `assets/js/app.js` (lines 1651-1657 - budget status calculation)
+- `assets/js/app.js` (lines 1657-1664 - budget status calculation)
 - `assets/js/app.js` (lines 4192-4264 - settlement function)
-- `assets/js/app.js` (lines 4390-4400 - untracked expenses calculation)
-- `assets/js/app.js` (lines 5178-5184 - month close confirmation)
-- `assets/js/app.js` (lines 5217-5223 - month close budget status)
-- `assets/js/app.js` (lines 5228-5235 - storing actual outstanding)
+- `assets/js/app.js` (lines 4400-4410 - untracked expenses calculation)
+- `assets/js/app.js` (lines 5198-5218 - month close confirmation)
+- `assets/js/app.js` (lines 5238-5245 - month close budget status)
+- `assets/js/app.js` (lines 5250-5257 - storing actual outstanding)
 
 ---
 
-## 14. Fixed Closed Month Banner Color and Border Issues ✅
+## 14. Fixed CC Bill Carry Forward Calculation ✅
+
+**Issue:** The month close calculation was subtracting settlements twice - once when the user clicked "Settle from Saving" (which reduced creditCardOutstanding), and again at month close. This caused incorrect amounts to be carried forward.
+
+**Wrong Logic:**
+```
+actualCCOutstanding = creditCardOutstanding - ccSettlementAmount + midMonthCCOutstanding
+```
+This subtracted settlements again even though creditCardOutstanding was already reduced by the settlement.
+
+**Correct Logic:**
+```
+actualCCOutstanding = creditCardOutstanding + midMonthCCOutstanding
+```
+Since creditCardOutstanding is already reduced by settlements when the user clicks "Settle from Saving", we don't need to subtract it again.
+
+**Example:**
+- Previous month CC bill carried forward: ₹10,000
+- Current month new spending: ₹3,000
+- Settlements made: ₹6,000
+- After settlement: creditCardOutstanding = ₹4,000 (reduced immediately in UI)
+- **Wrong calculation:** ₹4,000 - ₹6,000 + ₹3,000 = ₹1,000 (double subtraction!)
+- **Correct calculation:** ₹4,000 + ₹3,000 = ₹7,000 (correct!)
+
+**Impact:**
+- Settlements now only apply to previous month's CC bill
+- Current month's spending is not reduced by settlements
+- Month close now carries forward the correct pending amount
+- UI immediately reflects settlement reduction
+
+**Files Modified:**
+- `assets/js/app.js` (lines 1657-1664 - budget status calculation)
+- `assets/js/app.js` (lines 4400-4410 - untracked expenses calculation)
+- `assets/js/app.js` (lines 5198-5218 - month close confirmation)
+- `assets/js/app.js` (lines 5238-5245 - month close budget status)
+
+---
+
+## 15. Fixed Closed Month Banner Color and Border Issues ✅
 
 **Issue:** 
 - Closed month banner always showed green regardless of budget status
@@ -282,7 +324,7 @@ The export/import functionality correctly handles all data fields:
 
 ---
 
-## 15. Hidden Edit/Close Buttons in Annual View ✅
+## 16. Hidden Edit/Close Buttons in Annual View ✅
 
 **Issue:** The Edit (✎) and Close Month buttons were visible in both monthly and annual views, but they only make sense in the monthly view.
 
@@ -308,7 +350,7 @@ The export/import functionality correctly handles all data fields:
 
 ---
 
-## 16. Fixed Navigation Alignment ✅
+## 17. Fixed Navigation Alignment ✅
 
 **Issue:** Navigation buttons appeared centered due to `justify-content: center` CSS, especially noticeable when fewer buttons were visible in annual view.
 
@@ -383,17 +425,27 @@ Before deploying these changes, please test the following scenarios:
 - [ ] Verify Fixed Monthly Income value is preserved after import
 
 ### 10. CC Bill Settlement and Month Close
-- [ ] Create a month with CC outstanding (e.g., ₹10,000)
-- [ ] Settle partial amount from savings (e.g., ₹3,000)
-- [ ] Verify current month's creditCardOutstanding shows ₹7,000
+- [ ] Create a month with CC outstanding (e.g., ₹10,000 from previous month)
+- [ ] Add current month CC spending (e.g., ₹8,000)
+- [ ] Settle partial amount from savings (e.g., ₹6,000)
+- [ ] Verify current month's creditCardOutstanding shows ₹4,000 (₹10K - ₹6K) ✅
 - [ ] Close the month
 - [ ] Navigate to next month
-- [ ] Verify next month's "Previous Month CC Bill (Unpaid)" shows ₹7,000 (not ₹10,000)
-- [ ] Verify month close confirmation shows settlement amount
-- [ ] Test with full settlement (settle entire amount)
-- [ ] Verify next month's CC bill is ₹0 after full settlement
+- [ ] Verify next month's "Previous Month CC Bill (Unpaid)" shows ₹12,000 (₹4K + ₹8K) ✅
+- [ ] Verify month close confirmation shows correct calculation
+- [ ] Test with full settlement (settle entire previous month amount)
+- [ ] Verify next month's CC bill includes current month spending only
 
-### 11. Closed Month Banner Colors and Borders
+### 11. CC Bill Carry Forward Calculation
+- [ ] Create scenario: Previous month CC = ₹10,000, current month new spending = ₹8,000
+- [ ] Close month without any settlement
+- [ ] Verify next month's CC bill = ₹18,000 (₹10K + ₹8K) ✅
+- [ ] Create scenario: Previous month CC = ₹10,000, new spending = ₹8,000, settlement = ₹6,000
+- [ ] Close month
+- [ ] Verify next month's CC bill = ₹12,000 (₹4K + ₹8K) ✅
+- [ ] Verify budget status calculations include previous month's CC bill
+
+### 12. Closed Month Banner Colors and Borders
 - [ ] Close a month with surplus - verify banner shows GREEN
 - [ ] Close a month with deficit - verify banner shows RED (not green!)
 - [ ] Close a month balanced - verify banner shows YELLOW
@@ -401,7 +453,7 @@ Before deploying these changes, please test the following scenarios:
 - [ ] Verify closed month banner styling matches current month banner
 - [ ] Enter budget edit mode - verify no empty banner or borders visible
 
-### 12. Annual View Button Visibility
+### 13. Annual View Button Visibility
 - [ ] Go to Budget tab in monthly view
 - [ ] Verify Edit (✎) button is visible
 - [ ] Verify Close Month button is visible
@@ -412,7 +464,7 @@ Before deploying these changes, please test the following scenarios:
 - [ ] Verify Edit (✎) button is visible again ✅
 - [ ] Verify Close Month button is visible again ✅
 
-### 13. Navigation Alignment
+### 14. Navigation Alignment
 - [ ] Go to Budget tab in monthly view
 - [ ] Verify navigation buttons are left-aligned (not centered) ✅
 - [ ] Switch to annual view
@@ -423,7 +475,7 @@ Before deploying these changes, please test the following scenarios:
 
 ## Files Changed Summary
 
-1. **assets/js/app.js** - Main application logic (15 fixes applied)
+1. **assets/js/app.js** - Main application logic (16 fixes applied)
 2. **index.html** - Help panel contact section + removed Save button (2 changes)
 3. **assets/css/styles.css** - Navigation alignment fix (2 changes)
 
@@ -450,11 +502,25 @@ Before deploying these changes, please test the following scenarios:
 
 **Developer:** Devin AI Assistant  
 **Date:** July 4, 2026  
-**Version:** 4.6
+**Version:** 4.8
 
 ---
 
 ## Changelog
+
+### Version 4.8 (July 4, 2026 - Eighth Update)
+- Fixed CC bill carry forward calculation to avoid double subtraction of settlements
+- Settlements were being subtracted twice (once on click, once at month close)
+- Now correctly calculates: creditCardOutstanding (already reduced) + midMonthCCOutstanding
+- Settlements only apply to previous month's CC bill, not current month's spending
+- UI immediately reflects settlement reduction
+
+### Version 4.7 (July 4, 2026 - Seventh Update)
+- Fixed CC bill carry forward calculation to include previous month's CC bill
+- Previous logic only considered current month's spending minus settlements
+- Now correctly calculates: Previous Month CC - Settlements + Current Month Spending
+- Budget status calculations now include total CC liability
+- Untracked expenses now reflect accurate CC debt position
 
 ### Version 4.6 (July 4, 2026 - Sixth Update)
 - Fixed navigation alignment from center to left-aligned

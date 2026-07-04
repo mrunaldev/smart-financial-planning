@@ -95,6 +95,8 @@ users/{uid} → single document
       "_transferDone": 0,
       "_initialBalance": 0,
       "_carryForwardDone": 0,
+      "_ccSettlementAmount": 0,
+      "_actualCCOutstanding": 0,
       "_monthClosed": false,
       "autoLinkedFields": { "outflow.loanEMI": true, "outflow.variableExpenditure": true, ... },
       "autoLinkedBreakdown": { "outflow.loanEMI": [{name, amount, source}] }

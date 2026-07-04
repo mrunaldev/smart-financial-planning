@@ -1,5 +1,429 @@
 'use strict';
 
+// ── Logging System ─────────────────────────────────────────────────────────────
+const LogLevel = {
+    INFO: 'info',
+    WARNING: 'warning',
+    ERROR: 'error'
+};
+
+class AppLogger {
+    constructor() {
+        this.userId = null;
+        this.deviceId = this.generateDeviceId();
+        this.isEnabled = true;
+        this.logQueue = [];
+        this.isOnline = navigator.onLine;
+        this.maxQueueSize = 100;
+        this.flushInterval = 30000; // 30 seconds
+        this.flushTimer = null;
+        
+        // Listen for online/offline events
+        window.addEventListener('online', () => this.handleOnline());
+        window.addEventListener('offline', () => this.handleOffline());
+        
+        // Start auto-flush
+        this.startAutoFlush();
+    }
+    
+    generateDeviceId() {
+        let deviceId = localStorage.getItem('app_device_id');
+        if (!deviceId) {
+            deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('app_device_id', deviceId);
+        }
+        return deviceId;
+    }
+    
+    setUserId(userId) {
+        this.userId = userId;
+    }
+    
+    handleOnline() {
+        this.isOnline = true;
+        console.log('[AppLogger] Back online, flushing queued logs');
+        this.flushQueue();
+    }
+    
+    handleOffline() {
+        this.isOnline = false;
+        console.log('[AppLogger] Gone offline, logs will be queued');
+    }
+    
+    startAutoFlush() {
+        if (this.flushTimer) clearInterval(this.flushTimer);
+        this.flushTimer = setInterval(() => this.flushQueue(), this.flushInterval);
+    }
+    
+    stopAutoFlush() {
+        if (this.flushTimer) {
+            clearInterval(this.flushTimer);
+            this.flushTimer = null;
+        }
+    }
+    
+    async log(level, message, context = {}) {
+        if (!this.isEnabled) return;
+        
+        const logEntry = {
+            timestamp: new Date().toISOString(),
+            level: level,
+            message: message,
+            userId: this.userId,
+            deviceId: this.deviceId,
+            userAgent: navigator.userAgent,
+            url: window.location.href,
+            context: context
+        };
+        
+        // Always log to console for local debugging
+        const consoleMethod = level === LogLevel.ERROR ? 'error' : level === LogLevel.WARNING ? 'warn' : 'log';
+        console[consoleMethod](`[${level.toUpperCase()}]`, message, context);
+        
+        // Add to queue for Firebase
+        this.logQueue.push(logEntry);
+        
+        // Trim queue if too large
+        if (this.logQueue.length > this.maxQueueSize) {
+            this.logQueue = this.logQueue.slice(-this.maxQueueSize);
+        }
+        
+        // Try to flush immediately if online
+        if (this.isOnline) {
+            await this.flushQueue();
+        }
+    }
+    
+    info(message, context) {
+        return this.log(LogLevel.INFO, message, context);
+    }
+    
+    warning(message, context) {
+        return this.log(LogLevel.WARNING, message, context);
+    }
+    
+    error(message, context) {
+        return this.log(LogLevel.ERROR, message, context);
+    }
+    
+    async flushQueue() {
+        if (!this.isOnline || this.logQueue.length === 0) return;
+        
+        const logsToSend = [...this.logQueue];
+        this.logQueue = [];
+        
+        try {
+            // Send to Firebase
+            await this.sendToFirebase(logsToSend);
+            console.log(`[AppLogger] Flushed ${logsToSend.length} logs to Firebase`);
+        } catch (error) {
+            console.error('[AppLogger] Failed to flush logs:', error);
+            // Re-add failed logs to queue
+            this.logQueue = [...logsToSend, ...this.logQueue];
+        }
+    }
+    
+    async sendToFirebase(logs) {
+        // This will be implemented after Firebase is initialized
+        // For now, just store in localStorage as fallback
+        try {
+            const existingLogs = JSON.parse(localStorage.getItem('app_logs_local') || '[]');
+            const newLogs = [...existingLogs, ...logs];
+            
+            // Keep only last 1000 logs locally
+            const trimmedLogs = newLogs.slice(-1000);
+            localStorage.setItem('app_logs_local', JSON.stringify(trimmedLogs));
+            
+            // If Firebase is available, send there
+            if (window.db && window.firestoreInitialized) {
+                const logsCollection = window.db.collection('app_logs');
+                const batch = window.db.batch();
+                
+                logs.forEach(log => {
+                    const docRef = logsCollection.doc();
+                    batch.set(docRef, log);
+                });
+                
+                await batch.commit();
+            }
+        } catch (error) {
+            console.error('[AppLogger] Error sending to Firebase:', error);
+        }
+    }
+    
+    async getLogs(filters = {}) {
+        try {
+            // Try to get from Firebase first
+            if (window.db && window.firestoreInitialized) {
+                let query = window.db.collection('app_logs')
+                    .orderBy('timestamp', 'desc')
+                    .limit(500);
+                
+                if (filters.level) {
+                    query = query.where('level', '==', filters.level);
+                }
+                
+                if (filters.userId) {
+                    query = query.where('userId', '==', filters.userId);
+                }
+                
+                if (filters.startDate) {
+                    query = query.where('timestamp', '>=', filters.startDate);
+                }
+                
+                if (filters.endDate) {
+                    query = query.where('timestamp', '<=', filters.endDate);
+                }
+                
+                const snapshot = await query.get();
+                return snapshot.docs.map(doc => doc.data());
+            }
+            
+            // Fallback to localStorage
+            const localLogs = JSON.parse(localStorage.getItem('app_logs_local') || '[]');
+            let filteredLogs = localLogs;
+            
+            if (filters.level) {
+                filteredLogs = filteredLogs.filter(log => log.level === filters.level);
+            }
+            
+            if (filters.userId) {
+                filteredLogs = filteredLogs.filter(log => log.userId === filters.userId);
+            }
+            
+            if (filters.startDate) {
+                filteredLogs = filteredLogs.filter(log => log.timestamp >= filters.startDate);
+            }
+            
+            if (filters.endDate) {
+                filteredLogs = filteredLogs.filter(log => log.timestamp <= filters.endDate);
+            }
+            
+            // Sort by timestamp desc
+            filteredLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            return filteredLogs.slice(0, 500);
+        } catch (error) {
+            console.error('[AppLogger] Error getting logs:', error);
+            return [];
+        }
+    }
+    
+    enable() {
+        this.isEnabled = true;
+    }
+    
+    disable() {
+        this.isEnabled = false;
+    }
+    
+    clearLocalLogs() {
+        localStorage.removeItem('app_logs_local');
+        console.log('[AppLogger] Local logs cleared');
+    }
+}
+
+// Initialize global logger
+const logger = new AppLogger();
+
+// ── App Logs Panel ─────────────────────────────────────────────────────────────
+let logsAutoRefreshInterval = null;
+
+function openLogsPanel() {
+    logger.info('Logs panel opened');
+    const logsPanel = document.getElementById('logsPanel');
+    const logsOverlay = document.getElementById('logsOverlay');
+    
+    logsPanel.classList.remove('hidden');
+    logsPanel.setAttribute('aria-hidden', 'false');
+    logsOverlay.classList.remove('hidden');
+    
+    loadLogs();
+    startLogsAutoRefresh();
+}
+
+function closeLogsPanel() {
+    logger.info('Logs panel closed');
+    const logsPanel = document.getElementById('logsPanel');
+    const logsOverlay = document.getElementById('logsOverlay');
+    
+    logsPanel.classList.add('hidden');
+    logsPanel.setAttribute('aria-hidden', 'true');
+    logsOverlay.classList.add('hidden');
+    
+    stopLogsAutoRefresh();
+}
+
+function startLogsAutoRefresh() {
+    stopLogsAutoRefresh();
+    logsAutoRefreshInterval = setInterval(() => loadLogs(), 10000); // Refresh every 10 seconds
+}
+
+function stopLogsAutoRefresh() {
+    if (logsAutoRefreshInterval) {
+        clearInterval(logsAutoRefreshInterval);
+        logsAutoRefreshInterval = null;
+    }
+}
+
+async function loadLogs() {
+    const levelFilter = document.getElementById('logLevelFilter').value;
+    const filters = {};
+    
+    if (levelFilter !== 'all') {
+        filters.level = levelFilter;
+    }
+    
+    try {
+        const logs = await logger.getLogs(filters);
+        renderLogs(logs);
+        updateLogsStats(logs);
+    } catch (error) {
+        logger.error('Failed to load logs', { error: error.message });
+        renderLogsError(error.message);
+    }
+}
+
+function renderLogs(logs) {
+    const logsTable = document.getElementById('logsTable');
+    
+    if (!logs || logs.length === 0) {
+        logsTable.innerHTML = '<div class="logs-empty">No logs found</div>';
+        return;
+    }
+    
+    const html = logs.map(log => {
+        const timestamp = new Date(log.timestamp).toLocaleString();
+        const contextStr = log.context ? JSON.stringify(log.context, null, 2) : '';
+        
+        return `
+            <div class="log-entry ${log.level}">
+                <div class="log-entry-header">
+                    <span class="log-entry-level ${log.level}">${log.level}</span>
+                    <span class="log-entry-timestamp">${timestamp}</span>
+                    ${log.userId ? `<span class="log-entry-user">User: ${log.userId.substring(0, 8)}...</span>` : ''}
+                    <span class="log-entry-device">Device: ${log.deviceId.substring(0, 15)}...</span>
+                </div>
+                <div class="log-entry-message">${escapeHtml(log.message)}</div>
+                ${contextStr ? `<div class="log-entry-context">${escapeHtml(contextStr)}</div>` : ''}
+            </div>
+        `;
+    }).join('');
+    
+    logsTable.innerHTML = html;
+}
+
+function renderLogsError(errorMessage) {
+    const logsTable = document.getElementById('logsTable');
+    logsTable.innerHTML = `<div class="logs-empty">Error loading logs: ${escapeHtml(errorMessage)}</div>`;
+}
+
+function updateLogsStats(logs) {
+    const total = logs.length;
+    const info = logs.filter(l => l.level === 'info').length;
+    const warning = logs.filter(l => l.level === 'warning').length;
+    const error = logs.filter(l => l.level === 'error').length;
+    
+    document.getElementById('logsTotalCount').textContent = `Total: ${total}`;
+    document.getElementById('logsInfoCount').textContent = `Info: ${info}`;
+    document.getElementById('logsWarningCount').textContent = `Warning: ${warning}`;
+    document.getElementById('logsErrorCount').textContent = `Error: ${error}`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function exportLogs() {
+    logger.info('Exporting logs');
+    const levelFilter = document.getElementById('logLevelFilter').value;
+    const filters = {};
+    
+    if (levelFilter !== 'all') {
+        filters.level = levelFilter;
+    }
+    
+    logger.getLogs(filters).then(logs => {
+        const exportData = {
+            exportedAt: new Date().toISOString(),
+            filters: filters,
+            totalLogs: logs.length,
+            logs: logs
+        };
+        
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `smartfin-logs-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        logger.info('Logs exported successfully', { count: logs.length });
+    }).catch(error => {
+        logger.error('Failed to export logs', { error: error.message });
+        alert('Failed to export logs: ' + error.message);
+    });
+}
+
+function clearLocalLogs() {
+    if (confirm('Are you sure you want to clear all local logs? This will not delete logs from Firebase.')) {
+        logger.clearLocalLogs();
+        loadLogs();
+        logger.info('Local logs cleared');
+    }
+}
+
+// Initialize logs panel event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const logsBtn = document.getElementById('logsBtn');
+    const closeLogsBtn = document.getElementById('closeLogsBtn');
+    const logRefreshBtn = document.getElementById('logRefreshBtn');
+    const logExportBtn = document.getElementById('logExportBtn');
+    const logClearBtn = document.getElementById('logClearBtn');
+    const logLevelFilter = document.getElementById('logLevelFilter');
+    
+    if (logsBtn) {
+        logsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openLogsPanel();
+        });
+    }
+    
+    if (closeLogsBtn) {
+        closeLogsBtn.addEventListener('click', closeLogsPanel);
+    }
+    
+    if (logRefreshBtn) {
+        logRefreshBtn.addEventListener('click', () => {
+            logger.info('Manual log refresh');
+            loadLogs();
+        });
+    }
+    
+    if (logExportBtn) {
+        logExportBtn.addEventListener('click', exportLogs);
+    }
+    
+    if (logClearBtn) {
+        logClearBtn.addEventListener('click', clearLocalLogs);
+    }
+    
+    if (logLevelFilter) {
+        logLevelFilter.addEventListener('change', loadLogs);
+    }
+    
+    // Close logs panel when clicking overlay
+    const logsOverlay = document.getElementById('logsOverlay');
+    if (logsOverlay) {
+        logsOverlay.addEventListener('click', closeLogsPanel);
+    }
+});
+
 // ── Theme-based favicon switching ─────────────────────────────────────────────
 function updateFaviconForTheme() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
@@ -590,6 +1014,7 @@ function openSettings() {
     settingsPanel.classList.add("open");
     settingsPanel.setAttribute("aria-hidden", "false");
 }
+
 function closeSettings() {
     settingsPanel.classList.remove("open");
     settingsPanel.setAttribute("aria-hidden", "true");
@@ -624,15 +1049,29 @@ if (helpOverlay) helpOverlay.addEventListener("click", closeHelp);
 // Export
 exportDataBtn.addEventListener("click", () => {
     if (!currentUser) return;
-    const payload = JSON.stringify({ exportDate: new Date().toISOString(), version: "2.0", data: appData }, null, 2);
+    const exportTimestamp = new Date().toISOString();
+    const exportDate = exportTimestamp.slice(0, 10);
+    
+    const payload = JSON.stringify({ 
+        exportDate: exportTimestamp, 
+        version: "2.0", 
+        data: appData 
+    }, null, 2);
+    
     const blob = new Blob([payload], { type: "application/json" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
     a.href     = url;
-    a.download = `smartfin-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `smartfin-backup-${exportDate}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    alert("Backup exported successfully!");
+    
+    logger.info('Data exported successfully', { 
+        filename: `smartfin-backup-${exportDate}.json`,
+        exportDate: exportTimestamp 
+    });
+    
+    alert(`Backup exported successfully!\n\nFile: smartfin-backup-${exportDate}.json`);
 });
 
 // Import
@@ -640,6 +1079,7 @@ importFileInput.addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file || !currentUser) return;
     const reader = new FileReader();
+    
     reader.onload = (ev) => {
         try {
             const parsed = JSON.parse(ev.target.result);
@@ -650,7 +1090,10 @@ importFileInput.addEventListener("change", (e) => {
                 throw new Error("File does not contain SmartFin data.");
             }
             const exportInfo = parsed.exportDate ? `\nBackup date: ${new Date(parsed.exportDate).toLocaleDateString("en-IN")}` : "";
-            if (!window.confirm(`This will overwrite ALL your current data with the imported backup.${exportInfo}\n\nContinue?`)) return;
+            const fileInfo = `\nFile: ${file.name}`;
+            const filePath = `\nPath: ${file.path || file.webkitRelativePath || 'Unknown (local file)'}`;
+            
+            if (!window.confirm(`This will overwrite ALL your current data with the imported backup.${exportInfo}${fileInfo}${filePath}\n\nContinue?`)) return;
 
             // Ensure all required fields exist in imported data
             const safeImport = {
@@ -682,6 +1125,13 @@ importFileInput.addEventListener("change", (e) => {
                     activeTabId = appData.onboardingComplete ? "monthlyBudget" : "cards";
                     render();
                     closeSettings();
+                    
+                    logger.info('Data imported successfully', { 
+                        filename: file.name,
+                        filePath: file.path || file.webkitRelativePath,
+                        fileSize: file.size
+                    });
+                    
                     alert("Data imported successfully!");
                 })
                 .catch(err => alert("Import failed: " + err.message));
@@ -831,16 +1281,22 @@ function scheduleSave() {
 function doSave() {
     if (!currentUser) return;
     localWritePending = true;
+    
+    logger.info('Saving data to Firebase', { userId: currentUser.uid });
+    
     db.collection("users").doc(currentUser.uid)
         .set(appData)
         .then(() => {
             localWritePending = false;
+            logger.info('Data saved successfully', { userId: currentUser.uid });
         })
         .catch(err => { 
             localWritePending = false; 
+            logger.error('Save failed', { error: err.message, code: err.code });
             console.error("Save failed:", err);
             // Show user-friendly error message
             if (err.code === 'unavailable' || err.code === 'failed-precondition') {
+                logger.warning('Network issue detected, retrying save');
                 console.warn("Network issue detected. Data will be retried automatically.");
                 // Retry after 2 seconds
                 setTimeout(() => {
@@ -1436,13 +1892,19 @@ function buildMonthlyAutoValues(monthKey) {
 }
 
 function applyMonthlyAutoValues(monthKey, monthData) {
+    logger.info('Applying monthly auto values', { monthKey });
+    
     monthData.autoLinkedFields = monthData.autoLinkedFields || {};
     monthData.autoLinkedBreakdown = monthData.autoLinkedBreakdown || {};
     
     // Preserve Current Month CC Spending value from Quick Update before clearing
     const preservedCCValue = Number(monthData.outflow?.midMonthCCOutstanding || 0);
     
-    if (!isCurrentOrFutureMonth(monthKey)) return monthData.autoLinkedFields;
+    if (!isCurrentOrFutureMonth(monthKey)) {
+        logger.info('Skipping auto values for past month', { monthKey });
+        return monthData.autoLinkedFields;
+    }
+    
     Object.keys(monthData.autoLinkedFields).forEach(key => {
         const [category, fieldId] = key.split(".");
         // Skip clearing midMonthCCOutstanding - it's managed by Quick Update
@@ -1451,7 +1913,9 @@ function applyMonthlyAutoValues(monthKey, monthData) {
         delete monthData.autoLinkedFields[key];
         delete monthData.autoLinkedBreakdown[key];
     });
+    
     const { values, breakdown } = buildMonthlyAutoValues(monthKey);
+    
     Object.entries(values).forEach(([category, fieldValues]) => {
         if (!monthData[category]) monthData[category] = {};
         Object.entries(fieldValues).forEach(([fieldId, value]) => {
@@ -1462,6 +1926,7 @@ function applyMonthlyAutoValues(monthKey, monthData) {
     });
 
     // Auto-calculate Previous Month CC Bill (Unpaid) from previous month closing
+    // Formula: creditCardOutstanding = (previous month's actual CC outstanding) - (settled amount in current month)
     const prevDate = new Date(monthKey + "-15");
     prevDate.setMonth(prevDate.getMonth() - 1);
     const prevKey = getMonthKey(prevDate);
@@ -1469,19 +1934,44 @@ function applyMonthlyAutoValues(monthKey, monthData) {
     if (prevData && prevData._monthClosed) {
         // Use the actual outstanding amount after settlements if available, otherwise use the original midMonthCCOutstanding
         const prevCC = Number(prevData._actualCCOutstanding ?? prevData.outflow?.midMonthCCOutstanding ?? 0);
+        // Subtract any settlements made in the current month
+        const settledAmount = Number(monthData._ccSettlementAmount || 0);
+        // Cap the settlement at the previous month's outstanding amount to prevent negative values
+        const effectiveSettledAmount = Math.min(settledAmount, prevCC);
+        const calculatedCC = Math.max(0, prevCC - effectiveSettledAmount);
+        
         if (!monthData.outflow) monthData.outflow = {};
-        monthData.outflow.creditCardOutstanding = prevCC;
+        monthData.outflow.creditCardOutstanding = calculatedCC;
         // Always mark as auto-linked to prevent editing, even if value is 0
         monthData.autoLinkedFields["outflow.creditCardOutstanding"] = true;
-        if (prevCC > 0) {
+        
+        if (calculatedCC > 0) {
+            const breakdownItems = [
+                { name: "Carried over from " + prevDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" }), amount: prevCC, source: "Previous Month Close" }
+            ];
+            if (effectiveSettledAmount > 0) {
+                breakdownItems.push({ name: "Less: Settled from Savings", amount: -effectiveSettledAmount, source: "Current Month Settlement" });
+            }
+            monthData.autoLinkedBreakdown["outflow.creditCardOutstanding"] = breakdownItems;
+        } else if (prevCC > 0 && effectiveSettledAmount >= prevCC) {
+            // Fully settled
             monthData.autoLinkedBreakdown["outflow.creditCardOutstanding"] = [
-                { name: "CC Outstanding from " + prevDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" }), amount: prevCC, source: "Previous Month Close" }
+                { name: "Carried over from " + prevDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" }), amount: prevCC, source: "Previous Month Close" },
+                { name: "Less: Settled from Savings (fully settled)", amount: -effectiveSettledAmount, source: "Current Month Settlement" }
             ];
         } else {
             monthData.autoLinkedBreakdown["outflow.creditCardOutstanding"] = [
                 { name: "No CC outstanding from previous month", amount: 0, source: "Previous Month Close" }
             ];
         }
+        
+        logger.info('Auto-calculated CC Outstanding with settlement', { 
+            monthKey, 
+            prevCC, 
+            settledAmount,
+            effectiveSettledAmount,
+            calculatedCC 
+        });
     } else {
         // If there's a value but it wasn't auto-calculated (legacy data), still mark as auto-linked to prevent editing
         const existingCC = Number(monthData.outflow?.creditCardOutstanding || 0);
@@ -4080,6 +4570,54 @@ function showAutoCalcPopup(anchor, fieldLabel, breakdown) {
     if (existing) existing.remove();
 
     const total = breakdown.reduce((s, b) => s + b.amount, 0);
+    
+    // Cap the total at 0 for CC Outstanding (can't have negative outstanding)
+    const displayTotal = fieldLabel === 'Previous Month CC Bill (Unpaid)' ? Math.max(0, total) : total;
+    
+    // Special handling for CC Outstanding to show calculation formula
+    let formulaHtml = '';
+    if (fieldLabel === 'Previous Month CC Bill (Unpaid)') {
+        const positiveAmount = breakdown.find(b => b.amount > 0)?.amount || 0;
+        const negativeAmount = Math.abs(breakdown.find(b => b.amount < 0)?.amount || 0);
+        
+        // Determine settlement status and color
+        let statusColor = '#eab308'; // yellow - default
+        let statusMessage = '';
+        
+        if (negativeAmount === 0) {
+            // Nothing settled
+            statusColor = '#ef4444'; // red
+            statusMessage = 'No settlement made';
+            formulaHtml = `
+                <div class="auto-calc-popup-formula" style="background: rgba(239, 68, 68, 0.1);">
+                    <span class="formula-label">Note:</span>
+                    <span class="formula-expression" style="color: ${statusColor};">${statusMessage}</span>
+                </div>
+            `;
+        } else if (displayTotal === 0) {
+            // Fully settled
+            statusColor = '#22c55e'; // green
+            statusMessage = 'Fully settled';
+            formulaHtml = `
+                <div class="auto-calc-popup-formula" style="background: rgba(34, 197, 94, 0.1);">
+                    <span class="formula-label">Note:</span>
+                    <span class="formula-expression" style="color: ${statusColor};">${statusMessage}</span>
+                </div>
+            `;
+        } else if (breakdown.length > 1) {
+            // Partial settlement - show formula
+            statusColor = '#eab308'; // yellow
+            statusMessage = 'Partially settled';
+            formulaHtml = `
+                <div class="auto-calc-popup-formula">
+                    <span class="formula-label">Calculation:</span>
+                    <span class="formula-expression">${formatMoney(positiveAmount)} - ${formatMoney(negativeAmount)} = ${formatMoney(displayTotal)}</span>
+                    <span class="formula-status" style="color: ${statusColor};">(${statusMessage})</span>
+                </div>
+            `;
+        }
+    }
+    
     const popup = document.createElement("div");
     popup.id = "autoCalcPopup";
     popup.className = "auto-calc-popup";
@@ -4089,16 +4627,22 @@ function showAutoCalcPopup(anchor, fieldLabel, breakdown) {
             <button type="button" class="auto-calc-popup-close">&times;</button>
         </div>
         <div class="auto-calc-popup-body">
-            ${breakdown.map(b => `
+            ${breakdown.map(b => {
+                const isNegative = b.amount < 0;
+                const amountClass = isNegative ? 'auto-calc-popup-amount-negative' : 'auto-calc-popup-amount';
+                const amountPrefix = isNegative ? '-' : '';
+                return `
                 <div class="auto-calc-popup-row">
                     <span class="auto-calc-popup-name">${esc(b.name)}</span>
-                    <span class="auto-calc-popup-amount">${formatMoney(b.amount)}</span>
+                    <span class="${amountClass}">${amountPrefix}${formatMoney(Math.abs(b.amount))}</span>
                     <span class="auto-calc-popup-source">${esc(b.source)}</span>
                 </div>
-            `).join("")}
+                `;
+            }).join("")}
+            ${formulaHtml}
             <div class="auto-calc-popup-total">
                 <strong>Total</strong>
-                <strong>${formatMoney(total)}</strong>
+                <strong>${formatMoney(displayTotal)}</strong>
             </div>
         </div>
     `;
@@ -4206,22 +4750,30 @@ function renderCategoryFields(container, fields, data, autoLinkedFields = {}, au
 }
 
 function settleCreditCardFromSaving() {
+    logger.info('CC settlement initiated', { monthKey: getMonthKey(currentMonth) });
+    
     const cards = getCardEntries();
     const savingAccount = cards.find(c => c.purpose === "Savings" || c.purpose === "Saving");
     if (!savingAccount) {
+        logger.warning('No savings account found for CC settlement');
         alert("No Savings account found. Please set up a Savings account first.");
         return;
     }
     const monthKey = getMonthKey(currentMonth);
     const monthData = (appData.monthlyBudgetData || {})[monthKey];
-    if (!monthData) return;
+    if (!monthData) {
+        logger.warning('No month data found for CC settlement', { monthKey });
+        return;
+    }
     const outstanding = Number(monthData.outflow?.creditCardOutstanding || 0);
     if (outstanding <= 0) {
+        logger.warning('No outstanding CC bill to settle', { outstanding });
         alert("No outstanding credit card bill to settle.");
         return;
     }
     const savingBalance = Number(savingAccount.balance || 0);
     if (savingBalance <= 0) {
+        logger.warning('Saving account has no balance for CC settlement', { savingBalance });
         alert("Saving account has no balance to settle from.");
         return;
     }
@@ -4237,35 +4789,58 @@ function settleCreditCardFromSaving() {
         maxSettleAmount.toString()
     );
     
-    if (userInput === null) return; // User cancelled
+    if (userInput === null) {
+        logger.info('CC settlement cancelled by user');
+        return;
+    }
     
     const settleAmount = userInput.trim() === "" ? maxSettleAmount : Number(userInput);
     
     if (isNaN(settleAmount) || settleAmount <= 0) {
+        logger.warning('Invalid settlement amount entered', { userInput, settleAmount });
         alert("Please enter a valid amount greater than 0.");
         return;
     }
     
     if (settleAmount > maxSettleAmount) {
-        alert(`Cannot settle ₹${settleAmount.toLocaleString("en-IN")}. Maximum available is ${formatMoney(maxSettleAmount)}.`);
+        logger.warning('Settlement amount exceeds maximum available', { settleAmount, maxSettleAmount, outstanding, savingBalance });
+        alert(`Cannot settle ₹${settleAmount.toLocaleString("en-IN")}. Maximum available is ${formatMoney(maxSettleAmount)} (limited by outstanding CC bill).`);
         return;
     }
     
     const confirmed = confirm(
         `Confirm settlement of ₹${settleAmount.toLocaleString("en-IN")} from your Saving account (${savingAccount.bankName})?\n\n` +
-        `This will:\n• Reduce CC outstanding from ${formatMoney(outstanding)} to ${formatMoney(outstanding - settleAmount)}\n` +
-        `• Reduce saving balance from ${formatMoney(savingBalance)} to ${formatMoney(savingBalance - settleAmount)}`
+        `This will:\n• Track settlement of ${formatMoney(settleAmount)} against CC outstanding\n` +
+        `• Reduce saving balance from ${formatMoney(savingBalance)} to ${formatMoney(savingBalance - settleAmount)}\n` +
+        `• CC outstanding will be recalculated automatically`
     );
-    if (!confirmed) return;
+    if (!confirmed) {
+        logger.info('CC settlement confirmation cancelled by user', { settleAmount });
+        return;
+    }
 
-    // Update the outstanding amount
-    monthData.outflow.creditCardOutstanding = outstanding - settleAmount;
-
-    // Track the settlement amount for month close calculation
+    // Track the settlement amount for auto-calculation
+    // The actual creditCardOutstanding will be calculated by applyMonthlyAutoValues
     if (!monthData._ccSettlementAmount) {
         monthData._ccSettlementAmount = 0;
     }
-    monthData._ccSettlementAmount += settleAmount;
+    
+    // Cap the total settlement at the outstanding amount to prevent negative values
+    const currentOutstanding = Number(monthData.outflow?.creditCardOutstanding || 0);
+    const totalSettlement = monthData._ccSettlementAmount + settleAmount;
+    const effectiveSettlement = Math.min(totalSettlement, Math.max(currentOutstanding, outstanding));
+    
+    // If the effective settlement is less than the intended settlement (due to cap), adjust
+    if (effectiveSettlement < totalSettlement) {
+        logger.warning('Settlement amount capped at outstanding amount', { 
+            intendedSettlement: settleAmount, 
+            effectiveSettlement: effectiveSettlement - monthData._ccSettlementAmount,
+            outstanding: Math.max(currentOutstanding, outstanding)
+        });
+        monthData._ccSettlementAmount = effectiveSettlement;
+    } else {
+        monthData._ccSettlementAmount += settleAmount;
+    }
 
     // Update saving account balance
     savingAccount.balance = savingBalance - settleAmount;
@@ -4273,6 +4848,17 @@ function settleCreditCardFromSaving() {
     if (!appData.tabData) appData.tabData = {};
     appData.tabData.cards = updatedCards;
 
+    // Re-apply auto values to recalculate creditCardOutstanding with the new settlement amount
+    applyMonthlyAutoValues(monthKey, monthData);
+
+    logger.info('CC settlement successful', { 
+        monthKey, 
+        settleAmount, 
+        totalSettled: monthData._ccSettlementAmount,
+        previousBalance: savingBalance,
+        newBalance: savingBalance - settleAmount
+    });
+    
     scheduleSave();
     // Re-render to update the UI immediately
     renderMonthlyBudget();

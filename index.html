@@ -1050,6 +1050,21 @@
                 <input type="file" id="importFileInput" accept=".json" hidden>
             </label>
         </div>
+        <div class="settings-action-row">
+            <div>
+                <div class="settings-row-label">App Logs</div>
+                <div class="settings-row-sub">View application logs and debug information</div>
+            </div>
+            <button type="button" id="logsBtn" class="btn-settings-action">View Logs</button>
+        </div>
+    </div>
+
+    <!-- Import/Export History -->
+    <div class="settings-section">
+        <h3 class="settings-section-title">Import/Export History</h3>
+        <div id="importExportHistoryContainer" class="import-export-history">
+            <div class="history-empty">No import/export history available</div>
+        </div>
     </div>
 
     <!-- Danger Zone -->
@@ -1280,6 +1295,49 @@
             </div>
         </details>
 
+    </div>
+</div>
+
+<!-- ── APP LOGS PANEL ─────────────────────────────────────── -->
+<div id="logsOverlay" class="settings-overlay" hidden></div>
+<div id="logsPanel" class="settings-panel help-panel" aria-hidden="true">
+    <div class="settings-header">
+        <h2>App Logs</h2>
+        <button type="button" id="closeLogsBtn" class="btn-icon-only" aria-label="Close logs">✕</button>
+    </div>
+    <div class="help-content">
+        <div class="logs-controls">
+            <div class="logs-filter-group">
+                <label for="logLevelFilter">Log Level:</label>
+                <select id="logLevelFilter">
+                    <option value="all">All</option>
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="error">Error</option>
+                </select>
+            </div>
+            <div class="logs-filter-group">
+                <label for="logRefreshBtn">Auto-Refresh:</label>
+                <button type="button" id="logRefreshBtn" class="btn-secondary">Refresh Now</button>
+            </div>
+            <div class="logs-filter-group">
+                <label for="logExportBtn">Export:</label>
+                <button type="button" id="logExportBtn" class="btn-secondary">Export Logs</button>
+            </div>
+            <div class="logs-filter-group">
+                <label for="logClearBtn">Clear:</label>
+                <button type="button" id="logClearBtn" class="btn-danger">Clear Local Logs</button>
+            </div>
+        </div>
+        <div class="logs-stats">
+            <span id="logsTotalCount">Total: 0</span>
+            <span id="logsInfoCount">Info: 0</span>
+            <span id="logsWarningCount">Warning: 0</span>
+            <span id="logsErrorCount">Error: 0</span>
+        </div>
+        <div id="logsTable" class="logs-table">
+            <div class="logs-empty">Loading logs...</div>
+        </div>
     </div>
 </div>
 

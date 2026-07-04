@@ -17,6 +17,7 @@
 9. [Deploying to Firebase Hosting (Alternative)](#9-deploying-to-firebase-hosting-alternative)
 10. [Environment Checklist](#10-environment-checklist)
 11. [Troubleshooting](#11-troubleshooting)
+12. [Logging System](#12-logging-system)
 
 ---
 
@@ -452,3 +453,130 @@ Run through this before considering any deployment complete.
 ### Chart not rendering
 **Symptom:** Canvas area is empty, console shows `Chart is not defined`  
 **Fix:** Chart.js CDN failed to load. Check network connection. The CDN URL is `https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js` — verify it loads in the browser.
+
+---
+
+## 12. Logging System
+
+The app includes a comprehensive logging system for debugging and monitoring application behavior.
+
+### Overview
+
+**Location:** `assets/js/app.js` (lines 3-227 for AppLogger class, lines 229-425 for logs panel UI)
+
+**Features:**
+- Centralized logging service with levels (info, warning, error)
+- Device tracking (unique device ID in localStorage)
+- User tracking (when logged in)
+- Offline queue system (logs queued when offline, flushed when online)
+- Auto-flush every 30 seconds
+- Firebase Firestore storage (collection: `app_logs`)
+- LocalStorage fallback (key: `app_logs_local`)
+
+### Log Levels
+
+- **info:** General operational messages
+- **warning:** Non-critical issues that need attention
+- **error:** Critical failures that prevent normal operation
+
+### Usage
+
+**Basic logging:**
+```javascript
+logger.info('User action', { action: 'edit', itemId: '123' });
+logger.warning('Low balance', { amount: 100 });
+logger.error('Operation failed', { error: error.message });
+```
+
+**With context:**
+```javascript
+logger.info('Settlement successful', { 
+    monthKey, 
+    settleAmount, 
+    previousBalance,
+    newBalance 
+});
+```
+
+### Accessing Logs
+
+**Location:** Settings → Data Management → "View Logs"
+
+**Features:**
+- Log level filter (All, Info, Warning, Error)
+- Auto-refresh every 10 seconds
+- Manual refresh button
+- Export logs to JSON
+- Clear local logs
+- Statistics display (total, info, warning, error counts)
+- Color-coded entries (blue=info, yellow=warning, red=error)
+
+### Firebase Setup
+
+**Collection:** `app_logs`
+
+**Required indexes** (for performance):
+- `timestamp` (descending)
+- `level`
+- `userId`
+- `deviceId`
+
+**Security Rules Example:**
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /app_logs/{logId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.userId || 
+         request.auth.token.admin === true);
+    }
+  }
+}
+```
+
+### Instrumented Functions
+
+Currently instrumented with logging:
+
+1. **Auto-Values Application** - Logs when monthly auto values are applied
+2. **Data Save** - Logs save operations, successes, failures, retries
+3. **CC Settlement** - Logs settlement operations with amounts
+4. **Data Export** - Logs export initiation and success
+5. **Data Import** - Logs import with filename, file path, file size
+
+### Adding More Logging
+
+To add logging to a function:
+
+```javascript
+logger.info('Descriptive message', { 
+    key: 'value',
+    additionalContext: 'data'
+});
+```
+
+### Log Entry Structure
+
+```javascript
+{
+    timestamp: "2024-07-04T10:30:00.000Z",
+    level: "info|warning|error",
+    message: "Log message",
+    userId: "user123",  // Optional
+    deviceId: "device_1234567890_abc123",
+    userAgent: "Browser user agent string",
+    url: "Current page URL",
+    context: {  // Additional contextual data
+        key: "value"
+    }
+}
+```
+
+### Performance Considerations
+
+- **Queue size:** Max 100 logs (older entries trimmed)
+- **Auto-flush:** Every 30 seconds
+- **LocalStorage fallback:** Used when Firebase unavailable
+- **Firebase costs:** Monitor usage; adjust flush interval if needed

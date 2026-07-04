@@ -1467,7 +1467,8 @@ function applyMonthlyAutoValues(monthKey, monthData) {
     const prevKey = getMonthKey(prevDate);
     const prevData = (appData.monthlyBudgetData || {})[prevKey];
     if (prevData && prevData._monthClosed) {
-        const prevCC = Number(prevData.outflow?.midMonthCCOutstanding || 0);
+        // Use the actual outstanding amount after settlements if available, otherwise use the original midMonthCCOutstanding
+        const prevCC = Number(prevData._actualCCOutstanding ?? prevData.outflow?.midMonthCCOutstanding ?? 0);
         if (!monthData.outflow) monthData.outflow = {};
         monthData.outflow.creditCardOutstanding = prevCC;
         // Always mark as auto-linked to prevent editing, even if value is 0
@@ -1650,7 +1651,9 @@ function renderMonthlyBudget() {
                 const spendable = inflowTotal - fixedMonthlyOutflow;
                 const variableExp = Number(monthData.outflow?.variableExpenditure || 0);
                 const midMonthCC = Number(monthData.outflow?.midMonthCCOutstanding || 0);
-                const untracked = variableExp + midMonthCC;
+                const ccSettlementAmount = Number(monthData._ccSettlementAmount || 0);
+                const actualCCOutstanding = midMonthCC - ccSettlementAmount;
+                const untracked = variableExp + actualCCOutstanding;
                 const budgetBalance = spendable - untracked;
                 
                 if (budgetBalance > 0) {
@@ -4245,6 +4248,12 @@ function settleCreditCardFromSaving() {
     // Update the outstanding amount
     monthData.outflow.creditCardOutstanding = outstanding - settleAmount;
 
+    // Track the settlement amount for month close calculation
+    if (!monthData._ccSettlementAmount) {
+        monthData._ccSettlementAmount = 0;
+    }
+    monthData._ccSettlementAmount += settleAmount;
+
     // Update saving account balance
     savingAccount.balance = savingBalance - settleAmount;
     const updatedCards = cards.map(c => c.id === savingAccount.id ? savingAccount : c);
@@ -4381,7 +4390,9 @@ function calculateAndDisplaySummary(monthData) {
     // UNTRACKED EXPENSES = variable expenditure (spent from exp account) + CC outstanding this month
     const variableExp = Number(monthData.outflow?.variableExpenditure || 0);
     const midMonthCC = Number(monthData.outflow?.midMonthCCOutstanding || 0);
-    const untracked = variableExp + midMonthCC;
+    const ccSettlementAmount = Number(monthData._ccSettlementAmount || 0);
+    const actualCCOutstanding = midMonthCC - ccSettlementAmount;
+    const untracked = variableExp + actualCCOutstanding;
     const untrackedEl = document.getElementById("untrackedExpenses");
     if (untrackedEl) {
         untrackedEl.textContent = formatMoney(untracked);
@@ -5170,6 +5181,8 @@ if (btnCarryForward) btnCarryForward.addEventListener("click", () => {
     const balance = Number(exp.balance || 0);
 
     const midMonthCC = Number(monthData.outflow?.midMonthCCOutstanding || 0);
+    const ccSettlementAmount = Number(monthData._ccSettlementAmount || 0);
+    const actualCCOutstanding = midMonthCC - ccSettlementAmount;
     const monthLabel = currentMonth.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
     let confirmMsg = `Close ${monthLabel} Budget?\n\nThis will:\n`;
@@ -5177,8 +5190,11 @@ if (btnCarryForward) btnCarryForward.addEventListener("click", () => {
     if (balance > 0) {
         confirmMsg += `• Carry forward ₹${balance.toLocaleString("en-IN")} expenditure balance as next month's initial balance\n`;
     }
-    if (midMonthCC > 0) {
-        confirmMsg += `• Set ₹${midMonthCC.toLocaleString("en-IN")} as next month's "Previous Month CC Bill (Unpaid)"\n`;
+    if (actualCCOutstanding > 0) {
+        confirmMsg += `• Set ₹${actualCCOutstanding.toLocaleString("en-IN")} as next month's "Previous Month CC Bill (Unpaid)"\n`;
+    }
+    if (ccSettlementAmount > 0) {
+        confirmMsg += `• (₹${ccSettlementAmount.toLocaleString("en-IN")} was settled from savings during this month)\n`;
     }
     confirmMsg += `• Navigate to next month\n\nProceed?`;
     if (!confirm(confirmMsg)) return;
@@ -5201,7 +5217,9 @@ if (btnCarryForward) btnCarryForward.addEventListener("click", () => {
     const spendableClose = inflowTotalClose - fixedMonthlyOutflowClose;
     const variableExpClose = Number(monthData.outflow?.variableExpenditure || 0);
     const midMonthCCClose = Number(monthData.outflow?.midMonthCCOutstanding || 0);
-    const untrackedClose = variableExpClose + midMonthCCClose;
+    const ccSettlementAmountClose = Number(monthData._ccSettlementAmount || 0);
+    const actualCCOutstandingClose = midMonthCCClose - ccSettlementAmountClose;
+    const untrackedClose = variableExpClose + actualCCOutstandingClose;
     const budgetBalanceClose = spendableClose - untrackedClose;
     if (budgetBalanceClose > 0) {
         monthData._closedBudgetStatus = `Budget Surplus: +${formatMoney(budgetBalanceClose)} remaining`;
@@ -5217,6 +5235,9 @@ if (btnCarryForward) btnCarryForward.addEventListener("click", () => {
     // Close the current month
     monthData._monthClosed = true;
     monthData._carryForwardDone = balance;
+    
+    // Store the actual CC outstanding amount after settlements for next month's auto-calculation
+    monthData._actualCCOutstanding = actualCCOutstanding;
 
     // Navigate to next month
     currentMonth.setMonth(currentMonth.getMonth() + 1);

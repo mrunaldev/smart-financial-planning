@@ -211,6 +211,47 @@ The export/import functionality correctly handles all data fields:
 
 ---
 
+## 13. Fixed CC Bill Auto-Calculation to Respect Settlements ✅
+
+**Issue:** When settling from savings during the month, the settlement reduced the current month's CC outstanding, but when the month closed, the next month's CC bill was still calculated from the original amount without accounting for the settlement. This caused the settled amount to be carried forward again.
+
+**Fix:** Implemented a comprehensive settlement tracking system:
+
+### Settlement Tracking
+- When settling from savings, the amount is now tracked in `_ccSettlementAmount` field
+- This accumulates all settlements made during the month
+
+### Month Close Logic
+- When closing the month, calculates the actual outstanding as: `midMonthCCOutstanding - _ccSettlementAmount`
+- Stores this actual outstanding in `_actualCCOutstanding` field
+- Confirmation message shows both the original amount and settlement amount
+
+### Auto-Calculation Logic
+- When calculating next month's CC bill, uses `_actualCCOutstanding` if available
+- Falls back to original `midMonthCCOutstanding` for backward compatibility
+
+### Budget Status Calculations
+- All budget status calculations now use the actual outstanding amount after settlements
+- This ensures budget surplus/deficit reflects the real financial position
+
+**Example Flow:**
+1. User has ₹10,000 CC outstanding (midMonthCCOutstanding)
+2. User settles ₹3,000 from savings
+3. Current month's creditCardOutstanding becomes ₹7,000
+4. When month closes, `_actualCCOutstanding` is stored as ₹7,000
+5. Next month's CC bill auto-calculates as ₹7,000 (not ₹10,000)
+
+**Files Modified:**
+- `assets/js/app.js` (lines 1464-1484 - auto-calculation logic)
+- `assets/js/app.js` (lines 1651-1657 - budget status calculation)
+- `assets/js/app.js` (lines 4192-4264 - settlement function)
+- `assets/js/app.js` (lines 4390-4400 - untracked expenses calculation)
+- `assets/js/app.js` (lines 5178-5184 - month close confirmation)
+- `assets/js/app.js` (lines 5217-5223 - month close budget status)
+- `assets/js/app.js` (lines 5228-5235 - storing actual outstanding)
+
+---
+
 ## Testing Recommendations
 
 Before deploying these changes, please test the following scenarios:
@@ -263,11 +304,22 @@ Before deploying these changes, please test the following scenarios:
 - [ ] Import the backup - verify all data restores correctly
 - [ ] Verify Fixed Monthly Income value is preserved after import
 
+### 10. CC Bill Settlement and Month Close
+- [ ] Create a month with CC outstanding (e.g., ₹10,000)
+- [ ] Settle partial amount from savings (e.g., ₹3,000)
+- [ ] Verify current month's creditCardOutstanding shows ₹7,000
+- [ ] Close the month
+- [ ] Navigate to next month
+- [ ] Verify next month's "Previous Month CC Bill (Unpaid)" shows ₹7,000 (not ₹10,000)
+- [ ] Verify month close confirmation shows settlement amount
+- [ ] Test with full settlement (settle entire amount)
+- [ ] Verify next month's CC bill is ₹0 after full settlement
+
 ---
 
 ## Files Changed Summary
 
-1. **assets/js/app.js** - Main application logic (11 fixes applied)
+1. **assets/js/app.js** - Main application logic (13 fixes applied)
 2. **index.html** - Help panel contact section + removed Save button (2 changes)
 
 ---
@@ -293,11 +345,17 @@ Before deploying these changes, please test the following scenarios:
 
 **Developer:** Devin AI Assistant  
 **Date:** July 4, 2026  
-**Version:** 4.2
+**Version:** 4.3
 
 ---
 
 ## Changelog
+
+### Version 4.3 (July 4, 2026 - Third Update)
+- Fixed CC bill auto-calculation to respect settlements from savings
+- Settlements now properly reduce the amount carried forward to next month
+- Budget status calculations now reflect actual outstanding after settlements
+- Updated documentation
 
 ### Version 4.2 (July 4, 2026 - Second Update)
 - Fixed empty banner border in budget edit mode

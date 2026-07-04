@@ -239,9 +239,10 @@ function openLogsPanel() {
         return;
     }
     
-    logsPanel.classList.remove('hidden');
+    logsPanel.hidden = false;
+    logsPanel.classList.add('open');
     logsPanel.setAttribute('aria-hidden', 'false');
-    logsOverlay.classList.remove('hidden');
+    logsOverlay.hidden = false;
     
     loadLogs();
     startLogsAutoRefresh();
@@ -257,9 +258,10 @@ function closeLogsPanel() {
         return;
     }
     
-    logsPanel.classList.add('hidden');
+    logsPanel.hidden = true;
+    logsPanel.classList.remove('open');
     logsPanel.setAttribute('aria-hidden', 'true');
-    logsOverlay.classList.add('hidden');
+    logsOverlay.hidden = true;
     
     stopLogsAutoRefresh();
 }
@@ -306,13 +308,15 @@ function renderLogs(logs) {
         const timestamp = new Date(log.timestamp).toLocaleString();
         const contextStr = log.context ? JSON.stringify(log.context, null, 2) : '';
         
+        const deviceLabel = log.deviceId ? `<span class="log-entry-device">Device: ${log.deviceId.substring(0, 15)}...</span>` : '';
+
         return `
             <div class="log-entry ${log.level}">
                 <div class="log-entry-header">
                     <span class="log-entry-level ${log.level}">${log.level}</span>
                     <span class="log-entry-timestamp">${timestamp}</span>
                     ${log.userId ? `<span class="log-entry-user">User: ${log.userId.substring(0, 8)}...</span>` : ''}
-                    <span class="log-entry-device">Device: ${log.deviceId.substring(0, 15)}...</span>
+                    ${deviceLabel}
                 </div>
                 <div class="log-entry-message">${escapeHtml(log.message)}</div>
                 ${contextStr ? `<div class="log-entry-context">${escapeHtml(contextStr)}</div>` : ''}

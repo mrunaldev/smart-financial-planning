@@ -18,8 +18,15 @@
 </head>
 <body>
 
+<!-- ── LOADING SPINNER ────────────────────────────────── -->
+<div id="loadingOverlay" class="sf-loading-overlay">
+    <img class="logo-img logo-img-lg" src="assets/logo.png" alt="SmartFin" style="width:56px;height:56px;">
+    <div class="sf-spinner"></div>
+    <span class="sf-loading-text">Loading SmartFin...</span>
+</div>
+
 <!-- ── AUTH SCREEN ──────────────────────────────────── -->
-<div id="authScreen" class="auth-screen">
+<div id="authScreen" class="auth-screen" hidden>
     <div class="auth-card">
         <div class="auth-brand">
             <img class="logo-img logo-img-lg" src="assets/logo.png" alt="SmartFin">
@@ -46,6 +53,9 @@
                 <label for="authPassword">Password</label>
                 <input id="authPassword" type="password" placeholder="••••••••"
                        autocomplete="current-password" minlength="6" required>
+            </div>
+            <div class="auth-forgot" id="forgotPasswordRow">
+                <button type="button" id="forgotPasswordBtn" class="btn-link">Forgot password?</button>
             </div>
             <button type="submit" id="authSubmitBtn" class="btn-primary btn-full">Sign In</button>
         </form>
@@ -102,6 +112,20 @@
     </nav>
 
     <section class="work-area">
+        <!-- Dashboard / Overview UI -->
+        <div id="dashboardUI" class="dashboard-ui" hidden>
+            <div id="dashReminders" class="dash-reminders" hidden></div>
+            <div id="dashboardGrid" class="dash-grid"></div>
+            <div class="dash-card" id="dashTrendCard" hidden>
+                <div class="dash-card-header">
+                    <span class="dash-card-title">Spending Trends (Last 6 Months)</span>
+                </div>
+                <div class="dash-chart-wrap">
+                    <canvas id="dashTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
         <!-- Monthly Budget Specific UI -->
         <div id="monthlyBudgetUI" class="monthly-budget-ui" hidden>
             <div class="month-nav">
@@ -982,6 +1006,7 @@
             <div class="toolbar">
                 <input id="searchInput" type="search" placeholder="Search items…" class="search-box">
                 <button type="button" id="exportBtn" class="btn-export">Export Excel</button>
+                <button type="button" id="exportPdfBtn" class="btn-export">Export PDF</button>
                 <button type="button" id="clearTab" class="btn-danger">Clear Tab</button>
                 <button type="button" id="resetAllData" class="btn-danger">Reset All Data</button>
             </div>
@@ -1337,6 +1362,7 @@
 <footer class="app-footer">
     <div class="footer-content">
         <p>&copy; 2024-2026 Mrunal Kanta Muduli. All rights reserved.</p>
+        <p class="app-version" id="appVersionDisplay"></p>
     </div>
 </footer>
 
@@ -1347,11 +1373,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-<!-- SheetJS for Excel export -->
-<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-<!-- Chart.js for pie chart -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="assets/js/firebase-config.js?v=2"></script>
-<script src="assets/js/app.js?v=2"></script>
+<!-- SheetJS + Chart.js are lazy-loaded on demand (see app.js loadScript) -->
+<script src="assets/js/firebase-config.js?v=3"></script>
+<script type="module" src="assets/js/app.js?v=3"></script>
 </body>
 </html>

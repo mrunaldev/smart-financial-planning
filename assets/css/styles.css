@@ -477,44 +477,6 @@ body {
     }
 }
 
-/* ── Dashboard Grid ───────────────────────────────────── */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    margin: 20px 24px;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 1px solid var(--border2);
-}
-
-.metric {
-    background: var(--surf1);
-    padding: 22px 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    border-left: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-}
-.metric:first-child { border-left: none; }
-.metric:last-child { border-bottom: none; }
-
-.metric-label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: var(--muted);
-}
-
-.metric strong {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--white);
-    letter-spacing: -0.5px;
-    overflow-wrap: anywhere;
-}
-
 /* ── Work Area ────────────────────────────────────────── */
 .work-area {
     margin: 0 24px;
@@ -593,8 +555,6 @@ thead th {
     letter-spacing: 0.5px;
     border-bottom: 1px solid var(--border);
 }
-.col-amt { text-align: right; }
-
 tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
 tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: var(--surf2); }
@@ -1856,12 +1816,13 @@ td.amount {
 
 .insurance-card-amounts,
 .card-item-amounts {
-    min-width: 150px;
+    min-width: 130px;
     display: flex;
     flex-direction: column;
     gap: 10px;
     text-align: right;
     margin-left: 20px;
+    flex-shrink: 0;
 }
 
 .insurance-card-amounts span,
@@ -1909,12 +1870,16 @@ td.amount {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .card-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .card-summary-item {
@@ -1925,6 +1890,7 @@ td.amount {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    min-width: 0;
 }
 
 .card-summary-label {
@@ -1945,12 +1911,16 @@ td.amount {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .cards-list {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .card-item {
@@ -1961,6 +1931,9 @@ td.amount {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .card-item-info {
@@ -2005,6 +1978,8 @@ td.amount {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* ── Net Worth UI ─────────────────────────────────────── */
@@ -2817,13 +2792,6 @@ td.amount {
 
 /* ── Narrow tablet / large phone (≤ 860px) ──────────── */
 @media (max-width: 860px) {
-    .dashboard-grid {
-        grid-template-columns: repeat(2, 1fr);
-        margin: 14px 16px;
-    }
-    .metric                      { border-left: none; border-bottom: 1px solid var(--border); }
-    .metric:nth-child(odd)       { border-right: 1px solid var(--border); }
-
     .work-area                   { margin: 0 16px; }
     .tab-bar, .app-header        { padding-left: 16px; padding-right: 16px; }
 
@@ -2869,12 +2837,6 @@ td.amount {
     /* Tab bar */
     .tab-bar { padding: 10px 14px; gap: 6px; }
     .tab { padding: 8px 14px; font-size: 0.78rem; }
-
-    /* Dashboard metrics */
-    .dashboard-grid { grid-template-columns: repeat(2, 1fr); margin: 10px 14px; }
-    .metric { padding: 14px 16px; }
-    .metric strong { font-size: 1.1rem; }
-    .metric-label { font-size: 0.65rem; }
 
     /* Work area */
     .work-area { margin: 0 14px; }
@@ -2999,7 +2961,14 @@ td.amount {
         margin-left: 0;
         margin-top: 8px;
         text-align: left;
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
     }
+
+    /* Accounts: ensure no overflow on mobile */
+    .card-item-details           { display: flex; flex-wrap: wrap; gap: 4px; }
+    .card-item-title             { font-size: 1rem; word-break: break-word; }
     .income-field-row {
         flex-direction: column;
         align-items: stretch;
@@ -3673,12 +3642,101 @@ td.amount {
     letter-spacing: 0.5px;
 }
 
+.app-version {
+    font-size: 0.75rem;
+    color: var(--dim);
+    margin-top: 6px !important;
+    letter-spacing: 0.3px;
+    opacity: 0.8;
+}
+
+/* ── On-Demand Description Input ────────────────────── */
+.ondemand-desc-input {
+    margin-top: 6px;
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    border: 1px dashed var(--border2);
+    border-radius: 6px;
+    background: var(--surf1);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.ondemand-desc-input:focus {
+    border-color: var(--accent);
+    border-style: solid;
+}
+
+.ondemand-desc-input::placeholder {
+    color: var(--dim);
+    font-style: italic;
+}
+
+/* ── Description Tooltip (Budget Preview) ───────────── */
+.desc-tooltip-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.desc-tooltip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    font-size: 0.65rem;
+    font-weight: 700;
+    font-style: italic;
+    cursor: help;
+    line-height: 1;
+}
+
+.desc-tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surf3);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    border: 1px solid var(--border2);
+    z-index: 100;
+    transition: opacity 0.15s, visibility 0.15s;
+    pointer-events: none;
+}
+
+.desc-tooltip-wrapper:hover .desc-tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
 /* ── Very small phones (≤ 360px) ─────────────────────── */
 @media (max-width: 360px) {
-    .dashboard-grid              { grid-template-columns: repeat(2, 1fr); margin: 8px 10px; }
     .work-area                   { margin: 0 10px; }
     .tab-bar, .app-header        { padding-left: 10px; padding-right: 10px; }
-    .metric strong               { font-size: 1rem; }
+
+    /* Accounts: tighter padding on tiny screens */
+    .card-item                   { padding: 12px 12px; }
+    .card-summary-item           { padding: 12px 14px; }
+    .card-summary-item strong    { font-size: 1.05rem; }
+    .card-item-badge             { font-size: 0.65rem; padding: 2px 6px; }
+    .card-item-amounts strong    { font-size: 0.88rem; }
 }
 
 /* ── App Logs Panel ─────────────────────────────────────── */
@@ -3864,4 +3922,387 @@ td.amount {
         flex-wrap: wrap;
         gap: 12px;
     }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   V2 ADDITIONS — Modal, Toast, Spinner, Dashboard, Undo, Reminders
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Custom Modal System ──────────────────────────────────────────────────── */
+.sf-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.55);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10000;
+    opacity: 0; transition: opacity .2s ease;
+    padding: 16px;
+    pointer-events: none;
+}
+.sf-modal-overlay.sf-modal-open { opacity: 1; pointer-events: auto; }
+.sf-modal-active { overflow: hidden; }
+
+.sf-modal-card {
+    background: var(--surf1);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    width: 100%; max-width: 460px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.4);
+    transform: translateY(12px) scale(.97);
+    transition: transform .2s ease;
+    overflow: hidden;
+}
+.sf-modal-open .sf-modal-card { transform: translateY(0) scale(1); }
+
+.sf-modal-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 18px 20px 0;
+}
+.sf-modal-icon { width: 28px; height: 28px; flex-shrink: 0; }
+.sf-modal-icon-success { color: #22c55e; }
+.sf-modal-icon-error   { color: #ef4444; }
+.sf-modal-icon-warning { color: #eab308; }
+.sf-modal-icon-info    { color: #3b82f6; }
+
+.sf-modal-title { font-size: 1.1rem; font-weight: 600; color: var(--text); }
+
+.sf-modal-body {
+    padding: 14px 20px;
+    color: var(--text);
+    font-size: .92rem;
+    line-height: 1.5;
+}
+.sf-modal-body p { margin-bottom: 8px; }
+.sf-modal-hint { font-size: .85rem; color: var(--muted); margin-bottom: 8px; display: block; }
+
+.sf-modal-input {
+    width: 100%; padding: 10px 12px;
+    background: var(--surf2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: .95rem;
+    margin-top: 4px;
+    outline: none;
+    transition: border-color .15s;
+}
+.sf-modal-input:focus { border-color: #3b82f6; }
+
+.sf-modal-footer {
+    padding: 12px 20px 18px;
+    display: flex; justify-content: flex-end; gap: 8px;
+}
+.sf-modal-footer-split { justify-content: flex-end; }
+
+.sf-modal-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: .9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s, opacity .15s;
+}
+.sf-modal-btn:disabled { opacity: .4; cursor: not-allowed; }
+.sf-modal-btn-primary { background: #3b82f6; color: #fff; }
+.sf-modal-btn-primary:hover:not(:disabled) { background: #2563eb; }
+.sf-modal-btn-confirm { background: #22c55e; color: #fff; }
+.sf-modal-btn-confirm:hover:not(:disabled) { background: #16a34a; }
+.sf-modal-btn-danger { background: #ef4444; color: #fff; }
+.sf-modal-btn-danger:hover:not(:disabled) { background: #dc2626; }
+.sf-modal-btn-cancel { background: var(--surf3); color: var(--text); }
+.sf-modal-btn-cancel:hover { background: var(--border2); }
+
+/* ── Toast Notifications ──────────────────────────────────────────────────── */
+.sf-toast-container {
+    position: fixed; bottom: 24px; right: 24px;
+    z-index: 10001;
+    display: flex; flex-direction: column-reverse; gap: 8px;
+    pointer-events: none;
+}
+.sf-toast {
+    pointer-events: all;
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px;
+    background: var(--surf2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.3);
+    font-size: .9rem;
+    color: var(--text);
+    transform: translateX(120%);
+    opacity: 0;
+    transition: transform .25s ease, opacity .25s ease;
+    max-width: 400px;
+}
+.sf-toast-show { transform: translateX(0); opacity: 1; }
+.sf-toast-success { border-left: 3px solid #22c55e; }
+.sf-toast-error   { border-left: 3px solid #ef4444; }
+.sf-toast-warning { border-left: 3px solid #eab308; }
+.sf-toast-info    { border-left: 3px solid #3b82f6; }
+
+.sf-toast-message { flex: 1; }
+.sf-toast-action {
+    background: none; border: none; color: #3b82f6;
+    font-weight: 600; cursor: pointer; font-size: .85rem;
+    padding: 4px 8px; border-radius: 4px;
+    white-space: nowrap;
+}
+.sf-toast-action:hover { background: rgba(59,130,246,.15); }
+.sf-toast-close {
+    background: none; border: none; color: var(--muted);
+    font-size: 1.1rem; cursor: pointer; padding: 2px 6px;
+    line-height: 1;
+}
+.sf-toast-close:hover { color: var(--text); }
+
+/* ── Loading Spinner ──────────────────────────────────────────────────────── */
+.sf-loading-overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 9999;
+    gap: 16px;
+    transition: opacity .3s ease;
+}
+.sf-loading-overlay.sf-loading-fade { opacity: 0; pointer-events: none; }
+
+.sf-spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border2);
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: sf-spin .8s linear infinite;
+}
+@keyframes sf-spin { to { transform: rotate(360deg); } }
+
+.sf-loading-text {
+    font-size: .95rem;
+    color: var(--muted);
+    letter-spacing: .3px;
+}
+
+/* ── Forgot Password Link ─────────────────────────────────────────────────── */
+.auth-forgot {
+    text-align: right;
+    margin-top: -6px;
+    margin-bottom: 8px;
+}
+.auth-forgot .btn-link {
+    font-size: .82rem;
+    color: var(--muted);
+}
+.auth-forgot .btn-link:hover { color: #3b82f6; }
+
+/* ── Dashboard Tab ────────────────────────────────────────────────────────── */
+.dashboard-ui { padding: 0; }
+
+.dash-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.dash-card {
+    background: var(--surf1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    display: flex; flex-direction: column; gap: 12px;
+}
+.dash-card:last-child {
+    grid-column: 1 / -1;
+}
+.dash-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+}
+.dash-card-title {
+    font-size: .95rem; font-weight: 600; color: var(--text);
+}
+.dash-card-badge {
+    font-size: .75rem; padding: 2px 8px;
+    border-radius: 10px; font-weight: 500;
+}
+
+.dash-stat-row {
+    display: flex; justify-content: space-between;
+    align-items: baseline;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+}
+.dash-stat-row:last-child { border: none; }
+.dash-stat-label { font-size: .85rem; color: var(--muted); }
+.dash-stat-value { font-size: .95rem; font-weight: 600; color: var(--text); }
+
+.dash-progress-bar {
+    width: 100%; height: 6px;
+    background: var(--surf3);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.dash-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width .4s ease;
+}
+
+.dash-goal-item {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+.dash-goal-item:last-child { border: none; }
+.dash-goal-name { font-size: .88rem; font-weight: 500; color: var(--text); }
+.dash-goal-meta { font-size: .78rem; color: var(--muted); }
+
+/* Spending Trend Chart */
+.dash-chart-wrap {
+    width: 100%; height: 200px;
+    position: relative;
+}
+.dash-chart-wrap canvas { width: 100% !important; height: 100% !important; }
+
+/* Payment Reminders Banner */
+.dash-reminders {
+    background: var(--surf1);
+    border: 1px solid var(--border);
+    border-left: 3px solid #eab308;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+}
+.dash-reminders-title {
+    font-size: .9rem; font-weight: 600; color: #eab308;
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+}
+.dash-reminders-list {
+    max-height: 260px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+}
+.dash-reminders-list::-webkit-scrollbar { width: 5px; }
+.dash-reminders-list::-webkit-scrollbar-track { background: transparent; }
+.dash-reminders-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+.dash-reminder-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0;
+    font-size: .85rem;
+    border-bottom: 1px solid var(--border);
+}
+.dash-reminder-item:last-child { border: none; }
+.dash-reminder-name { color: var(--text); }
+.dash-reminder-amount { font-weight: 600; color: var(--text); }
+.dash-reminder-due { font-size: .78rem; color: var(--muted); }
+
+/* ── Input Validation Styles ──────────────────────────────────────────────── */
+input:invalid:not(:placeholder-shown) {
+    border-color: #ef4444;
+}
+
+/* ── V2 Responsive — Tablet (≤ 900px) ─────────────────────────────────────── */
+@media (max-width: 900px) {
+    .dash-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    #dashTrendCard {
+        margin-bottom: 16px;
+    }
+}
+
+/* ── V2 Responsive — Mobile (≤ 768px) ─────────────────────────────────────── */
+@media (max-width: 768px) {
+    /* Modal */
+    .sf-modal-overlay { padding: 12px; align-items: flex-end; }
+    .sf-modal-card {
+        max-width: 100%;
+        border-radius: 14px 14px 0 0;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    .sf-modal-header { padding: 16px 16px 0; }
+    .sf-modal-body { padding: 12px 16px; }
+    .sf-modal-footer { padding: 10px 16px 16px; }
+    .sf-modal-btn { padding: 10px 18px; font-size: .92rem; }
+
+    /* Toast */
+    .sf-toast-container {
+        bottom: calc(12px + var(--safe-bottom));
+        right: 12px; left: 12px;
+    }
+    .sf-toast { max-width: 100%; font-size: .85rem; padding: 10px 14px; }
+
+    /* Dashboard */
+    .dashboard-ui { padding: 0 4px; }
+    .dash-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    .dash-card { padding: 14px; gap: 10px; }
+    .dash-card-title { font-size: .88rem; }
+    .dash-stat-label { font-size: .8rem; }
+    .dash-stat-value { font-size: .88rem; }
+    .dash-goal-name { font-size: .82rem; }
+
+    .dash-reminders { padding: 12px 14px; margin-bottom: 12px; }
+    .dash-reminders-title { font-size: .85rem; }
+    .dash-reminders-list { max-height: 220px; }
+    .dash-reminder-item {
+        font-size: .8rem;
+        padding: 8px 0;       /* taller rows for touch targets */
+    }
+    .dash-reminder-name {
+        max-width: 55%;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .dash-reminder-amount { font-size: .82rem; flex-shrink: 0; }
+
+    #dashTrendCard { margin: 0 0 14px; }
+    .dash-chart-wrap { height: 180px; }
+
+    /* Spinner */
+    .sf-loading-text { font-size: .85rem; }
+
+    /* Forgot password */
+    .auth-forgot { margin-top: -4px; margin-bottom: 6px; }
+}
+
+/* ── V2 Responsive — Small phones (≤ 400px) ───────────────────────────────── */
+@media (max-width: 400px) {
+    .sf-modal-header { gap: 8px; }
+    .sf-modal-icon { width: 22px; height: 22px; }
+    .sf-modal-title { font-size: .98rem; }
+    .sf-modal-body { font-size: .85rem; }
+    .sf-modal-footer { flex-direction: column; gap: 6px; }
+    .sf-modal-btn { width: 100%; text-align: center; }
+    .sf-modal-footer-split { flex-direction: column-reverse; }
+
+    .dash-card { padding: 12px; }
+    .dash-card-badge { font-size: .7rem; padding: 2px 6px; }
+    .dash-stat-row { padding: 3px 0; }
+    .dash-progress-bar { height: 5px; }
+
+    .sf-toast { padding: 8px 12px; font-size: .82rem; gap: 8px; }
+    .sf-toast-action { font-size: .8rem; padding: 3px 6px; }
+}
+
+/* ── Reduced Motion (P3) ──────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    .sf-spinner { animation: none; border-top-color: var(--text); }
+    .sf-toast { transition: none; }
+    .sf-modal-overlay { transition: none; }
+    .sf-modal-card { transition: none; }
+    .settings-panel, .help-panel, .logs-panel { transition: none; }
+    .dash-progress-fill { transition: none; }
 }

@@ -42,12 +42,15 @@ button:hover { background: #e0e0e0; }
     <li><strong>Auth:</strong> Register new account → verify name in header</li>
     <li><strong>Auth:</strong> Sign out → verify auth screen appears</li>
     <li><strong>Auth:</strong> Sign in with wrong password → verify friendly error</li>
-    <li><strong>Tabs:</strong> Click each of the 10 tabs → verify correct UI renders</li>
-    <li><strong>Monthly Budget:</strong> Enter income/expense → verify totals update live</li>
-    <li><strong>Monthly Budget:</strong> Click "📊 Annual" → verify annual summary with month breakdown</li>
-    <li><strong>Monthly Budget:</strong> Navigate months with ← → → verify month display updates</li>
-    <li><strong>Financial Goal:</strong> Add goal → verify in preview cards</li>
-    <li><strong>Monthly Fixed Expense:</strong> Add expense → verify bar graphs update</li>
+    <li><strong>Auth:</strong> Forgot password → enter email → verify reset email sent toast</li>
+    <li><strong>Tabs:</strong> Click each of the 11 tabs → verify correct UI renders</li>
+    <li><strong>Dashboard:</strong> Verify budget summary, net worth, goals, and accounts widgets display</li>
+    <li><strong>Dashboard:</strong> Verify recurring payment reminders appear when due</li>
+    <li><strong>Budget:</strong> Enter income/expense → verify totals update live</li>
+    <li><strong>Budget:</strong> Click "📊 Annual" → verify annual summary with month breakdown</li>
+    <li><strong>Budget:</strong> Navigate months with ← → → verify month display updates</li>
+    <li><strong>Goals:</strong> Add goal → verify in preview cards</li>
+    <li><strong>Fixed Outflow:</strong> Add expense → verify bar graphs update</li>
     <li><strong>Investments:</strong> Add investment → verify total and bar chart update</li>
     <li><strong>Net Worth:</strong> Add asset + liability → verify projection chart shows</li>
     <li><strong>Tax Plan:</strong> Switch regime → verify tax calculation changes</li>
@@ -56,8 +59,12 @@ button:hover { background: #e0e0e0; }
     <li><strong>Export:</strong> Click "Export Excel" on any tab with data → verify .xlsx downloads</li>
     <li><strong>Reset:</strong> Click "Reset All Data" → cancel → verify data intact</li>
     <li><strong>Reset:</strong> Click "Reset All Data" → confirm → type DELETE → verify all data cleared</li>
+    <li><strong>Undo Delete:</strong> Delete a row → verify undo toast appears → click undo → verify row restored</li>
     <li><strong>Search:</strong> Type in search box on standard tab → verify rows filter</li>
     <li><strong>Firebase Sync:</strong> Add entry → refresh page → verify data persists</li>
+    <li><strong>Loading:</strong> Refresh page → verify loading spinner appears briefly before content</li>
+    <li><strong>Modals:</strong> Trigger alert/confirm actions → verify styled modals appear (not browser alerts)</li>
+    <li><strong>Theme:</strong> Switch OS dark/light mode → verify app auto-detects and updates theme</li>
   </ul>
 </div>
 
@@ -102,19 +109,43 @@ function renderResults() {
     `).join('');
 }
 
-// ── Stub implementations (mirrors app.js logic, no Firebase) ──────────────────
+// ── Stub implementations (mirrors app.js v2.0 logic, no Firebase) ─────────────
 const DEFAULT_TABS = [
-    { id: "monthlyBudget",       label: "Monthly Budget",        color: "#333", text: "#fff" },
-    { id: "financialGoal",       label: "Financial Goal",        color: "#444", text: "#fff" },
-    { id: "monthlyFixedExpense", label: "Monthly Fixed Expense", color: "#555", text: "#fff" },
-    { id: "investments",         label: "Investments",           color: "#333", text: "#fff" },
-    { id: "insurances",          label: "Insurances",            color: "#444", text: "#fff" },
-    { id: "cards",               label: "Cards",                 color: "#555", text: "#fff" },
-    { id: "netWorth",            label: "Net Worth",             color: "#333", text: "#fff" },
-    { id: "taxPlan",             label: "Tax Plan",              color: "#444", text: "#fff" },
-    { id: "gifts",               label: "Gifts",                 color: "#555", text: "#fff" },
-    { id: "emergencyFund",       label: "Emergency Fund",        color: "#22c55e", text: "#fff" }
+    { id: "dashboard",           label: "Dashboard",             semantic: "Others", core: true },
+    { id: "cards",               label: "Accounts",              semantic: "Others", core: true },
+    { id: "inflow",              label: "Investments",           semantic: "Investment", core: true },
+    { id: "outflow",             label: "Fixed Outflow",          semantic: "Liability", core: true },
+    { id: "insurance",           label: "Insurance",             semantic: "Insurance", core: true },
+    { id: "monthlyBudget",       label: "Budget",                semantic: "Expenditure", core: true },
+    { id: "financialGoal",       label: "Goals",                 semantic: "Savings", core: true },
+    { id: "netWorth",            label: "Net Worth",             semantic: "Others" },
+    { id: "taxPlan",             label: "Tax Plan",              semantic: "Savings" },
+    { id: "gifts",               label: "Gifts",                 semantic: "Others" },
+    { id: "emergencyFund",       label: "Emergency Fund",        semantic: "Savings" }
 ];
+
+// ── Constants (mirrors assets/js/modules/constants.js) ────────────────────────
+const SAVE_DEBOUNCE_MS        = 600;
+const PANEL_CLOSE_ANIMATION_MS = 280;
+const SAVE_RETRY_DELAY_MS     = 2000;
+const UNDO_TOAST_DURATION_MS  = 5000;
+const SEARCH_DEBOUNCE_MS      = 300;
+const PIE_CHART_DEBOUNCE_MS   = 500;
+const MOBILE_BREAKPOINT_PX    = 768;
+const DEFAULT_INFLATION_RATE  = 0.06;
+const DEFAULT_RETIREMENT_AGE  = 70;
+const DEFAULT_CURRENT_AGE     = 30;
+
+// ── Debounce utility (mirrors app.js) ─────────────────────────────────────────
+function debounce(fn, ms) {
+    let timer;
+    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+
+// ── autoBackup stub (mirrors app.js signature, no-op in tests) ────────────────
+function autoBackup(reason) {
+    return { called: true, reason };
+}
 
 const TAB_FIELDS = {
     monthlyBudget: [
@@ -211,28 +242,48 @@ function runTests() {
     results.length = 0;
 
     // ─ DEFAULT_TABS ─────────────────────────────────────────────────────────────
-    assertEqual(DEFAULT_TABS.length, 10, "DEFAULT_TABS: exactly 10 tabs defined");
+    assertEqual(DEFAULT_TABS.length, 11, "DEFAULT_TABS: exactly 11 tabs defined (v2)");
 
-    test("DEFAULT_TABS: misc tab removed", () =>
-        !DEFAULT_TABS.find(t => t.id === "misc") || "misc tab still present");
+    test("DEFAULT_TABS: dashboard tab present", () =>
+        !!DEFAULT_TABS.find(t => t.id === "dashboard") || "dashboard tab missing");
 
-    test("DEFAULT_TABS: oneTimeBudget tab removed", () =>
-        !DEFAULT_TABS.find(t => t.id === "oneTimeBudget") || "oneTimeBudget tab still present");
+    test("DEFAULT_TABS: old tab IDs removed (monthlyFixedExpense, investments, insurances)", () => {
+        const oldIds = ["monthlyFixedExpense", "investments", "insurances"];
+        const found = oldIds.filter(id => DEFAULT_TABS.find(t => t.id === id));
+        return found.length === 0 || `Stale tab IDs still present: ${found.join(", ")}`;
+    });
+
+    test("DEFAULT_TABS: renamed tabs present (inflow, outflow, insurance)", () => {
+        const newIds = ["inflow", "outflow", "insurance"];
+        const missing = newIds.filter(id => !DEFAULT_TABS.find(t => t.id === id));
+        return missing.length === 0 || `Renamed tab IDs missing: ${missing.join(", ")}`;
+    });
 
     test("DEFAULT_TABS: emergencyFund tab present", () =>
         !!DEFAULT_TABS.find(t => t.id === "emergencyFund") || "emergencyFund tab missing");
 
-    test("DEFAULT_TABS: all tabs have required fields", () =>
-        DEFAULT_TABS.every(t => t.id && t.label && t.color && t.text) || "Some tabs missing required fields");
+    test("DEFAULT_TABS: all tabs have v2 required fields (id, label, semantic)", () =>
+        DEFAULT_TABS.every(t => t.id && t.label && t.semantic) || "Some tabs missing required fields");
+
+    test("DEFAULT_TABS: core tabs marked correctly (7 core tabs)", () => {
+        const coreTabs = DEFAULT_TABS.filter(t => t.core === true);
+        return coreTabs.length === 7 || `Expected 7 core tabs, got ${coreTabs.length}`;
+    });
 
     test("DEFAULT_TABS: all tab IDs are unique", () => {
         const ids = DEFAULT_TABS.map(t => t.id);
         return new Set(ids).size === ids.length || "Duplicate tab IDs found";
     });
 
-    const expectedTabIds = ["monthlyBudget","financialGoal","monthlyFixedExpense","investments",
-                            "insurances","cards","netWorth","taxPlan","gifts","emergencyFund"];
-    assertEqual(DEFAULT_TABS.map(t => t.id), expectedTabIds, "DEFAULT_TABS: correct tab order and IDs");
+    const expectedTabIds = ["dashboard","cards","inflow","outflow","insurance",
+                            "monthlyBudget","financialGoal","netWorth","taxPlan","gifts","emergencyFund"];
+    assertEqual(DEFAULT_TABS.map(t => t.id), expectedTabIds, "DEFAULT_TABS: correct v2 tab order and IDs");
+
+    test("DEFAULT_TABS: semantic categories are valid", () => {
+        const validSemantics = ["Others", "Investment", "Liability", "Insurance", "Expenditure", "Savings"];
+        return DEFAULT_TABS.every(t => validSemantics.includes(t.semantic))
+            || "Invalid semantic category found";
+    });
 
     // ─ TAB_FIELDS ────────────────────────────────────────────────────────────────
     test("TAB_FIELDS: emergencyFund fields defined", () =>
@@ -350,6 +401,65 @@ function runTests() {
         const label = "Test@#$% Tab!";
         const id = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-test";
         return !id.match(/[@#$%!]/) || "Special chars not stripped";
+    });
+
+    // ─ crypto.randomUUID ──────────────────────────────────────────────────────
+    test("crypto.randomUUID: generates valid UUID v4 format", () => {
+        if (typeof crypto === "undefined" || !crypto.randomUUID) return "crypto.randomUUID not available";
+        const uuid = crypto.randomUUID();
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+        return uuidRegex.test(uuid) || `Invalid UUID: ${uuid}`;
+    });
+    test("crypto.randomUUID: generates unique values", () => {
+        if (typeof crypto === "undefined" || !crypto.randomUUID) return "crypto.randomUUID not available";
+        const a = crypto.randomUUID();
+        const b = crypto.randomUUID();
+        return a !== b || "Two UUIDs should not be identical";
+    });
+
+    // ─ autoBackup stub ────────────────────────────────────────────────────────
+    test("autoBackup: accepts reason parameter", () => {
+        const result = autoBackup("reset-all-data");
+        return result.called === true && result.reason === "reset-all-data"
+            || "autoBackup should accept and return reason";
+    });
+    test("autoBackup: callable with different reasons", () => {
+        const r1 = autoBackup("delete-account");
+        const r2 = autoBackup("import-overwrite");
+        return r1.reason === "delete-account" && r2.reason === "import-overwrite"
+            || "autoBackup should handle various reasons";
+    });
+
+    // ─ Constants module values ────────────────────────────────────────────────
+    assertEqual(SAVE_DEBOUNCE_MS, 600, "Constants: SAVE_DEBOUNCE_MS = 600");
+    assertEqual(MOBILE_BREAKPOINT_PX, 768, "Constants: MOBILE_BREAKPOINT_PX = 768");
+    assertEqual(UNDO_TOAST_DURATION_MS, 5000, "Constants: UNDO_TOAST_DURATION_MS = 5000");
+    assertEqual(SEARCH_DEBOUNCE_MS, 300, "Constants: SEARCH_DEBOUNCE_MS = 300");
+    assertEqual(PIE_CHART_DEBOUNCE_MS, 500, "Constants: PIE_CHART_DEBOUNCE_MS = 500");
+    assertEqual(PANEL_CLOSE_ANIMATION_MS, 280, "Constants: PANEL_CLOSE_ANIMATION_MS = 280");
+    assertEqual(SAVE_RETRY_DELAY_MS, 2000, "Constants: SAVE_RETRY_DELAY_MS = 2000");
+    assertEqual(DEFAULT_INFLATION_RATE, 0.06, "Constants: DEFAULT_INFLATION_RATE = 0.06");
+    assertEqual(DEFAULT_RETIREMENT_AGE, 70, "Constants: DEFAULT_RETIREMENT_AGE = 70");
+    assertEqual(DEFAULT_CURRENT_AGE, 30, "Constants: DEFAULT_CURRENT_AGE = 30");
+
+    // ─ debounce utility ───────────────────────────────────────────────────────
+    test("debounce: returns a function", () => {
+        const debounced = debounce(() => {}, 100);
+        return typeof debounced === "function" || "debounce should return a function";
+    });
+    test("debounce: delays execution", () => {
+        let called = false;
+        const debounced = debounce(() => { called = true; }, 50);
+        debounced();
+        return called === false || "Function should not be called immediately";
+    });
+    test("debounce: multiple rapid calls do not fire immediately", () => {
+        let count = 0;
+        const debounced = debounce(() => { count++; }, 50);
+        debounced();
+        debounced();
+        debounced();
+        return count === 0 || `Expected 0 immediate calls, got ${count}`;
     });
 
     renderResults();

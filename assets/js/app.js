@@ -1,4 +1,67 @@
-'use strict';
+// ── SmartFin v2.0 ────────────────────────────────────────────────────────────
+// ES Module — all P1/P2 refactors applied
+
+import { showAlert, showConfirm, showPrompt, showTypedConfirm, showToast } from './modules/modal.js';
+import { renderDashboard } from './modules/dashboard.js';
+import {
+    SAVE_DEBOUNCE_MS, PANEL_CLOSE_ANIMATION_MS, SAVE_RETRY_DELAY_MS,
+    LOGS_REFRESH_INTERVAL_MS, LOG_FLUSH_INTERVAL_MS, OUTSIDE_CLICK_DELAY_MS,
+    UNDO_TOAST_DURATION_MS, SEARCH_DEBOUNCE_MS,
+    MAX_LOG_QUEUE_SIZE, MAX_LOCAL_LOGS, LOG_QUERY_LIMIT,
+    MOBILE_BREAKPOINT_PX, DEFAULT_INFLATION_RATE, DEFAULT_RETIREMENT_AGE,
+    DEFAULT_CURRENT_AGE, MISMATCH_TOLERANCE, DAYS_PER_YEAR,
+    COLOR_POSITIVE, COLOR_NEGATIVE, COLOR_WARNING,
+    toMonthlyAmount, getPeriodsPerYear
+} from './modules/constants.js';
+
+// ── Lazy-Load Helpers (P2: lazy-load SheetJS + Chart.js) ─────────────────────
+const _loadedScripts = {};
+function loadScript(url) {
+    if (_loadedScripts[url]) return _loadedScripts[url];
+    _loadedScripts[url] = new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${url}"]`)) { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = url;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error(`Failed to load ${url}`));
+        document.head.appendChild(s);
+    });
+    return _loadedScripts[url];
+}
+
+const CHART_JS_URL = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+const SHEETJS_URL  = 'https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js';
+
+async function ensureChartJs() { await loadScript(CHART_JS_URL); }
+async function ensureSheetJs() { await loadScript(SHEETJS_URL); }
+
+// ── Debounce Utility (P2) ────────────────────────────────────────────────────
+function debounce(fn, ms) {
+    let timer;
+    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+
+// ── Undo Delete Queue (P1) ──────────────────────────────────────────────────
+let _undoDeleteEntry = null;
+let _undoDeleteTabId = null;
+
+// ── Budget State (P2: encapsulate window.* globals) ─────────────────────────
+const budgetState = {
+    transferAmt: 0,
+    salaryAccount: null,
+    expAccount: null,
+    autoDebitByType: {},
+    transferDone: 0,
+    trackedExpenses: 0,
+    mismatchCorrectTransfer: null,
+    mismatchFixedOutflow: null,
+};
+
+// ── Loading Spinner ──────────────────────────────────────────────────────────
+function hideLoadingOverlay() {
+    const el = document.getElementById('loadingOverlay');
+    if (el) { el.classList.add('sf-loading-fade'); setTimeout(() => el.remove(), 400); }
+}
 
 // ── Logging System ─────────────────────────────────────────────────────────────
 const LogLevel = {
@@ -14,8 +77,8 @@ class AppLogger {
         this.isEnabled = true;
         this.logQueue = [];
         this.isOnline = navigator.onLine;
-        this.maxQueueSize = 100;
-        this.flushInterval = 30000; // 30 seconds
+        this.maxQueueSize = MAX_LOG_QUEUE_SIZE;
+        this.flushInterval = LOG_FLUSH_INTERVAL_MS;
         this.flushTimer = null;
         
         // Listen for online/offline events
@@ -130,13 +193,12 @@ class AppLogger {
             const existingLogs = JSON.parse(localStorage.getItem('app_logs_local') || '[]');
             const newLogs = [...existingLogs, ...logs];
             
-            // Keep only last 1000 logs locally
-            const trimmedLogs = newLogs.slice(-1000);
+            const trimmedLogs = newLogs.slice(-MAX_LOCAL_LOGS);
             localStorage.setItem('app_logs_local', JSON.stringify(trimmedLogs));
             
-            // If Firebase is available, send there
-            if (window.db && window.firestoreInitialized) {
-                const logsCollection = window.db.collection('app_logs');
+            // P0: Send to per-user scoped logs collection
+            if (window.db && window.firestoreInitialized && this.userId) {
+                const logsCollection = window.db.collection('users').doc(this.userId).collection('logs');
                 const batch = window.db.batch();
                 
                 logs.forEach(log => {
@@ -153,18 +215,14 @@ class AppLogger {
     
     async getLogs(filters = {}) {
         try {
-            // Try to get from Firebase first
-            if (window.db && window.firestoreInitialized) {
-                let query = window.db.collection('app_logs')
+            // P0: Read from per-user scoped logs collection
+            if (window.db && window.firestoreInitialized && this.userId) {
+                let query = window.db.collection('users').doc(this.userId).collection('logs')
                     .orderBy('timestamp', 'desc')
-                    .limit(500);
+                    .limit(LOG_QUERY_LIMIT);
                 
                 if (filters.level) {
                     query = query.where('level', '==', filters.level);
-                }
-                
-                if (filters.userId) {
-                    query = query.where('userId', '==', filters.userId);
                 }
                 
                 if (filters.startDate) {
@@ -202,7 +260,7 @@ class AppLogger {
             // Sort by timestamp desc
             filteredLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             
-            return filteredLogs.slice(0, 500);
+            return filteredLogs.slice(0, LOG_QUERY_LIMIT);
         } catch (error) {
             console.error('[AppLogger] Error getting logs:', error);
             return [];
@@ -268,7 +326,7 @@ function closeLogsPanel() {
 
 function startLogsAutoRefresh() {
     stopLogsAutoRefresh();
-    logsAutoRefreshInterval = setInterval(() => loadLogs(), 10000); // Refresh every 10 seconds
+    logsAutoRefreshInterval = setInterval(() => loadLogs(), LOGS_REFRESH_INTERVAL_MS);
 }
 
 function stopLogsAutoRefresh() {
@@ -380,12 +438,12 @@ function exportLogs() {
         logger.info('Logs exported successfully', { count: logs.length });
     }).catch(error => {
         logger.error('Failed to export logs', { error: error.message });
-        alert('Failed to export logs: ' + error.message);
+        showAlert('Failed to export logs: ' + error.message, { variant: 'error' });
     });
 }
 
-function clearLocalLogs() {
-    if (confirm('Are you sure you want to clear all local logs? This will not delete logs from Firebase.')) {
+async function clearLocalLogs() {
+    if (await showConfirm('Are you sure you want to clear all local logs? This will not delete logs from Firebase.', { title: 'Clear Logs' })) {
         logger.clearLocalLogs();
         loadLogs();
         logger.info('Local logs cleared');
@@ -462,11 +520,11 @@ function getChartThemeColors() {
 
 const SEMANTIC_COLORS = {
     investment: { color: "#3b82f6", bg: "rgba(59, 130, 246, .18)", paidBg: "rgba(59, 130, 246, .05)", text: "#93c5fd", lightBg: "rgba(59, 130, 246, .12)", lightText: "#2563eb" },
-    liability: { color: "#ef4444", bg: "rgba(239, 68, 68, .18)", paidBg: "rgba(239, 68, 68, .05)", text: "#fca5a5", lightBg: "rgba(239, 68, 68, .12)", lightText: "#dc2626" },
-    savings: { color: "#22c55e", bg: "rgba(34, 197, 94, .18)", paidBg: "rgba(34, 197, 94, .05)", text: "#86efac", lightBg: "rgba(34, 197, 94, .12)", lightText: "#16a34a" },
+    liability: { color: COLOR_NEGATIVE, bg: "rgba(239, 68, 68, .18)", paidBg: "rgba(239, 68, 68, .05)", text: "#fca5a5", lightBg: "rgba(239, 68, 68, .12)", lightText: "#dc2626" },
+    savings: { color: COLOR_POSITIVE, bg: "rgba(34, 197, 94, .18)", paidBg: "rgba(34, 197, 94, .05)", text: "#86efac", lightBg: "rgba(34, 197, 94, .12)", lightText: "#16a34a" },
     expenditure: { color: "#f97316", bg: "rgba(249, 115, 22, .18)", paidBg: "rgba(249, 115, 22, .05)", text: "#fdba74", lightBg: "rgba(249, 115, 22, .12)", lightText: "#ea580c" },
     insurance: { color: "#a855f7", bg: "rgba(168, 85, 247, .18)", paidBg: "rgba(168, 85, 247, .05)", text: "#d8b4fe", lightBg: "rgba(168, 85, 247, .12)", lightText: "#7c3aed" },
-    others: { color: "#eab308", bg: "rgba(234, 179, 8, .18)", paidBg: "rgba(234, 179, 8, .05)", text: "#fde68a", lightBg: "rgba(234, 179, 8, .12)", lightText: "#ca8a04" }
+    others: { color: COLOR_WARNING, bg: "rgba(234, 179, 8, .18)", paidBg: "rgba(234, 179, 8, .05)", text: "#fde68a", lightBg: "rgba(234, 179, 8, .12)", lightText: "#ca8a04" }
 };
 
 function semanticKey(value) {
@@ -491,7 +549,23 @@ function semanticBadgeStyle(value, paid = false) {
     return `background:${c.background};color:${c.color};border-color:${c.borderColor}`;
 }
 
+// ── Version Info ──────────────────────────────────────────────────────────────
+const APP_VERSION = { major: 2, minor: 0, build: 1 };
+function getAppVersion() {
+    return `v${APP_VERSION.major}.${APP_VERSION.minor}.${APP_VERSION.build}`;
+}
+
+// ── Utility: sum only numeric values from a category data object ─────────────
+function sumCategoryNumericValues(data) {
+    if (!data) return 0;
+    return Object.entries(data).reduce((s, [k, v]) => {
+        if (k.endsWith('Desc')) return s; // Skip description fields
+        return s + (Number(v) || 0);
+    }, 0);
+}
+
 const DEFAULT_TABS = [
+    { id: "dashboard",           label: "Dashboard",             semantic: "Others", core: true },
     { id: "cards",               label: "Accounts",              semantic: "Others", core: true },
     { id: "inflow",              label: "Investments",           semantic: "Investment", core: true },
     { id: "outflow",             label: "Fixed Outflow",          semantic: "Liability", core: true },
@@ -533,7 +607,7 @@ const TAB_FIELDS = {
     ],
     outflow: [
         { id: "name",      label: "Name",           type: "text",   placeholder: "e.g. Rent, LIC Premium", required: true },
-        { id: "type",      label: "Type",           type: "select", options: ["Insurance", "Liability", "Savings", "Expenditure", "Investment"] },
+        { id: "type",      label: "Type",           type: "select", options: ["Insurance", "Liability", "Savings", "Expenditure", "Investment", "Others"] },
         { id: "amount",    label: "Amount (₹)",     type: "number", placeholder: "0", required: true },
         { id: "frequency", label: "Frequency",      type: "select", options: ["Monthly", "Quarterly", "Semi-Annual", "Annual", "One-Time"] },
         { id: "bankName",  label: "Bank Name",      type: "text",   placeholder: "e.g. HDFC, ICICI" },
@@ -614,13 +688,14 @@ const MONTHLY_BUDGET_CATEGORIES = {
         { id: "debtRepayment", label: "Debt Repayment / Lending", type: "number" },
         { id: "utilityBills", label: "Utility Bills (electricity, water, gas, internet)", type: "number" },
         { id: "familyExpenditure", label: "Family Expenditure (groceries, household)", type: "number" },
-        { id: "miscExpenses", label: "Miscellaneous Expenses", type: "number" }
+        { id: "miscExpenses", label: "Miscellaneous Expenses", type: "number" },
+        { id: "fixedOthers", label: "Auto-calculated Fixed Others", type: "number" }
     ],
     investing: [
-        { id: "onetimeSaving", label: "On-Demand Saving", type: "number" },
-        { id: "onetimeInvestment", label: "On-Demand Investment)", type: "number" },
-        { id: "ondemandExpenditure", label: "On-Demand Expenditure", type: "number" },
-        { id: "ondemandLiability", label: "On-Demand Liability", type: "number" }
+        { id: "onetimeSaving", label: "On-Demand Saving", type: "number", hasDescription: true },
+        { id: "onetimeInvestment", label: "On-Demand Investment", type: "number", hasDescription: true },
+        { id: "ondemandExpenditure", label: "On-Demand Expenditure", type: "number", hasDescription: true },
+        { id: "ondemandLiability", label: "On-Demand Liability", type: "number", hasDescription: true }
     ]
 };
 
@@ -690,7 +765,7 @@ const budgetStatus      = document.getElementById("budgetStatus");
 const inflowFields      = document.getElementById("inflowFields");
 const outflowFields     = document.getElementById("outflowFields");
 const investingFields   = document.getElementById("investingFields");
-const monthEndBalance   = document.getElementById("monthEndBalance");
+// monthEndBalance removed – primary account balance is used instead
 
 // Annual summary refs
 const annualSummarySection = document.getElementById("annualSummarySection");
@@ -774,7 +849,7 @@ const cardEmptyState    = document.getElementById("cardEmptyState");
 // Net Worth refs
 const netWorthUI        = document.getElementById("netWorthUI");
 const toggleNetWorthEdit = document.getElementById("toggleNetWorthEdit");
-const currentAgeInput   = document.getElementById("currentAge");
+// currentAgeInput removed – age computed from dateOfBirth
 const currentAgeDisplay = document.getElementById("currentAgeDisplay");
 const netWorthPreview  = document.getElementById("netWorthPreview");
 const netWorthEdit     = document.getElementById("netWorthEdit");
@@ -840,7 +915,7 @@ const fieldInputs = {};
 // ── App state ─────────────────────────────────────────────────────────────────
 let isRegisterMode = false;
 let currentUser    = null;
-let activeTabId    = "monthlyBudget";
+let activeTabId    = "dashboard";
 let appData        = { tabData: {}, customTabs: [], userName: "", monthlyBudgetData: {} };
 let firestoreUnsub = null;
 let saveTimer      = null;
@@ -905,12 +980,17 @@ const db   = firebase.firestore();
 
 // ── Auth state listener ───────────────────────────────────────────────────────
 auth.onAuthStateChanged(user => {
+    hideLoadingOverlay();
     if (user) {
         currentUser = user;
+        logger.setUserId(user.uid);
+        logger.info('User signed in', { uid: user.uid, email: user.email });
         authScreen.hidden = true;
         // Don't show app screen yet — wait for first Firestore snapshot to avoid flash
         startListening();
     } else {
+        logger.info('User signed out');
+        logger.setUserId(null);
         currentUser = null;
         appScreen.hidden  = true;
         authScreen.hidden = false;
@@ -928,11 +1008,15 @@ auth.onAuthStateChanged(user => {
 });
 
 // ── Auth form ─────────────────────────────────────────────────────────────────
+const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
+const forgotPasswordRow = document.getElementById("forgotPasswordRow");
+
 authToggleBtn.addEventListener("click", () => {
     isRegisterMode = !isRegisterMode;
     nameField.hidden = !isRegisterMode;
     dobField.hidden = !isRegisterMode;
     authNameInput.required = isRegisterMode;
+    if (forgotPasswordRow) forgotPasswordRow.hidden = isRegisterMode;
     if (!isRegisterMode) {
         authNameInput.value = "";
         authDobInput.value = "";
@@ -943,14 +1027,42 @@ authToggleBtn.addEventListener("click", () => {
     setAuthError("");
 });
 
+// ── Forgot Password (P1) ────────────────────────────────────────────────────
+if (forgotPasswordBtn) {
+    forgotPasswordBtn.addEventListener("click", async () => {
+        const email = authEmailInput.value.trim();
+        if (!email) {
+            setAuthError("Please enter your email address first, then click 'Forgot password?'");
+            return;
+        }
+        try {
+            await auth.sendPasswordResetEmail(email);
+            showToast(`Password reset email sent to ${email}. Check your inbox.`, { variant: 'success', duration: 5000 });
+            logger.info('Password reset email sent', { email });
+        } catch (err) {
+            const msg = err.code === 'auth/user-not-found' ? 'No account found with this email.'
+                      : err.code === 'auth/invalid-email' ? 'Please enter a valid email address.'
+                      : err.code === 'auth/too-many-requests' ? 'Too many attempts. Try again later.'
+                      : 'Failed to send reset email: ' + err.message;
+            setAuthError(msg);
+            logger.warning('Password reset failed', { email, error: err.code });
+        }
+    });
+}
+
 authForm.addEventListener("submit", async e => {
     e.preventDefault();
     const email    = authEmailInput.value.trim();
     const password = authPasswordInput.value;
     const name     = authNameInput.value.trim();
     const dob      = authDobInput.value;
-    if (!email || !password) return;
-    if (isRegisterMode && !name) return;
+    // P1: Input validation improvements
+    if (!email || !password) { setAuthError("Please fill in all required fields."); return; }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) { setAuthError("Please enter a valid email address."); return; }
+    if (password.length < 6) { setAuthError("Password must be at least 6 characters."); return; }
+    if (isRegisterMode && !name) { setAuthError("Please enter your name."); return; }
+    if (isRegisterMode && name.length < 2) { setAuthError("Name must be at least 2 characters."); return; }
     setAuthError("");
     authSubmitBtn.disabled    = true;
     authSubmitBtn.textContent = "Please wait…";
@@ -972,6 +1084,7 @@ authForm.addEventListener("submit", async e => {
         }
     } catch (err) {
         console.error("Firebase auth error:", err);
+        logger.error('Authentication failed', { mode: isRegisterMode ? 'register' : 'login', errorCode: err.code, message: err.message });
         const message = friendlyError(err.code);
         const display = err.code
             ? `${err.code}: ${message}`
@@ -982,7 +1095,10 @@ authForm.addEventListener("submit", async e => {
     }
 });
 
-logoutBtn.addEventListener("click", () => auth.signOut());
+logoutBtn.addEventListener("click", () => {
+    logger.info('User initiated sign out');
+    auth.signOut();
+});
 
 // ── Theme Toggle ────────────────────────────────────────────────────────────
 function applyTheme(theme) {
@@ -1006,11 +1122,28 @@ function applyTheme(theme) {
 themeToggle.addEventListener("click", () => {
     const current = document.documentElement.getAttribute("data-theme");
     applyTheme(current === "light" ? "dark" : "light");
-    render();
+    // P2 fix: theme toggle only changes CSS variables, no need to re-render all sections
+    // Only re-render chart-related elements that depend on theme colors
+    if (typeof renderPieChart === 'function' && activeTabId === 'monthlyBudget') {
+        const mk = getMonthKey(currentMonth);
+        const md = (appData.monthlyBudgetData || {})[mk];
+        if (md) renderPieChart(md);
+    }
 });
 
-applyTheme(localStorage.getItem("theme") || "dark");
+// P3: Auto-detect system theme, allow manual override
+function getDefaultTheme() {
+    const saved = localStorage.getItem("theme");
+    if (saved) return saved;
+    return window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+applyTheme(getDefaultTheme());
 updateFaviconForTheme();
+
+// Listen for OS theme changes (only if user hasn't manually overridden)
+window.matchMedia?.("(prefers-color-scheme: light)").addEventListener("change", (e) => {
+    if (!localStorage.getItem("theme")) applyTheme(e.matches ? "light" : "dark");
+});
 
 // ── Settings Panel ──────────────────────────────────────────────────────────
 const settingsBtn      = document.getElementById("settingsBtn");
@@ -1030,7 +1163,7 @@ function openSettings() {
 function closeSettings() {
     settingsPanel.classList.remove("open");
     settingsPanel.setAttribute("aria-hidden", "true");
-    setTimeout(() => { settingsOverlay.hidden = true; }, 280);
+    setTimeout(() => { settingsOverlay.hidden = true; }, PANEL_CLOSE_ANIMATION_MS);
 }
 
 settingsBtn.addEventListener("click", openSettings);
@@ -1051,7 +1184,7 @@ function openHelp() {
 function closeHelp() {
     helpPanel.classList.remove("open");
     helpPanel.setAttribute("aria-hidden", "true");
-    setTimeout(() => { helpOverlay.hidden = true; }, 280);
+    setTimeout(() => { helpOverlay.hidden = true; }, PANEL_CLOSE_ANIMATION_MS);
 }
 
 if (helpBtn) helpBtn.addEventListener("click", openHelp);
@@ -1066,7 +1199,7 @@ exportDataBtn.addEventListener("click", () => {
     
     const payload = JSON.stringify({ 
         exportDate: exportTimestamp, 
-        version: "2.0", 
+        version: getAppVersion(), 
         data: appData 
     }, null, 2);
     
@@ -1083,16 +1216,39 @@ exportDataBtn.addEventListener("click", () => {
         exportDate: exportTimestamp 
     });
     
-    alert(`Backup exported successfully!\n\nFile: smartfin-backup-${exportDate}.json`);
+    showToast(`Backup exported: smartfin-backup-${exportDate}.json`, { variant: 'success' });
 });
 
+// P0: Auto-backup before destructive operations
+function autoBackup(reason) {
+    try {
+        const ts = new Date().toISOString();
+        const payload = JSON.stringify({
+            exportDate: ts,
+            version: getAppVersion(),
+            reason,
+            data: appData
+        }, null, 2);
+        const blob = new Blob([payload], { type: "application/json" });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement("a");
+        a.href     = url;
+        a.download = `smartfin-auto-backup-${ts.slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        logger.info('Auto-backup created before destructive operation', { reason });
+    } catch (err) {
+        logger.error('Auto-backup failed', { reason, error: err.message });
+    }
+}
+
 // Import
-importFileInput.addEventListener("change", (e) => {
+importFileInput.addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file || !currentUser) return;
     const reader = new FileReader();
     
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
         try {
             const parsed = JSON.parse(ev.target.result);
             const imported = parsed.data || parsed;
@@ -1105,7 +1261,10 @@ importFileInput.addEventListener("change", (e) => {
             const fileInfo = `\nFile: ${file.name}`;
             const filePath = `\nPath: ${file.path || file.webkitRelativePath || 'Unknown (local file)'}`;
             
-            if (!window.confirm(`This will overwrite ALL your current data with the imported backup.${exportInfo}${fileInfo}${filePath}\n\nContinue?`)) return;
+            if (!(await showConfirm(`This will overwrite ALL your current data with the imported backup.${exportInfo}${fileInfo}${filePath}\n\nContinue?`, { title: 'Import Data', dangerous: true, confirmText: 'Import' }))) return;
+
+            // P0: Auto-backup current data before overwriting
+            autoBackup('import');
 
             // Ensure all required fields exist in imported data
             const safeImport = {
@@ -1134,7 +1293,7 @@ importFileInput.addEventListener("change", (e) => {
                     appData.onboardingComplete = hasPrimaryImp && hasSalaryImp;
                     // Trigger migration if needed
                     if (!appData.dataMigrated) migrateToNewTabStructure();
-                    activeTabId = appData.onboardingComplete ? "monthlyBudget" : "cards";
+                    activeTabId = appData.onboardingComplete ? "dashboard" : "cards";
                     render();
                     closeSettings();
                     
@@ -1144,11 +1303,15 @@ importFileInput.addEventListener("change", (e) => {
                         fileSize: file.size
                     });
                     
-                    alert("Data imported successfully!");
+                    showToast('Data imported successfully!', { variant: 'success' });
                 })
-                .catch(err => alert("Import failed: " + err.message));
+                .catch(err => {
+                    logger.error('Data import save failed', { error: err.message });
+                    showAlert('Import failed: ' + err.message, { variant: 'error' });
+                });
         } catch (err) {
-            alert("Could not read file. Make sure it is a valid SmartFin backup (.json).\n\n" + err.message);
+            logger.error('Import file parsing failed', { filename: file.name, error: err.message });
+            showAlert('Could not read file. Make sure it is a valid SmartFin backup (.json).\n\n' + err.message, { variant: 'error' });
         }
     };
     reader.readAsText(file);
@@ -1156,11 +1319,16 @@ importFileInput.addEventListener("change", (e) => {
 });
 
 // Reset (Settings panel)
-resetDataBtn.addEventListener("click", () => {
+resetDataBtn.addEventListener("click", async () => {
     if (!currentUser) return;
-    if (!window.confirm("Are you sure? This will permanently delete ALL your financial data and cannot be undone.")) return;
-    const typed = prompt("Type DELETE to confirm:");
-    if (typed !== "DELETE") { alert("Reset cancelled."); return; }
+    if (!(await showConfirm('Are you sure? This will permanently delete ALL your financial data and cannot be undone.', { title: 'Reset All Data', dangerous: true }))) return;
+    if (!(await showTypedConfirm('This action cannot be reversed. All your financial data will be permanently deleted.', 'DELETE', { title: 'Confirm Reset' }))) {
+        showToast('Reset cancelled.', { variant: 'info' });
+        return;
+    }
+    logger.warning('Reset all data initiated', { userId: currentUser.uid });
+    // P0: Auto-backup before settings reset
+    autoBackup('settings-reset');
     const resetData = {
         tabData: {}, customTabs: [], userName: appData.userName || "",
         monthlyBudgetData: {}, fixedMonthlyIncome: 0,
@@ -1174,9 +1342,13 @@ resetDataBtn.addEventListener("click", () => {
             activeTabId = "cards";
             render();
             closeSettings();
-            alert("All data has been reset.");
+            logger.info('All data reset successfully');
+            showToast('All data has been reset.', { variant: 'success' });
         })
-        .catch(err => alert("Reset failed: " + err.message));
+        .catch(err => {
+            logger.error('Data reset failed', { error: err.message });
+            showAlert('Reset failed: ' + err.message, { variant: 'error' });
+        });
 });
 
 // ── Tab Menu Toggle ─────────────────────────────────────────────────────────────
@@ -1186,7 +1358,7 @@ tabMenuToggle.addEventListener("click", () => {
 
 // Close tab menu when clicking outside on mobile
 document.addEventListener("click", (e) => {
-    if (window.innerWidth <= 768) {
+    if (window.innerWidth <= MOBILE_BREAKPOINT_PX) {
         if (!tabBar.contains(e.target) && tabList.classList.contains("open")) {
             tabList.classList.remove("open");
         }
@@ -1219,10 +1391,20 @@ function friendlyError(code) {
 function startListening() {
     stopListening();
     let firstLoad = true;
+    // P0: Mark Firestore as initialized so logger can write to Firebase
+    window.firestoreInitialized = true;
+
     firestoreUnsub = db.collection("users").doc(currentUser.uid)
         .onSnapshot(snap => {
             // Skip re-render when this is our own write being echoed back (prevents focus loss)
             if (snap.metadata.hasPendingWrites) return;
+            
+            // Capture focused input state BEFORE checking localWritePending
+            const focused = document.activeElement;
+            const focusedId = focused?.id;
+            const focusedValue = (focused?.tagName === 'INPUT' || focused?.tagName === 'TEXTAREA') ? focused.value : null;
+            const focusedSelection = focused?.selectionStart;
+            
             if (localWritePending) { localWritePending = false; return; }
 
             if (snap.exists) {
@@ -1253,7 +1435,7 @@ function startListening() {
                     if (!appData.onboardingComplete) {
                         activeTabId = "cards";
                     } else {
-                        activeTabId = "monthlyBudget";
+                        activeTabId = "dashboard";
                         // Auto-advance to next month if current month is closed
                         const todayKey = getMonthKey(new Date());
                         const todayMonthData = (appData.monthlyBudgetData || {})[todayKey];
@@ -1273,10 +1455,25 @@ function startListening() {
             // Show app screen now that data is ready (prevents flash of intermediate content)
             appScreen.hidden = false;
             render();
+            
+            // Restore focused input state after re-render (prevents value loss while typing)
+            if (focusedId && focusedValue !== null) {
+                requestAnimationFrame(() => {
+                    const restored = document.getElementById(focusedId);
+                    if (restored && restored.value !== focusedValue) {
+                        restored.value = focusedValue;
+                        if (focusedSelection !== null && focusedSelection !== undefined) {
+                            restored.setSelectionRange(focusedSelection, focusedSelection);
+                        }
+                        restored.focus();
+                    }
+                });
+            }
         }, err => {
             console.error("Firestore listen error:", err);
+            logger.error('Firestore listener error', { code: err.code, message: err.message });
             if (err.code === 'unavailable' || err.code === 'permission-denied') {
-                alert("Connection to database lost. Please check your internet connection and refresh the page.");
+                showAlert('Connection to database lost. Please check your internet connection and refresh the page.', { variant: 'error' });
             }
         });
 }
@@ -1287,7 +1484,7 @@ function stopListening() {
 
 function scheduleSave() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(doSave, 600);
+    saveTimer = setTimeout(doSave, SAVE_DEBOUNCE_MS);
 }
 
 function doSave() {
@@ -1297,9 +1494,8 @@ function doSave() {
     logger.info('Saving data to Firebase', { userId: currentUser.uid });
     
     db.collection("users").doc(currentUser.uid)
-        .set(appData)
+        .set(appData, { merge: true })
         .then(() => {
-            localWritePending = false;
             logger.info('Data saved successfully', { userId: currentUser.uid });
         })
         .catch(err => { 
@@ -1316,9 +1512,9 @@ function doSave() {
                         console.log("Retrying save...");
                         scheduleSave();
                     }
-                }, 2000);
+                }, SAVE_RETRY_DELAY_MS);
             } else {
-                alert("Failed to save data. Please check your internet connection and try again.");
+                showAlert('Failed to save data. Please check your internet connection and try again.', { variant: 'error' });
             }
         });
 }
@@ -1447,6 +1643,7 @@ function activeEntries() {
         return (appData.tabData || {})[activeTabId] || [];
     } catch (e) {
         console.error("Error getting active entries:", e);
+        logger.error('Error getting active entries', { activeTabId, error: e.message });
         return [];
     }
 }
@@ -1458,6 +1655,7 @@ function setActiveEntries(entries) {
         scheduleSave();
     } catch (e) {
         console.error("Error setting active entries:", e);
+        logger.error('Error setting active entries', { activeTabId, error: e.message });
     }
 }
 
@@ -1479,10 +1677,13 @@ function buildDependencyNotice(message, jumpTabId) {
 }
 
 function switchToTab(tabId) {
+    logger.info('Tab switched', { tabId });
     activeTabId = tabId;
     if (searchInput) searchInput.value = "";
     render();
 }
+// Expose on window for inline onclick handlers in generated HTML
+window.switchToTab = switchToTab;
 
 // ── Sort/Filter toolbar helpers ───────────────────────────────────────────────
 function buildSortFilterToolbar(tabId) {
@@ -1640,7 +1841,7 @@ function clearEditing(tabId) {
 function readSectionFormEntry(tabId) {
     const cfg = sectionConfig[tabId];
     const fields = TAB_FIELDS[tabId === "standard" ? activeTabId : tabId] || TAB_FIELDS.monthlyBudget;
-    const entry = { id: editingEntryIds[tabId] || String(Date.now()) };
+    const entry = { id: editingEntryIds[tabId] || crypto.randomUUID() };
 
     fields.forEach(f => {
         const input = document.getElementById(`${cfg.prefix}_${f.id}`);
@@ -1759,7 +1960,7 @@ function yearsBetweenDates(startDate, endDate = new Date()) {
     const start = new Date(startDate);
     const end = endDate instanceof Date ? endDate : new Date(endDate);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return 0;
-    return Math.max(0, (end - start) / (365.25 * 24 * 60 * 60 * 1000));
+    return Math.max(0, (end - start) / (DAYS_PER_YEAR * 24 * 60 * 60 * 1000));
 }
 
 function calculateInvestmentCurrentValue(item = {}) {
@@ -1771,8 +1972,7 @@ function calculateInvestmentCurrentValue(item = {}) {
         // No interest: for recurring, total = amount × number of periods elapsed
         const freq = normalizeInvestmentFrequency(item);
         if (freq === "One-Time") return amount;
-        const periodsPerYear = freq === "Monthly" ? 12 : freq === "Quarterly" ? 4 : freq === "Semi-Annual" ? 2 : freq === "Annual" ? 1 : 12;
-        return amount * Math.round(years * periodsPerYear);
+        return amount * Math.round(years * getPeriodsPerYear(freq));
     }
     const freq = normalizeInvestmentFrequency(item);
     if (freq === "One-Time") {
@@ -1780,7 +1980,7 @@ function calculateInvestmentCurrentValue(item = {}) {
         return amount * Math.pow(1 + annualRate, years);
     }
     // Recurring investment: Future Value of Annuity
-    const periodsPerYear = freq === "Monthly" ? 12 : freq === "Quarterly" ? 4 : freq === "Semi-Annual" ? 2 : freq === "Annual" ? 1 : 12;
+    const periodsPerYear = getPeriodsPerYear(freq);
     const ratePerPeriod = annualRate / periodsPerYear;
     const totalPeriods = Math.round(years * periodsPerYear);
     if (totalPeriods <= 0) return amount;
@@ -1824,6 +2024,45 @@ function normalizeEntry(tabId, entry) {
     return entry;
 }
 
+// P2: Shared variable expenditure calculator (deduplicated from two identical implementations)
+function calcVariableExpenditure(monthData, prevKey, overrideExpBalance) {
+    const cards = (appData.tabData || {}).cards || [];
+    const expAccount = cards.find(c => c.isPrimary === "Yes");
+    const expBalance = overrideExpBalance != null ? overrideExpBalance : Number(expAccount?.balance || 0);
+    const transferDone = Number(monthData._transferDone || 0);
+    const prevMonthCarryData = (appData.monthlyBudgetData || {})[prevKey];
+    const prevCarryForward = Number(prevMonthCarryData?._carryForwardDone || 0);
+    const initialBalance = Number(monthData._initialBalance || 0);
+    const totalFunded = initialBalance > 0 ? initialBalance : (transferDone + prevCarryForward);
+    const varExp = totalFunded > 0 ? Math.max(0, totalFunded - expBalance) : 0;
+
+    if (!monthData.outflow) monthData.outflow = {};
+    if (!monthData.autoLinkedFields) monthData.autoLinkedFields = {};
+    if (!monthData.autoLinkedBreakdown) monthData.autoLinkedBreakdown = {};
+    monthData.outflow.variableExpenditure = varExp;
+    monthData.autoLinkedFields["outflow.variableExpenditure"] = true;
+
+    const breakdownItems = [];
+    if (totalFunded > 0) {
+        if (initialBalance > 0) {
+            if (prevCarryForward > 0) breakdownItems.push({ name: "Carry Forward (Last Month)", amount: prevCarryForward, source: "Previous Month Close" });
+            if (transferDone > 0) breakdownItems.push({ name: "Salary Leftover Transferred", amount: transferDone, source: "Execute Transfer" });
+            const accountInitial = initialBalance - transferDone - prevCarryForward;
+            if (accountInitial > 0) breakdownItems.push({ name: "Account Pre-existing Balance", amount: accountInitial, source: "Account Balance" });
+            if (breakdownItems.length === 0) breakdownItems.push({ name: "Balance After Transfer", amount: totalFunded, source: "Post-Transfer Balance" });
+        } else {
+            if (transferDone > 0) breakdownItems.push({ name: "Salary Leftover Transferred", amount: transferDone, source: "Execute Transfer" });
+            if (prevCarryForward > 0) breakdownItems.push({ name: "Carry Forward (Last Month)", amount: prevCarryForward, source: "Previous Month Close" });
+        }
+        breakdownItems.push({ name: "Current Exp Balance", amount: -expBalance, source: "Account Balance" });
+    }
+    monthData.autoLinkedBreakdown["outflow.variableExpenditure"] = breakdownItems.length > 0
+        ? breakdownItems.filter(b => b.amount !== 0)
+        : [{ name: "No transfer done yet", amount: 0, source: "Pending" }];
+
+    return { varExp, totalFunded, expBalance, breakdownItems };
+}
+
 function isCurrentOrFutureMonth(monthKey) {
     return monthKey >= getMonthKey(new Date());
 }
@@ -1840,15 +2079,11 @@ function buildMonthlyAutoValues(monthKey) {
         if (item.endDate && monthKey > item.endDate.slice(0, 7)) return;
         const freq = item.frequency || "Monthly";
         // Convert to monthly equivalent
-        let monthlyAmount = 0;
-        if (freq === "Monthly")      monthlyAmount = amount;
-        else if (freq === "Quarterly")   monthlyAmount = amount / 3;
-        else if (freq === "Semi-Annual") monthlyAmount = amount / 6;
-        else if (freq === "Annual")      monthlyAmount = amount / 12;
-        else if (freq === "One-Time") {
+        if (freq === "One-Time") {
             // One-time items excluded from recurring monthly budget
             return;
         }
+        const monthlyAmount = toMonthlyAmount(amount, freq);
         if (monthlyAmount <= 0) return;
         const freqLabel = freq !== "Monthly" ? ` (${freq} ÷ ${freq === "Quarterly" ? 3 : freq === "Semi-Annual" ? 6 : freq === "Annual" ? 12 : 1})` : "";
         if (item.type === "Liability") {
@@ -1871,6 +2106,10 @@ function buildMonthlyAutoValues(monthKey) {
             values.outflow.fixedInvestment = (values.outflow.fixedInvestment || 0) + monthlyAmount;
             if (!breakdown.outflow.fixedInvestment) breakdown.outflow.fixedInvestment = [];
             breakdown.outflow.fixedInvestment.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
+        } else if (item.type === "Others") {
+            values.outflow.fixedOthers = (values.outflow.fixedOthers || 0) + monthlyAmount;
+            if (!breakdown.outflow.fixedOthers) breakdown.outflow.fixedOthers = [];
+            breakdown.outflow.fixedOthers.push({ name: item.name + freqLabel, amount: monthlyAmount, source: "Fixed Outflow" });
         }
     });
 
@@ -1995,59 +2234,15 @@ function applyMonthlyAutoValues(monthKey, monthData) {
         }
     }
 
-    // Auto-calculate Variable Expenditure (amount spent from expenditure account)
-    // totalFunded = account initial balance + carry forward from last month + salary leftover transferred
-    // _initialBalance captures this exactly (stored on Execute Transfer as exp.balance post-transfer)
-    // Fallback (before transfer): transferDone + prevCarryForward
-    // variableExpenditure = totalFunded - current exp account balance (how much was spent)
-    const cards = (appData.tabData || {}).cards || [];
-    const expAccount = cards.find(c => c.isPrimary === "Yes");
-    const expBalance = Number(expAccount?.balance || 0);
-    const transferDone = Number(monthData._transferDone || 0);
-    const prevMonthCarryData = (appData.monthlyBudgetData || {})[prevKey];
-    const prevCarryForward = Number(prevMonthCarryData?._carryForwardDone || 0);
-    const initialBalance = Number(monthData._initialBalance || 0);
-    const totalFunded = initialBalance > 0 ? initialBalance : (transferDone + prevCarryForward);
-    const varExp = totalFunded > 0 ? Math.max(0, totalFunded - expBalance) : 0;
-    if (!monthData.outflow) monthData.outflow = {};
-    monthData.outflow.variableExpenditure = varExp;
-    monthData.autoLinkedFields["outflow.variableExpenditure"] = true;
-    // Build detailed breakdown showing components of totalFunded
-    const breakdownItems = [];
-    if (totalFunded > 0) {
-        if (initialBalance > 0) {
-            // Show carry forward + transfer as separate items when possible
-            if (prevCarryForward > 0) {
-                breakdownItems.push({ name: "Carry Forward (Last Month)", amount: prevCarryForward, source: "Previous Month Close" });
-            }
-            if (transferDone > 0) {
-                breakdownItems.push({ name: "Salary Leftover Transferred", amount: transferDone, source: "Execute Transfer" });
-            }
-            const accountInitial = initialBalance - transferDone - prevCarryForward;
-            if (accountInitial > 0) {
-                breakdownItems.push({ name: "Account Pre-existing Balance", amount: accountInitial, source: "Account Balance" });
-            }
-            // If components don't add up (older data), show combined
-            if (breakdownItems.length === 0) {
-                breakdownItems.push({ name: "Balance After Transfer", amount: totalFunded, source: "Post-Transfer Balance" });
-            }
-        } else {
-            // Fallback: show transfer + carry forward separately
-            if (transferDone > 0) breakdownItems.push({ name: "Salary Leftover Transferred", amount: transferDone, source: "Execute Transfer" });
-            if (prevCarryForward > 0) breakdownItems.push({ name: "Carry Forward (Last Month)", amount: prevCarryForward, source: "Previous Month Close" });
-        }
-        breakdownItems.push({ name: "Current Exp Balance", amount: -expBalance, source: "Account Balance" });
-    }
-    monthData.autoLinkedBreakdown["outflow.variableExpenditure"] = breakdownItems.length > 0
-        ? breakdownItems.filter(b => b.amount !== 0)
-        : [{ name: "No transfer done yet", amount: 0, source: "Pending" }];
+    // P2: Deduplicated — use shared helper
+    const varExpResult = calcVariableExpenditure(monthData, prevKey);
     
     logger.info('Variable expenditure auto-calculated with breakdown', { 
         monthKey, 
-        totalFunded, 
-        expBalance, 
-        variableExpenditure: varExp,
-        breakdown: breakdownItems
+        totalFunded: varExpResult.totalFunded, 
+        expBalance: varExpResult.expBalance, 
+        variableExpenditure: varExpResult.varExp,
+        breakdown: varExpResult.breakdownItems
     });
 
     // Auto-calculate Current Month CC Spending from Quick Update data (applies to all months)
@@ -2070,11 +2265,13 @@ function render() {
     renderTabs();
 
     // All UI panels
-    const allPanels = { monthlyBudgetUI, standardUI, financialGoalUI, inflowUI, outflowUI, insuranceUI, cardsUI, netWorthUI, taxPlanUI, giftsUI, emergencyFundUI };
+    const dashboardUI = document.getElementById("dashboardUI");
+    const allPanels = { dashboardUI, monthlyBudgetUI, standardUI, financialGoalUI, inflowUI, outflowUI, insuranceUI, cardsUI, netWorthUI, taxPlanUI, giftsUI, emergencyFundUI };
     // Hide all panels first
     Object.values(allPanels).forEach(p => { if (p) p.hidden = true; });
 
     const panelMap = {
+        dashboard:     { panel: dashboardUI,     render: () => renderDashboardTab() },
         monthlyBudget: { panel: monthlyBudgetUI, render: renderMonthlyBudget },
         financialGoal: { panel: financialGoalUI, render: renderFinancialGoal },
         inflow:        { panel: inflowUI,        render: renderInflow },
@@ -2090,6 +2287,11 @@ function render() {
     const entry = panelMap[activeTabId];
     if (entry && entry.panel) {
         entry.panel.hidden = false;
+        // P2: Lazy-load Chart.js for chart-heavy tabs, re-render once loaded
+        const chartTabs = ['monthlyBudget', 'inflow', 'outflow', 'netWorth', 'dashboard'];
+        if (chartTabs.includes(activeTabId) && typeof Chart === 'undefined') {
+            ensureChartJs().then(() => entry.render()).catch(() => {});
+        }
         entry.render();
     } else {
         standardUI.hidden = false;
@@ -2099,6 +2301,10 @@ function render() {
         renderTableHead();
         renderRows(entries);
     }
+}
+
+function renderDashboardTab() {
+    renderDashboard(appData);
 }
 
 function renderMonthlyBudget() {
@@ -2157,11 +2363,7 @@ function renderMonthlyBudget() {
                     const amount = Number(e.amount || 0);
                     if (amount <= 0) return;
                     const freq = e.frequency || "Monthly";
-                    let monthlyAmt = 0;
-                    if (freq === "Monthly")      monthlyAmt = amount;
-                    else if (freq === "Quarterly")   monthlyAmt = amount / 3;
-                    else if (freq === "Semi-Annual") monthlyAmt = amount / 6;
-                    else if (freq === "Annual")      monthlyAmt = amount / 12;
+                    const monthlyAmt = toMonthlyAmount(amount, freq);
                     fixedMonthlyOutflow += monthlyAmt;
                 });
                 // Exclude borrowing from spendable as it's not new income
@@ -2240,7 +2442,7 @@ function renderMonthlyBudget() {
         // Update edit mode totals
         const inflowTotal = Object.values(monthData.inflow).reduce((s, v) => s + Number(v || 0), 0);
         const outflowTotal = Object.values(monthData.outflow).reduce((s, v) => s + Number(v || 0), 0);
-        const investingTotal = Object.values(monthData.investing).reduce((s, v) => s + Number(v || 0), 0);
+        const investingTotal = sumCategoryNumericValues(monthData.investing);
         document.getElementById("inflowTotalEdit").textContent = formatMoney(inflowTotal);
         document.getElementById("outflowTotalEdit").textContent = formatMoney(outflowTotal);
         document.getElementById("investingTotalEdit").textContent = formatMoney(investingTotal);
@@ -2252,7 +2454,7 @@ function renderMonthlyBudget() {
         renderCategoryPreview(inflowPreview, MONTHLY_BUDGET_CATEGORIES.inflow, monthData.inflow, monthData.autoLinkedFields, monthData.autoLinkedBreakdown, "inflow");
         renderCategoryPreview(outflowPreview, MONTHLY_BUDGET_CATEGORIES.outflow, monthData.outflow, monthData.autoLinkedFields, monthData.autoLinkedBreakdown, "outflow");
         renderCategoryPreview(investingPreview, MONTHLY_BUDGET_CATEGORIES.investing, monthData.investing, monthData.autoLinkedFields, monthData.autoLinkedBreakdown, "investing");
-        const investingTotalVal = Object.values(monthData.investing || {}).reduce((s, v) => s + Number(v || 0), 0);
+        const investingTotalVal = sumCategoryNumericValues(monthData.investing);
         const investingSection = document.getElementById("investingPreviewSection");
         if (investingSection) investingSection.hidden = (investingTotalVal === 0);
 
@@ -2281,8 +2483,15 @@ function renderCategoryPreview(container, fields, data, autoLinkedFields, autoLi
             if (isAuto) {
                 badgeHtml = `<span class="auto-badge auto-badge-clickable auto-preview-badge" data-field-key="${fieldKey}" style="cursor:pointer" title="Click to see breakdown">auto</span>`;
             }
+            // Check for description (on-demand fields)
+            const descKey = field.id + "Desc";
+            const description = data[descKey] || "";
+            let descTooltipHtml = "";
+            if (description) {
+                descTooltipHtml = `<span class="desc-tooltip-wrapper"><span class="desc-tooltip-icon" title="${esc(description)}">i</span><span class="desc-tooltip-text">${esc(description)}</span></span>`;
+            }
             item.innerHTML = `
-                <span class="label">${field.label}${badgeHtml}</span>
+                <span class="label">${field.label}${badgeHtml}${descTooltipHtml}</span>
                 <span class="value">${formatMoney(value)}</span>
             `;
             // Attach click handler for auto badge
@@ -2858,7 +3067,7 @@ function renderOutflowDynamicFields() {
         if (field.id === "bankName") {
             if (activeAccounts.length === 0) {
                 const notice = document.createElement("p");
-                notice.style.cssText = "font-size:0.82rem;color:#eab308;margin:4px 0 0;";
+                notice.style.cssText = `font-size:0.82rem;color:${COLOR_WARNING};margin:4px 0 0;`;
                 notice.innerHTML = `No active accounts found. <button type="button" class="dependency-notice-btn" style="font-size:0.78rem;padding:3px 8px;" onclick="switchToTab('cards')">Set up Accounts →</button>`;
                 div.appendChild(notice);
                 input = document.createElement("input");
@@ -2997,7 +3206,7 @@ function renderOutflowCharts(entries) {
     }
 
     // Type chart
-    const typeData = { "Insurance": { amount: 0, color: SEMANTIC_COLORS.insurance.color }, "Investment": { amount: 0, color: SEMANTIC_COLORS.investment.color }, "Savings": { amount: 0, color: SEMANTIC_COLORS.savings.color }, "Liability": { amount: 0, color: SEMANTIC_COLORS.liability.color }, "Expenditure": { amount: 0, color: SEMANTIC_COLORS.expenditure.color } };
+    const typeData = { "Insurance": { amount: 0, color: SEMANTIC_COLORS.insurance.color }, "Investment": { amount: 0, color: SEMANTIC_COLORS.investment.color }, "Savings": { amount: 0, color: SEMANTIC_COLORS.savings.color }, "Liability": { amount: 0, color: SEMANTIC_COLORS.liability.color }, "Expenditure": { amount: 0, color: SEMANTIC_COLORS.expenditure.color }, "Others": { amount: 0, color: SEMANTIC_COLORS.others.color } };
     entries.forEach(e => { let type = e.type || "Expenditure"; if (type === "Saving") type = "Savings"; if (typeData[type]) typeData[type].amount += Number(e.amount || 0); });
     if (outflowTypeChartCanvas) {
         const typeCtx = outflowTypeChartCanvas.getContext("2d");
@@ -3443,9 +3652,9 @@ function calculateNetWorthSummary(entries) {
 function renderAssetsLiabilitiesLists(entries) {
     const assets      = entries.filter(e => e.type === "Asset");
     const liabilities = entries.filter(e => e.type === "Liability");
-    const currentAge = calculateAgeFromDob(appData.dateOfBirth) || 30;
-    const yearsTo70 = Math.max(0, 70 - currentAge);
-    const inflationRate = 0.06;
+    const currentAge = calculateAgeFromDob(appData.dateOfBirth) || DEFAULT_CURRENT_AGE;
+    const yearsTo70 = Math.max(0, DEFAULT_RETIREMENT_AGE - currentAge);
+    const inflationRate = DEFAULT_INFLATION_RATE;
 
     function calcProjectedValue(entry) {
         const val = Number(entry.value || 0);
@@ -3486,8 +3695,8 @@ function renderAssetsLiabilitiesLists(entries) {
             </div>
             <div class="nw-values">
                 <span class="nw-val-row"><span class="nw-val-label">Current</span><span class="value">${formatMoney(currentVal)}</span></span>
-                ${showProjected ? `<span class="nw-val-row"><span class="nw-val-label">@ 70 yrs</span><span class="projected-value">${formatMoney(projectedVal)}</span></span>` : ''}
-                ${showProjected ? `<span class="nw-val-row"><span class="nw-val-label">@ 70 yrs real</span><span class="inflation-adj-value">${formatMoney(inflationAdjVal)}</span></span>` : ''}
+                ${showProjected ? `<span class="nw-val-row"><span class="nw-val-label">@ ${DEFAULT_RETIREMENT_AGE} yrs</span><span class="projected-value">${formatMoney(projectedVal)}</span></span>` : ''}
+                ${showProjected ? `<span class="nw-val-row"><span class="nw-val-label">@ ${DEFAULT_RETIREMENT_AGE} yrs real</span><span class="inflation-adj-value">${formatMoney(inflationAdjVal)}</span></span>` : ''}
             </div>
         `;
         return item;
@@ -3512,8 +3721,8 @@ function renderNetWorthProjectionChart(entries) {
     // Destroy existing chart
     if (netWorthProjectionChart) netWorthProjectionChart.destroy();
 
-    const currentAge = calculateAgeFromDob(appData.dateOfBirth) || 30;
-    const targetAge = 70;
+    const currentAge = calculateAgeFromDob(appData.dateOfBirth) || DEFAULT_CURRENT_AGE;
+    const targetAge = DEFAULT_RETIREMENT_AGE;
     const years = targetAge - currentAge;
 
     if (years <= 0 || entries.length === 0) return;
@@ -3526,7 +3735,7 @@ function renderNetWorthProjectionChart(entries) {
     const projectedValues = [];
     const inflationAdjustedValues = [];
     
-    const inflationRate = 0.06; // 6% inflation
+    const inflationRate = DEFAULT_INFLATION_RATE; // 6% inflation
     
     for (let year = 0; year <= years; year++) {
         labels.push(`Age ${currentAge + year}`);
@@ -3594,7 +3803,7 @@ function renderNetWorthProjectionChart(entries) {
                 {
                     label: "Inflation-Adjusted",
                     data: inflationAdjustedValues,
-                    borderColor: "#ef4444",
+                    borderColor: COLOR_NEGATIVE,
                     backgroundColor: "rgba(239, 68, 68, 0.1)",
                     fill: true,
                     tension: 0.4
@@ -4292,11 +4501,7 @@ function calculateEmergencyFundSummary(entries) {
         const amount = Number(e.amount || 0);
         if (amount <= 0) return;
         const freq = e.frequency || "Monthly";
-        let monthlyAmt = 0;
-        if (freq === "Monthly")          monthlyAmt = amount;
-        else if (freq === "Quarterly")   monthlyAmt = amount / 3;
-        else if (freq === "Semi-Annual") monthlyAmt = amount / 6;
-        else if (freq === "Annual")      monthlyAmt = amount / 12;
+        const monthlyAmt = toMonthlyAmount(amount, freq);
         if (monthlyAmt <= 0) return;
 
         const t = e.type || "Expenditure";
@@ -4491,16 +4696,16 @@ function calculateAnnualSummary() {
             if (storedMd._closedBudgetStatus) {
                 // Use saved status from when month was closed
                 const statusType = storedMd._closedBudgetStatusType || "neutral";
-                const statusColor = statusType === "positive" ? "#22c55e" : statusType === "negative" ? "#ef4444" : "#eab308";
+                const statusColor = statusType === "positive" ? COLOR_POSITIVE : statusType === "negative" ? COLOR_NEGATIVE : COLOR_WARNING;
                 budgetStatusHtml = `<span class="annual-month-budget-status" style="color:${statusColor};font-weight:600;font-size:0.78rem;">${storedMd._closedBudgetStatus}</span>`;
             } else if (month.income > 0) {
                 // Compute budget status: income vs total outflow
                 if (budgetDiff > 0) {
-                    budgetStatusHtml = `<span class="annual-month-budget-status" style="color:#22c55e;font-weight:600;font-size:0.78rem;">Under Budget: +${formatMoney(budgetDiff)}</span>`;
+                    budgetStatusHtml = `<span class="annual-month-budget-status" style="color:${COLOR_POSITIVE};font-weight:600;font-size:0.78rem;">Under Budget: +${formatMoney(budgetDiff)}</span>`;
                 } else if (budgetDiff < 0) {
-                    budgetStatusHtml = `<span class="annual-month-budget-status" style="color:#ef4444;font-weight:600;font-size:0.78rem;">Over Budget: ${formatMoney(Math.abs(budgetDiff))}</span>`;
+                    budgetStatusHtml = `<span class="annual-month-budget-status" style="color:${COLOR_NEGATIVE};font-weight:600;font-size:0.78rem;">Over Budget: ${formatMoney(Math.abs(budgetDiff))}</span>`;
                 } else {
-                    budgetStatusHtml = `<span class="annual-month-budget-status" style="color:#eab308;font-weight:600;font-size:0.78rem;">Balanced</span>`;
+                    budgetStatusHtml = `<span class="annual-month-budget-status" style="color:${COLOR_WARNING};font-weight:600;font-size:0.78rem;">Balanced</span>`;
                 }
             }
 
@@ -4523,6 +4728,7 @@ function calculateAnnualSummary() {
         });
     } catch (error) {
         console.error("Error calculating annual summary:", error);
+        logger.error('Annual summary calculation failed', { error: error.message });
         annualTotalIncome.textContent = "₹0";
         annualTotalExpenditure.textContent = "₹0";
         annualTotalSavings.textContent = "₹0";
@@ -4544,7 +4750,7 @@ function renderAnnualPieChart(totals) {
             labels: ["Investment", "Liability", "Savings", "Expenditure", "Insurance", "Others"],
             datasets: [{
                 data: values,
-                backgroundColor: ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7", "#eab308"],
+                backgroundColor: ["#3b82f6", COLOR_NEGATIVE, COLOR_POSITIVE, "#f97316", "#a855f7", COLOR_WARNING],
                 borderWidth: 0
             }]
         },
@@ -4601,12 +4807,12 @@ function showAutoCalcPopup(anchor, fieldLabel, breakdown) {
         const negativeAmount = Math.abs(breakdown.find(b => b.amount < 0)?.amount || 0);
         
         // Determine settlement status and color
-        let statusColor = '#eab308'; // yellow - default
+        let statusColor = COLOR_WARNING; // yellow - default
         let statusMessage = '';
         
         if (negativeAmount === 0) {
             // Nothing settled
-            statusColor = '#ef4444'; // red
+            statusColor = COLOR_NEGATIVE; // red
             statusMessage = 'No settlement made';
             formulaHtml = `
                 <div class="auto-calc-popup-formula" style="background: rgba(239, 68, 68, 0.1);">
@@ -4616,7 +4822,7 @@ function showAutoCalcPopup(anchor, fieldLabel, breakdown) {
             `;
         } else if (displayTotal === 0) {
             // Fully settled
-            statusColor = '#22c55e'; // green
+            statusColor = COLOR_POSITIVE; // green
             statusMessage = 'Fully settled';
             formulaHtml = `
                 <div class="auto-calc-popup-formula" style="background: rgba(34, 197, 94, 0.1);">
@@ -4626,7 +4832,7 @@ function showAutoCalcPopup(anchor, fieldLabel, breakdown) {
             `;
         } else if (breakdown.length > 1) {
             // Partial settlement - show formula
-            statusColor = '#eab308'; // yellow
+            statusColor = COLOR_WARNING; // yellow
             statusMessage = 'Partially settled';
             formulaHtml = `
                 <div class="auto-calc-popup-formula">
@@ -4684,7 +4890,7 @@ function showAutoCalcPopup(anchor, fieldLabel, breakdown) {
             document.removeEventListener("click", closeOnOutside);
         }
     };
-    setTimeout(() => document.addEventListener("click", closeOnOutside), 10);
+    setTimeout(() => document.addEventListener("click", closeOnOutside), OUTSIDE_CLICK_DELAY_MS);
 }
 
 function renderCategoryFields(container, fields, data, autoLinkedFields = {}, autoLinkedBreakdown = {}) {
@@ -4730,7 +4936,8 @@ function renderCategoryFields(container, fields, data, autoLinkedFields = {}, au
         input.min = "0";
         input.step = "1";
         input.placeholder = "0";
-        input.value = data[field.id] || "";
+        input.value = data[field.id] !== undefined ? data[field.id] : (field.id === "onetimeSaving" ? 1000 : "");
+        input.id = `${categoryName}_${field.id}`;
         input.dataset.fieldId = field.id;
         input.dataset.category = container.id;
         if (isAutoLinked) {
@@ -4765,18 +4972,32 @@ function renderCategoryFields(container, fields, data, autoLinkedFields = {}, au
             div.appendChild(settleBtn);
         }
 
+        // Add description text input for on-demand fields
+        if (field.hasDescription) {
+            const descInput = document.createElement("input");
+            descInput.type = "text";
+            descInput.className = "ondemand-desc-input";
+            descInput.placeholder = "Description (optional)";
+            descInput.value = data[field.id + "Desc"] || "";
+            descInput.id = `${categoryName}_${field.id}Desc`;
+            descInput.dataset.fieldId = field.id + "Desc";
+            descInput.dataset.category = container.id;
+            descInput.dataset.isDescription = "true";
+            div.appendChild(descInput);
+        }
+
         container.appendChild(div);
     });
 }
 
-function settleCreditCardFromSaving() {
+async function settleCreditCardFromSaving() {
     logger.info('CC settlement initiated', { monthKey: getMonthKey(currentMonth) });
     
     const cards = getCardEntries();
     const savingAccount = cards.find(c => c.purpose === "Savings" || c.purpose === "Saving");
     if (!savingAccount) {
         logger.warning('No savings account found for CC settlement');
-        alert("No Savings account found. Please set up a Savings account first.");
+        showAlert('No Savings account found. Please set up a Savings account first.', { variant: 'warning' });
         return;
     }
     const monthKey = getMonthKey(currentMonth);
@@ -4788,25 +5009,24 @@ function settleCreditCardFromSaving() {
     const outstanding = Number(monthData.outflow?.creditCardOutstanding || 0);
     if (outstanding <= 0) {
         logger.warning('No outstanding CC bill to settle', { outstanding });
-        alert("No outstanding credit card bill to settle.");
+        showAlert('No outstanding credit card bill to settle.', { variant: 'info' });
         return;
     }
     const savingBalance = Number(savingAccount.balance || 0);
     if (savingBalance <= 0) {
         logger.warning('Saving account has no balance for CC settlement', { savingBalance });
-        alert("Saving account has no balance to settle from.");
+        showAlert('Saving account has no balance to settle from.', { variant: 'warning' });
         return;
     }
     
     // Ask user for settlement amount (default to full settlement or available balance, whichever is less)
     const maxSettleAmount = Math.min(outstanding, savingBalance);
-    const userInput = prompt(
-        `Enter amount to settle from Saving account:\n\n` +
+    const userInput = await showPrompt(
         `Outstanding CC Bill: ${formatMoney(outstanding)}\n` +
         `Saving Balance: ${formatMoney(savingBalance)}\n` +
         `Max you can settle: ${formatMoney(maxSettleAmount)}\n\n` +
         `Enter amount (or leave blank to settle maximum):`,
-        maxSettleAmount.toString()
+        { title: 'Settle CC Bill', inputType: 'number', placeholder: '0', defaultValue: maxSettleAmount.toString() }
     );
     
     if (userInput === null) {
@@ -4818,21 +5038,22 @@ function settleCreditCardFromSaving() {
     
     if (isNaN(settleAmount) || settleAmount <= 0) {
         logger.warning('Invalid settlement amount entered', { userInput, settleAmount });
-        alert("Please enter a valid amount greater than 0.");
+        showAlert('Please enter a valid amount greater than 0.', { variant: 'warning' });
         return;
     }
     
     if (settleAmount > maxSettleAmount) {
         logger.warning('Settlement amount exceeds maximum available', { settleAmount, maxSettleAmount, outstanding, savingBalance });
-        alert(`Cannot settle ₹${settleAmount.toLocaleString("en-IN")}. Maximum available is ${formatMoney(maxSettleAmount)} (limited by outstanding CC bill).`);
+        showAlert(`Cannot settle ₹${settleAmount.toLocaleString("en-IN")}. Maximum available is ${formatMoney(maxSettleAmount)} (limited by outstanding CC bill).`, { variant: 'warning' });
         return;
     }
     
-    const confirmed = confirm(
-        `Confirm settlement of ₹${settleAmount.toLocaleString("en-IN")} from your Saving account (${savingAccount.bankName})?\n\n` +
+    const confirmed = await showConfirm(
+        `Confirm settlement of ${formatMoney(settleAmount)} from your Saving account (${savingAccount.bankName})?\n\n` +
         `This will:\n• Track settlement of ${formatMoney(settleAmount)} against CC outstanding\n` +
         `• Reduce saving balance from ${formatMoney(savingBalance)} to ${formatMoney(savingBalance - settleAmount)}\n` +
-        `• CC outstanding will be recalculated automatically`
+        `• CC outstanding will be recalculated automatically`,
+        { title: 'Confirm Settlement', confirmText: 'Settle' }
     );
     if (!confirmed) {
         logger.info('CC settlement confirmation cancelled by user', { settleAmount });
@@ -4882,7 +5103,7 @@ function settleCreditCardFromSaving() {
     scheduleSave();
     // Re-render to update the UI immediately
     renderMonthlyBudget();
-    alert(`Successfully settled ${formatMoney(settleAmount)} from Saving account.`);
+    showToast(`Successfully settled ${formatMoney(settleAmount)} from Saving account.`, { variant: 'success' });
 }
 
 function calculateAndDisplaySummary(monthData) {
@@ -4896,16 +5117,12 @@ function calculateAndDisplaySummary(monthData) {
 
     // Fixed outflows auto-debited from salary — all frequencies converted to monthly equivalent
     const allOutflows = ((appData.tabData || {}).outflow || []);
-    const autoDebitByType = { Liability: 0, Insurance: 0, Savings: 0, Expenditure: 0, Investment: 0 };
+    const autoDebitByType = { Liability: 0, Insurance: 0, Savings: 0, Expenditure: 0, Investment: 0, Others: 0 };
     allOutflows.forEach(e => {
         const amount = Number(e.amount || 0);
         if (amount <= 0) return;
         const freq = e.frequency || "Monthly";
-        let monthlyAmt = 0;
-        if (freq === "Monthly")      monthlyAmt = amount;
-        else if (freq === "Quarterly")   monthlyAmt = amount / 3;
-        else if (freq === "Semi-Annual") monthlyAmt = amount / 6;
-        else if (freq === "Annual")      monthlyAmt = amount / 12;
+        const monthlyAmt = toMonthlyAmount(amount, freq);
         if (monthlyAmt <= 0) return;
         let t = e.type || "Expenditure";
         if (t === "Saving") t = "Savings";
@@ -4916,7 +5133,7 @@ function calculateAndDisplaySummary(monthData) {
     // Category totals — Total Outflow uses only recurring outflow, excludes on-demand investing
     const inflowTotal = Object.values(monthData.inflow || {}).reduce((s, v) => s + Number(v || 0), 0);
     const outflowTotal = Object.values(monthData.outflow || {}).reduce((s, v) => s + Number(v || 0), 0);
-    const investingTotal = Object.values(monthData.investing || {}).reduce((s, v) => s + Number(v || 0), 0);
+    const investingTotal = sumCategoryNumericValues(monthData.investing);
 
     document.getElementById("inflowTotal").textContent = formatMoney(inflowTotal);
     document.getElementById("outflowTotal").textContent = formatMoney(outflowTotal);
@@ -4946,11 +5163,7 @@ function calculateAndDisplaySummary(monthData) {
             const amount = Number(e.amount || 0);
             if (amount <= 0) return;
             const freq = e.frequency || "Monthly";
-            let monthlyAmt = 0;
-            if (freq === "Monthly")      monthlyAmt = amount;
-            else if (freq === "Quarterly")   monthlyAmt = amount / 3;
-            else if (freq === "Semi-Annual") monthlyAmt = amount / 6;
-            else if (freq === "Annual")      monthlyAmt = amount / 12;
+            const monthlyAmt = toMonthlyAmount(amount, freq);
             if (monthlyAmt <= 0) return;
             let t = e.type || "Expenditure";
             if (t === "Saving") t = "Savings";
@@ -4978,6 +5191,10 @@ function calculateAndDisplaySummary(monthData) {
             lines.push(`<strong>→ Primary A/c: ${formatMoney(autoDebitByType.Expenditure)}</strong>`);
             (itemsByType.Expenditure || []).forEach(l => lines.push(`&nbsp;&nbsp;${l}`));
         }
+        if (autoDebitByType.Others > 0) {
+            lines.push(`<strong>Others: ${formatMoney(autoDebitByType.Others)}</strong>`);
+            (itemsByType.Others || []).forEach(l => lines.push(`&nbsp;&nbsp;${l}`));
+        }
         breakdownEl.innerHTML = lines.length > 0
             ? lines.map(l => `<div class="auto-debit-line">${l}</div>`).join("")
             : `<div class="auto-debit-line" style="color:var(--dim)">No fixed outflows</div>`;
@@ -4997,7 +5214,7 @@ function calculateAndDisplaySummary(monthData) {
             availableEl.style.color = "var(--dim)";
         } else {
             availableEl.textContent = formatMoney(Math.abs(spendable));
-            availableEl.style.color = spendable >= 0 ? "#22c55e" : "#ef4444";
+            availableEl.style.color = spendable >= 0 ? COLOR_POSITIVE : COLOR_NEGATIVE;
         }
     }
     if (availableLabelEl) {
@@ -5020,13 +5237,13 @@ function calculateAndDisplaySummary(monthData) {
     const untrackedEl = document.getElementById("untrackedExpenses");
     if (untrackedEl) {
         untrackedEl.textContent = formatMoney(untracked);
-        untrackedEl.style.color = untracked > 0 ? "#eab308" : "#22c55e";
+        untrackedEl.style.color = untracked > 0 ? COLOR_WARNING : COLOR_POSITIVE;
     }
 
     // Store globally for Quick Update calculations
     const monthKey = getMonthKey(currentMonth);
     const transferDone = Number(monthData._transferDone || 0);
-    window._budgetTrackedExpenses = untracked;
+    budgetState.trackedExpenses = untracked;
 
     // Budget status banner — based on spendable vs untracked (hidden in edit mode)
     const isMonthClosed = Boolean(monthData._monthClosed);
@@ -5079,7 +5296,7 @@ function calculateAndDisplaySummary(monthData) {
     const transferEl = document.getElementById("transferAmount");
     if (transferEl) {
         transferEl.textContent = formatMoney(Math.abs(transferAmt));
-        transferEl.style.color = transferAmt >= 0 ? "#22c55e" : "#ef4444";
+        transferEl.style.color = transferAmt >= 0 ? COLOR_POSITIVE : COLOR_NEGATIVE;
     }
     const transferLabelEl = transferEl?.previousElementSibling;
     if (transferLabelEl) {
@@ -5089,11 +5306,11 @@ function calculateAndDisplaySummary(monthData) {
     }
 
     // Store transfer amount for Execute Transfer button
-    window._budgetTransferAmt = transferAmt;
-    window._budgetSalaryAccount = salaryAccount;
-    window._budgetExpAccount = expenditureAccount;
-    window._budgetAutoDebitByType = autoDebitByType;
-    window._budgetTransferDone = transferDone;
+    budgetState.transferAmt = transferAmt;
+    budgetState.salaryAccount = salaryAccount;
+    budgetState.expAccount = expenditureAccount;
+    budgetState.autoDebitByType = autoDebitByType;
+    budgetState.transferDone = transferDone;
 
     // Hide Monthly Transfer Breakdown if transfer already done for this month OR month is closed
     const transferSection = document.getElementById("transferBreakdownSection");
@@ -5108,14 +5325,14 @@ function calculateAndDisplaySummary(monthData) {
             const correctTransfer = Math.max(0, primaryIncome - fixedMonthlyOutflow);
             const diff = transferDone - correctTransfer;
             // Show warning if mismatch exceeds ₹1 (float tolerance)
-            if (Math.abs(diff) > 1) {
+            if (Math.abs(diff) > MISMATCH_TOLERANCE) {
                 mismatchEl.hidden = false;
                 document.getElementById("mismatchOldTransfer").textContent = formatMoney(transferDone);
                 document.getElementById("mismatchNewTransfer").textContent = formatMoney(correctTransfer);
                 document.getElementById("mismatchDifference").textContent = (diff > 0 ? "+" : "") + formatMoney(diff);
                 // Store for recalc button
-                window._mismatchCorrectTransfer = correctTransfer;
-                window._mismatchFixedOutflow = fixedMonthlyOutflow;
+                budgetState.mismatchCorrectTransfer = correctTransfer;
+                budgetState.mismatchFixedOutflow = fixedMonthlyOutflow;
             } else {
                 mismatchEl.hidden = true;
             }
@@ -5162,12 +5379,12 @@ function renderPieChart(monthData) {
                 dist.other
             ],
             backgroundColor: [
-                "#3b82f6", // Investment - blue
-                "#ef4444", // Liability - red
-                "#22c55e", // Savings - green
-                "#f97316", // Expenditure - orange
-                "#a855f7", // Insurance - purple
-                "#eab308"  // Others - yellow
+                "#3b82f6",      // Investment - blue
+                COLOR_NEGATIVE, // Liability - red
+                COLOR_POSITIVE, // Savings - green
+                "#f97316",      // Expenditure - orange
+                "#a855f7",      // Insurance - purple
+                COLOR_WARNING   // Others - yellow
             ],
             borderWidth: 0
         }]
@@ -5298,13 +5515,13 @@ function renderTabs() {
         }
         btn.addEventListener("click", () => {
             if (disabled) {
-                alert("Please set up both a Primary (Expenditure) account and a Salary account in the Accounts tab before accessing other tabs.");
+                showAlert('Please set up both a Primary (Expenditure) account and a Salary account in the Accounts tab before accessing other tabs.', { variant: 'warning' });
                 return;
             }
             activeTabId = tab.id;
             searchInput.value = "";
             render();
-            if (window.innerWidth <= 768) {
+            if (window.innerWidth <= MOBILE_BREAKPOINT_PX) {
                 tabList.classList.remove("open");
             }
         });
@@ -5364,51 +5581,83 @@ function addEntry(event) {
     render();
 }
 
-function deleteEntry(id) {
+async function deleteEntry(id) {
     if (activeTabId === "cards") {
         const entry = activeEntries().find(i => i.id === id);
         if (entry && entry.isPrimary === "Yes") {
-            const confirmed = confirm(
-                "⚠️  You are about to delete your PRIMARY (Expenditure) account.\n\n" +
-                "This is your main spending account. Deleting it will disable all " +
-                "other tabs until a new primary account is set.\n\n" +
-                "Are you sure you want to delete this primary account?"
+            const confirmed = await showConfirm(
+                "You are about to delete your PRIMARY (Expenditure) account. This will affect budget transfers and reconciliation.",
+                { title: 'Delete Primary Account', dangerous: true, confirmText: 'Delete' }
             );
             if (!confirmed) return;
         } else if (entry && entry.purpose === "Salary") {
-            const confirmed = confirm(
-                "⚠️  You are about to delete your SALARY account.\n\n" +
-                "This account is used for salary credits and transfer calculations. " +
-                "Deleting it will disable other tabs until a Salary account is added again.\n\n" +
-                "Are you sure?"
+            const confirmed = await showConfirm(
+                "You are about to delete your SALARY account. This will affect monthly transfers.",
+                { title: 'Delete Salary Account', dangerous: true, confirmText: 'Delete' }
             );
             if (!confirmed) return;
         } else {
-            if (!confirm("Delete this account? This cannot be undone.")) return;
+            if (!(await showConfirm('Delete this account?', { title: 'Delete Account', dangerous: true, confirmText: 'Delete' }))) return;
         }
     } else {
-        if (!confirm("Delete this entry? This cannot be undone.")) return;
+        if (!(await showConfirm('Delete this entry?', { title: 'Delete Entry', dangerous: true, confirmText: 'Delete' }))) return;
     }
+    // Save for undo
+    const deletedEntry = activeEntries().find(i => i.id === id);
+    const deletedTabId = activeTabId;
     setActiveEntries(activeEntries().filter(i => i.id !== id));
     Object.keys(editingEntryIds).forEach(tabId => {
         if (editingEntryIds[tabId] === id) editingEntryIds[tabId] = null;
     });
     render();
+
+    // Show undo toast (P1)
+    if (deletedEntry) {
+        _undoDeleteEntry = deletedEntry;
+        _undoDeleteTabId = deletedTabId;
+        showToast(`Deleted "${deletedEntry.name || 'entry'}"`, {
+            variant: 'info',
+            actionLabel: 'Undo',
+            duration: UNDO_TOAST_DURATION_MS,
+        }).then(undone => {
+            if (undone && _undoDeleteEntry) {
+                // Restore entry
+                const entries = getSectionEntries(_undoDeleteTabId);
+                setSectionEntries(_undoDeleteTabId, [_undoDeleteEntry, ...entries]);
+                _undoDeleteEntry = null;
+                _undoDeleteTabId = null;
+                render();
+                showToast('Entry restored.', { variant: 'success', duration: 2000 });
+            } else {
+                _undoDeleteEntry = null;
+                _undoDeleteTabId = null;
+            }
+        });
+    }
 }
 
-function clearActiveTab() {
+async function clearActiveTab() {
     if (!activeEntries().length) return;
-    if (confirm("Clear all items in this tab?")) {
+    if (await showConfirm('Clear all items in this tab?', { title: 'Clear Tab', dangerous: true, confirmText: 'Clear All' })) {
         setActiveEntries([]);
         render();
     }
 }
 
 // ── Export to Excel ─────────────────────────────────────────────────────────────
-function exportToExcel() {
+async function exportToExcel() {
     const entries = activeEntries();
     if (!entries.length) {
-        alert("No data to export.");
+        logger.warning('Export attempted with no data', { activeTabId });
+        showAlert('No data to export.', { variant: 'warning' });
+        return;
+    }
+    
+    // P2: Lazy-load SheetJS
+    try {
+        await ensureSheetJs();
+    } catch {
+        showAlert('Failed to load Excel export library. Check your connection.', { variant: 'error' });
         return;
     }
     
@@ -5424,10 +5673,55 @@ function exportToExcel() {
     XLSX.writeFile(wb, `${tab.label.replace(/\s+/g, "_")}_export.xlsx`);
 }
 
+// ── Export to PDF (P3) ──────────────────────────────────────────────────────
+function exportToPdf() {
+    const entries = activeEntries();
+    if (!entries.length) {
+        showAlert('No data to export.', { variant: 'warning' });
+        return;
+    }
+    const tab = getTabs().find(t => t.id === activeTabId) || DEFAULT_TABS[0];
+    const fields = TAB_FIELDS[activeTabId] || TAB_FIELDS.monthlyBudget;
+
+    // Build printable HTML document
+    const headerRow = fields.map(f => `<th>${esc(f.label)}</th>`).join('');
+    const bodyRows = entries.map(e =>
+        '<tr>' + fields.map(f => {
+            const v = e[f.id];
+            const display = f.type === 'number' ? formatMoney(Number(v || 0)) : esc(v || '');
+            return `<td>${display}</td>`;
+        }).join('') + '</tr>'
+    ).join('');
+
+    const printHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${esc(tab.label)} – SmartFin Report</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:30px;color:#222}
+h1{font-size:1.3rem;margin-bottom:4px}
+.meta{font-size:.8rem;color:#666;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{background:#f5f5f5;text-align:left;padding:8px 10px;border:1px solid #ddd;font-weight:600}
+td{padding:7px 10px;border:1px solid #ddd}
+tr:nth-child(even){background:#fafafa}
+@media print{body{margin:10mm}@page{size:landscape}}
+</style></head><body>
+<h1>${esc(tab.label)} – Financial Report</h1>
+<p class="meta">Generated ${new Date().toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' })} &bull; SmartFin</p>
+<table><thead><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody></table>
+</body></html>`;
+
+    const printWin = window.open('', '_blank');
+    if (!printWin) { showAlert('Pop-up blocked. Please allow pop-ups for PDF export.', { variant: 'warning' }); return; }
+    printWin.document.write(printHtml);
+    printWin.document.close();
+    printWin.addEventListener('afterprint', () => printWin.close());
+    setTimeout(() => printWin.print(), 300);
+}
+
 // ── Reset All Data ─────────────────────────────────────────────────────────────
-function resetAllData() {
-    const confirmation = confirm(
-        "⚠️ WARNING: This will delete ALL your data including:\n\n" +
+async function resetAllData() {
+    const confirmation = await showConfirm(
+        "This will delete ALL your data including:\n\n" +
         "• All budget entries\n" +
         "• All monthly budget data\n" +
         "• All financial goals\n" +
@@ -5438,18 +5732,21 @@ function resetAllData() {
         "• Tax plan data\n" +
         "• Gifts\n" +
         "• Emergency fund data\n\n" +
-        "This action CANNOT be undone!\n\n" +
-        "Type 'DELETE' to confirm:"
+        "This action CANNOT be undone!",
+        { title: 'Reset All Data', dangerous: true, confirmText: 'Continue' }
     );
     
     if (!confirmation) return;
     
-    const deleteConfirmation = prompt("Type 'DELETE' to confirm permanent deletion:");
-    if (deleteConfirmation !== "DELETE") {
-        alert("Reset cancelled. Data remains intact.");
+    const deleteConfirmation = await showTypedConfirm('Type DELETE to confirm permanent deletion of all data.', 'DELETE', { title: 'Final Confirmation' });
+    if (!deleteConfirmation) {
+        showToast('Reset cancelled. Data remains intact.', { variant: 'info' });
         return;
     }
     
+    // P0: Auto-backup current data before resetting
+    autoBackup('reset');
+
     // Clear all data but preserve user name
     appData = {
         tabData: {},
@@ -5471,30 +5768,38 @@ function resetAllData() {
     // Re-render
     render();
     
-    alert("✅ All data has been permanently deleted.");
+    showToast('All data has been permanently deleted.', { variant: 'success' });
 }
 
 // ── Delete Account ────────────────────────────────────────────────────────────
-function deleteAccount() {
-    const confirmation = confirm(
-        "⚠️ DANGER: DELETE ACCOUNT\n\n" +
+async function deleteAccount() {
+    const confirmation = await showConfirm(
         "This will permanently:\n" +
         "• Delete ALL your financial data from our servers\n" +
         "• Delete your Firebase Authentication account\n" +
         "• Log you out immediately\n\n" +
-        "This action CANNOT be undone. Your data CANNOT be recovered.\n\n" +
-        "Are you sure you want to delete your account?"
+        "This action CANNOT be undone. Your data CANNOT be recovered.",
+        { title: 'Delete Account', dangerous: true }
     );
     if (!confirmation) return;
 
-    const deleteConfirmation = prompt("Type 'DELETE ACCOUNT' to confirm permanent account deletion:");
-    if (deleteConfirmation !== "DELETE ACCOUNT") {
-        alert("Account deletion cancelled. Your data remains intact.");
+    const deleteConfirmation = await showTypedConfirm('Type DELETE ACCOUNT to confirm permanent account deletion.', 'DELETE ACCOUNT', { title: 'Final Confirmation' });
+    if (!deleteConfirmation) {
+        showToast('Account deletion cancelled. Your data remains intact.', { variant: 'info' });
         return;
     }
 
     const user = firebase.auth().currentUser;
-    if (!user) { alert("No user signed in."); return; }
+    if (!user) {
+        logger.warning('Delete account attempted with no user signed in');
+        showAlert('No user signed in.', { variant: 'error' });
+        return;
+    }
+
+    logger.warning('Account deletion initiated', { userId: user.uid });
+
+    // P0: Auto-backup before account deletion
+    autoBackup('account-delete');
 
     // Step 1: Delete Firestore data
     db.collection("users").doc(user.uid).delete()
@@ -5503,14 +5808,17 @@ function deleteAccount() {
             return user.delete();
         })
         .then(() => {
-            alert("Your account and all data have been permanently deleted.");
+            logger.info('Account deleted successfully', { userId: user.uid });
+            showToast('Your account and all data have been permanently deleted.', { variant: 'success' });
             // Auth state listener will handle redirect to login
         })
         .catch(err => {
             if (err.code === "auth/requires-recent-login") {
-                alert("For security, you need to sign in again before deleting your account. Please log out, log back in, and try again.");
+                logger.warning('Account deletion requires recent login', { userId: user.uid });
+                showAlert('For security, you need to sign in again before deleting your account. Please log out, log back in, and try again.', { variant: 'warning' });
             } else {
-                alert("Error deleting account: " + err.message);
+                logger.error('Account deletion failed', { code: err.code, message: err.message });
+                showAlert('Error deleting account: ' + err.message, { variant: 'error' });
                 console.error("Delete account error:", err);
             }
         });
@@ -5521,8 +5829,9 @@ if (deleteAccountBtn) deleteAccountBtn.addEventListener("click", deleteAccount);
 
 // ── Event bindings ────────────────────────────────────────────────────────────
 entryForm.addEventListener("submit", addEntry);
-searchInput.addEventListener("input", render);
+searchInput.addEventListener("input", debounce(render, SEARCH_DEBOUNCE_MS));
 exportBtn.addEventListener("click", exportToExcel);
+document.getElementById("exportPdfBtn")?.addEventListener("click", exportToPdf);
 clearTabButton.addEventListener("click", clearActiveTab);
 resetAllDataButton.addEventListener("click", resetAllData);
 entryRows.addEventListener("click", e => {
@@ -5626,52 +5935,98 @@ toggleBudgetEdit.addEventListener("click", () => {
 
 // ── Execute Transfer button ───────────────────────────────────────────────────
 const btnDoTransfer = document.getElementById("btnDoTransfer");
-if (btnDoTransfer) btnDoTransfer.addEventListener("click", () => {
-    const amt = window._budgetTransferAmt;
-    const salary = window._budgetSalaryAccount;
-    const exp = window._budgetExpAccount;
-    const autoDebitByType = window._budgetAutoDebitByType || {};
-    if (!salary) { alert("No Salary account found. Add one with purpose 'Salary' in Accounts tab."); return; }
-    if (!exp) { alert("No Primary (Expenditure) account found. Set an account as Primary in the Accounts tab."); return; }
+if (btnDoTransfer) btnDoTransfer.addEventListener("click", async () => {
+    const amt = budgetState.transferAmt;
+    const salary = budgetState.salaryAccount;
+    const exp = budgetState.expAccount;
+    const autoDebitByType = budgetState.autoDebitByType || {};
+    if (!salary) { showAlert("No Salary account found. Add one with purpose 'Salary' in Accounts tab.", { variant: 'warning' }); return; }
+    if (!exp) { showAlert('No Primary (Expenditure) account found. Set an account as Primary in the Accounts tab.', { variant: 'warning' }); return; }
     // Block if primaryIncome not defined or transfer already done
     const monthKey = getMonthKey(currentMonth);
     const monthData = (appData.monthlyBudgetData || {})[monthKey] || {};
-    if (monthData._transferDone) { alert("Transfer already executed for this month."); return; }
-    if (monthData._monthClosed) { alert("This month is already closed."); return; }
+    if (monthData._transferDone) { showAlert('Transfer already executed for this month.', { variant: 'info' }); return; }
+    if (monthData._monthClosed) { showAlert('This month is already closed.', { variant: 'info' }); return; }
     const primaryIncome = Number(monthData.inflow?.primaryIncome || 0);
-    if (primaryIncome <= 0) { alert("Please enter your Primary Income (salary credited this month) before executing transfer."); return; }
-    if (amt <= 0) { alert("Nothing to transfer — fixed outflow exceeds or equals income."); return; }
+    if (primaryIncome <= 0) { showAlert('Please enter your Primary Income (salary credited this month) before executing transfer.', { variant: 'warning' }); return; }
+    if (amt <= 0) { showAlert("Nothing to transfer — fixed outflow exceeds or equals income.", { variant: 'info' }); return; }
 
     const cards = (appData.tabData || {}).cards || [];
     const savingAccount = cards.find(c => (c.purpose === "Savings" || c.purpose === "Saving") && c.isPrimary !== "Yes");
     const investmentAccount = cards.find(c => c.purpose === "Investment" && c.isPrimary !== "Yes");
 
-    const liabInsTotal = (autoDebitByType.Liability || 0) + (autoDebitByType.Insurance || 0);
-    const fixedTotal = liabInsTotal
+    const fixedTotal = (autoDebitByType.Liability || 0)
+        + (autoDebitByType.Insurance || 0)
         + (autoDebitByType.Savings || 0)
         + (autoDebitByType.Investment || 0)
-        + (autoDebitByType.Expenditure || 0);
+        + (autoDebitByType.Expenditure || 0)
+        + (autoDebitByType.Others || 0);
     const expBalBefore = Number(exp.balance || 0);
     const expBalAfter = expBalBefore + amt;
+    const savBalBefore = Number(savingAccount?.balance || 0);
+    const invBalBefore = Number(investmentAccount?.balance || 0);
 
-    let confirmMsg = `Execute Monthly Transfer\n`;
-    confirmMsg += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-    confirmMsg += `Salary Credited: ${formatMoney(primaryIncome)}\n\n`;
-    confirmMsg += `Fixed Outflows Deducted from Salary:\n`;
-    if (autoDebitByType.Liability > 0) confirmMsg += `  Liability:   ${formatMoney(autoDebitByType.Liability)}\n`;
-    if (autoDebitByType.Insurance > 0) confirmMsg += `  Insurance:   ${formatMoney(autoDebitByType.Insurance)}\n`;
-    if (autoDebitByType.Savings > 0) confirmMsg += `  → Savings A/c${savingAccount ? ` (${savingAccount.bankName})` : ''}: ${formatMoney(autoDebitByType.Savings)}\n`;
-    if (autoDebitByType.Investment > 0) confirmMsg += `  → Investment A/c${investmentAccount ? ` (${investmentAccount.bankName})` : ''}: ${formatMoney(autoDebitByType.Investment)}\n`;
-    if (autoDebitByType.Expenditure > 0) confirmMsg += `  → Fixed Expenditure: ${formatMoney(autoDebitByType.Expenditure)}\n`;
-    confirmMsg += `  Total Deducted: ${formatMoney(fixedTotal)}\n\n`;
-    confirmMsg += `Salary Leftover: ${formatMoney(amt)}\n`;
-    confirmMsg += `→ Transferred to Expenditure A/c (${exp.bankName || 'Primary'})\n\n`;
-    confirmMsg += `Expenditure A/c Balance:\n`;
-    confirmMsg += `  Before: ${formatMoney(expBalBefore)}${expBalBefore > 0 ? ' (includes carry forward)' : ''}\n`;
-    confirmMsg += `  + Transfer: ${formatMoney(amt)}\n`;
-    confirmMsg += `  After:  ${formatMoney(expBalAfter)}\n\n`;
-    confirmMsg += `Salary A/c: ${formatMoney(Number(salary.balance || 0))} → ₹0`;
-    if (!confirm(confirmMsg)) return;
+    let confirmMsg = ``;
+    confirmMsg += `EXECUTE MONTHLY TRANSFER\n`;
+    confirmMsg += `════════════════════════════════\n\n`;
+
+    // Section 1: Income
+    confirmMsg += `INCOME\n`;
+    confirmMsg += `────────────────────────────────\n`;
+    confirmMsg += `  Salary Credited:  ${formatMoney(primaryIncome)}\n\n`;
+
+    // Section 2: Deductions (paid from salary, leaves system)
+    const leavesSystem = (autoDebitByType.Liability || 0) + (autoDebitByType.Insurance || 0) + (autoDebitByType.Expenditure || 0) + (autoDebitByType.Others || 0);
+    if (leavesSystem > 0) {
+        confirmMsg += `DEDUCTIONS (paid from salary)\n`;
+        confirmMsg += `────────────────────────────────\n`;
+        if (autoDebitByType.Liability > 0)  confirmMsg += `  Liability:        ${formatMoney(autoDebitByType.Liability)}\n`;
+        if (autoDebitByType.Insurance > 0)  confirmMsg += `  Insurance:        ${formatMoney(autoDebitByType.Insurance)}\n`;
+        if (autoDebitByType.Expenditure > 0) confirmMsg += `  Fixed Expenditure: ${formatMoney(autoDebitByType.Expenditure)}\n`;
+        if (autoDebitByType.Others > 0)     confirmMsg += `  Others:           ${formatMoney(autoDebitByType.Others)}\n`;
+        confirmMsg += `\n`;
+    }
+
+    // Section 3: Internal Transfers (to other accounts)
+    const internalTransfers = (autoDebitByType.Savings || 0) + (autoDebitByType.Investment || 0);
+    if (internalTransfers > 0) {
+        confirmMsg += `INTERNAL TRANSFERS\n`;
+        confirmMsg += `────────────────────────────────\n`;
+        if (autoDebitByType.Savings > 0) {
+            confirmMsg += `  Savings A/c${savingAccount ? ` (${savingAccount.bankName})` : ''}:\n`;
+            confirmMsg += `      ${formatMoney(savBalBefore)} + ${formatMoney(autoDebitByType.Savings)} = ${formatMoney(savBalBefore + autoDebitByType.Savings)}\n`;
+        }
+        if (autoDebitByType.Investment > 0) {
+            confirmMsg += `  Investment A/c${investmentAccount ? ` (${investmentAccount.bankName})` : ''}:\n`;
+            confirmMsg += `      ${formatMoney(invBalBefore)} + ${formatMoney(autoDebitByType.Investment)} = ${formatMoney(invBalBefore + autoDebitByType.Investment)}\n`;
+        }
+        confirmMsg += `\n`;
+    }
+
+    // Section 4: Summary
+    confirmMsg += `SUMMARY\n`;
+    confirmMsg += `────────────────────────────────\n`;
+    confirmMsg += `  Total Deducted:   ${formatMoney(fixedTotal)}\n`;
+    confirmMsg += `  Salary Leftover:  ${formatMoney(amt)}\n\n`;
+
+    // Section 5: Expenditure Account
+    confirmMsg += `EXPENDITURE A/C (${exp.bankName || 'Primary'})\n`;
+    confirmMsg += `────────────────────────────────\n`;
+    if (expBalBefore > 0) {
+        confirmMsg += `  Existing Balance: ${formatMoney(expBalBefore)} (carry forward)\n`;
+    }
+    confirmMsg += `  + Transfer:       ${formatMoney(amt)}\n`;
+    confirmMsg += `  = New Balance:    ${formatMoney(expBalAfter)}\n\n`;
+
+    // Section 6: Salary Account
+    confirmMsg += `SALARY A/C (${salary.bankName || 'Salary'})\n`;
+    confirmMsg += `────────────────────────────────\n`;
+    confirmMsg += `  ${formatMoney(Number(salary.balance || 0))} → ₹0 (fully allocated)`;
+
+    if (!(await showConfirm(confirmMsg, { title: 'Execute Monthly Transfer', confirmText: 'Execute Transfer' }))) {
+        logger.info('Execute Transfer cancelled by user');
+        return;
+    }
 
     // Deduct full primaryIncome from salary (all obligations + transfer)
     salary.balance = 0;
@@ -5703,22 +6058,23 @@ if (btnDoTransfer) btnDoTransfer.addEventListener("click", () => {
     appData.monthlyBudgetData[monthKey]._initialBalance = exp.balance;
     // Snapshot: fixed outflow total at time of transfer (for mismatch detection)
     appData.monthlyBudgetData[monthKey]._transferOutflowSnapshot = fixedTotal;
+    logger.info('Execute Transfer completed', { monthKey, transferAmount: amt, fixedTotal, primaryIncome });
     scheduleSave();
     renderMonthlyBudget();
 });
 
 // ── Recalculate Transfer (fix mismatch) ──────────────────────────────────────
 const btnRecalcTransfer = document.getElementById("btnRecalcTransfer");
-if (btnRecalcTransfer) btnRecalcTransfer.addEventListener("click", () => {
+if (btnRecalcTransfer) btnRecalcTransfer.addEventListener("click", async () => {
     const monthKey = getMonthKey(currentMonth);
     const monthData = (appData.monthlyBudgetData || {})[monthKey];
-    if (!monthData || !monthData._transferDone) { alert("No transfer to recalculate."); return; }
-    if (monthData._monthClosed) { alert("Cannot recalculate — month is already closed."); return; }
+    if (!monthData || !monthData._transferDone) { showAlert('No transfer to recalculate.', { variant: 'info' }); return; }
+    if (monthData._monthClosed) { showAlert('Cannot recalculate — month is already closed.', { variant: 'info' }); return; }
 
     const primaryIncome = Number(monthData.inflow?.primaryIncome || 0);
-    const correctTransfer = window._mismatchCorrectTransfer;
-    const fixedOutflow = window._mismatchFixedOutflow;
-    if (correctTransfer == null || fixedOutflow == null) { alert("No mismatch detected."); return; }
+    const correctTransfer = budgetState.mismatchCorrectTransfer;
+    const fixedOutflow = budgetState.mismatchFixedOutflow;
+    if (correctTransfer == null || fixedOutflow == null) { showAlert('No mismatch detected.', { variant: 'info' }); return; }
 
     const oldTransfer = Number(monthData._transferDone || 0);
     const oldInitial = Number(monthData._initialBalance || 0);
@@ -5752,13 +6108,15 @@ if (btnRecalcTransfer) btnRecalcTransfer.addEventListener("click", () => {
     msg += `Only budget metadata (_transferDone, _initialBalance) will be corrected.\n\n`;
     msg += `Proceed?`;
 
-    if (!confirm(msg)) return;
+    if (!(await showConfirm(msg, { title: 'Recalculate Transfer', confirmText: 'Recalculate' }))) return;
 
     monthData._transferDone = correctTransfer;
     monthData._initialBalance = newInitial;
+    monthData._transferOutflowSnapshot = fixedOutflow;
+    logger.info('Transfer recalculated', { monthKey, oldTransfer, correctTransfer, oldInitial, newInitial, fixedOutflow });
     scheduleSave();
     renderMonthlyBudget();
-    alert("Transfer recalculated. Variable expenditure has been corrected.");
+    showToast('Transfer recalculated. Variable expenditure has been corrected.', { variant: 'success' });
 });
 
 // ── Reconcile button ─────────────────────────────────────────────────────────
@@ -5766,8 +6124,8 @@ const btnReconcile = document.getElementById("btnReconcile");
 if (btnReconcile) btnReconcile.addEventListener("click", () => {
     const input = document.getElementById("currentExpAccBalanceInput");
     const actualBalance = Number(input?.value || 0);
-    const transferDone = window._budgetTransferDone || 0;
-    const trackedExp = window._budgetTrackedExpenses || 0;
+    const transferDone = budgetState.transferDone || 0;
+    const trackedExp = budgetState.trackedExpenses || 0;
     // Previous month carryforward adds to expected starting balance
     const prevMonth = new Date(currentMonth);
     prevMonth.setMonth(prevMonth.getMonth() - 1);
@@ -5785,11 +6143,11 @@ if (btnReconcile) btnReconcile.addEventListener("click", () => {
     if (el2) el2.textContent = formatMoney(actualBalance);
     if (el3) {
         el3.textContent = formatMoney(untracked);
-        el3.style.color = untracked > 0 ? "#eab308" : "#22c55e";
+        el3.style.color = untracked > 0 ? COLOR_WARNING : COLOR_POSITIVE;
     }
 
     // Also update expenditure account balance in Accounts
-    const exp = window._budgetExpAccount;
+    const exp = budgetState.expAccount;
     if (exp) {
         exp.balance = actualBalance;
         const cards = (appData.tabData || {}).cards || [];
@@ -5800,16 +6158,16 @@ if (btnReconcile) btnReconcile.addEventListener("click", () => {
 
 // ── Close Current Month Budget button ─────────────────────────────────────────
 const btnCarryForward = document.getElementById("btnCarryForward");
-if (btnCarryForward) btnCarryForward.addEventListener("click", () => {
-    const exp = window._budgetExpAccount;
-    if (!exp) { alert("No Expenditure account found."); return; }
+if (btnCarryForward) btnCarryForward.addEventListener("click", async () => {
+    const exp = budgetState.expAccount;
+    if (!exp) { showAlert('No Expenditure account found.', { variant: 'warning' }); return; }
 
     const monthKey = getMonthKey(currentMonth);
     if (!appData.monthlyBudgetData) appData.monthlyBudgetData = {};
     if (!appData.monthlyBudgetData[monthKey]) appData.monthlyBudgetData[monthKey] = { inflow: {}, outflow: {}, investing: {} };
     const monthData = appData.monthlyBudgetData[monthKey];
-    if (monthData._monthClosed) { alert("This month is already closed."); return; }
-    if (!monthData._transferDone) { alert("Execute the monthly transfer first before closing the month."); return; }
+    if (monthData._monthClosed) { showAlert('This month is already closed.', { variant: 'info' }); return; }
+    if (!monthData._transferDone) { showAlert('Execute the monthly transfer first before closing the month.', { variant: 'warning' }); return; }
     const balance = Number(exp.balance || 0);
 
     const creditCardOutstanding = Number(monthData.outflow?.creditCardOutstanding || 0);
@@ -5833,7 +6191,7 @@ if (btnCarryForward) btnCarryForward.addEventListener("click", () => {
         confirmMsg += `• (₹${ccSettlementAmount.toLocaleString("en-IN")} was settled from savings during this month)\n`;
     }
     confirmMsg += `• Navigate to next month\n\nProceed?`;
-    if (!confirm(confirmMsg)) return;
+    if (!(await showConfirm(confirmMsg, { title: 'Close Month', dangerous: true, confirmText: 'Close Month' }))) return;
 
     // Save the budget status before closing
     const inflowTotalClose = Object.values(monthData.inflow || {}).reduce((s, v) => s + Number(v || 0), 0);
@@ -5843,11 +6201,7 @@ if (btnCarryForward) btnCarryForward.addEventListener("click", () => {
         const amount = Number(e.amount || 0);
         if (amount <= 0) return;
         const freq = e.frequency || "Monthly";
-        let monthlyAmt = 0;
-        if (freq === "Monthly")      monthlyAmt = amount;
-        else if (freq === "Quarterly")   monthlyAmt = amount / 3;
-        else if (freq === "Semi-Annual") monthlyAmt = amount / 6;
-        else if (freq === "Annual")      monthlyAmt = amount / 12;
+        const monthlyAmt = toMonthlyAmount(amount, freq);
         fixedMonthlyOutflowClose += monthlyAmt;
     });
     const spendableClose = inflowTotalClose - fixedMonthlyOutflowClose;
@@ -5880,6 +6234,8 @@ if (btnCarryForward) btnCarryForward.addEventListener("click", () => {
     // Store the actual CC outstanding amount after settlements for next month's auto-calculation
     monthData._actualCCOutstanding = actualCCOutstanding;
 
+    logger.info('Month closed successfully', { monthKey, carryForward: balance, budgetStatus: monthData._closedBudgetStatusType });
+
     // Navigate to next month
     currentMonth.setMonth(currentMonth.getMonth() + 1);
     scheduleSave();
@@ -5894,14 +6250,14 @@ if (btnUpdateSalaryBalance) btnUpdateSalaryBalance.addEventListener("click", () 
     const newBalance = Number(input?.value);
     if (isNaN(newBalance) || newBalance < 0) { 
         logger.warning('Invalid salary balance entered', { newBalance });
-        alert("Enter a valid salary balance."); 
+        showAlert('Enter a valid salary balance.', { variant: 'warning' }); 
         return; 
     }
     const cards = (appData.tabData || {}).cards || [];
     const salary = cards.find(c => c.purpose === "Salary" && c.isPrimary !== "Yes");
     if (!salary) { 
         logger.warning('No salary account found for quick update');
-        alert("No Salary account found."); 
+        showAlert('No Salary account found.', { variant: 'warning' }); 
         return; 
     }
     const oldBalance = salary.balance;
@@ -5918,7 +6274,7 @@ if (btnUpdateSalaryBalance) btnUpdateSalaryBalance.addEventListener("click", () 
         newBalance,
         savedToFirebase: true
     });
-    alert(`Salary account balance updated to ${formatMoney(newBalance)}`);
+    showToast(`Salary account balance updated to ${formatMoney(newBalance)}`, { variant: 'success' });
 });
 
 // Quick Update: Expenditure Account Balance
@@ -5929,14 +6285,14 @@ if (btnUpdateExpBalance) btnUpdateExpBalance.addEventListener("click", () => {
     const newBalance = Number(input?.value);
     if (isNaN(newBalance) || newBalance < 0) { 
         logger.warning('Invalid expenditure balance entered', { newBalance });
-        alert("Enter a valid expenditure balance."); 
+        showAlert('Enter a valid expenditure balance.', { variant: 'warning' }); 
         return; 
     }
     const cards = (appData.tabData || {}).cards || [];
     const exp = cards.find(c => c.isPrimary === "Yes");
     if (!exp) { 
         logger.warning('No expenditure account found for quick update');
-        alert("No Primary (Expenditure) account found."); 
+        showAlert('No Primary (Expenditure) account found.', { variant: 'warning' }); 
         return; 
     }
     const oldBalance = exp.balance;
@@ -5954,47 +6310,11 @@ if (btnUpdateExpBalance) btnUpdateExpBalance.addEventListener("click", () => {
     };
     appData.monthlyBudgetData[monthKey] = monthData;
     
-    const transferDone = Number(monthData._transferDone || 0);
-    const initialBalance = Number(monthData._initialBalance || 0);
+    // P2: Deduplicated — use shared helper with overridden balance
     const prevMonthForCarry = new Date(currentMonth);
     prevMonthForCarry.setMonth(prevMonthForCarry.getMonth() - 1);
-    const prevMonthCarry = (appData.monthlyBudgetData || {})[getMonthKey(prevMonthForCarry)];
-    const prevCarryForward = Number(prevMonthCarry?._carryForwardDone || 0);
-    // totalFunded = exp account balance right after transfer
-    const totalFunded = initialBalance > 0 ? initialBalance : (transferDone + prevCarryForward);
-    const varExp = totalFunded > 0 ? Math.max(0, totalFunded - newBalance) : 0;
-    
-    // Update monthData with the new variable expenditure
-    if (!monthData.outflow) monthData.outflow = {};
-    monthData.outflow.variableExpenditure = varExp;
-    monthData.autoLinkedFields["outflow.variableExpenditure"] = true;
-    
-    // Update breakdown for variable expenditure
-    const breakdownItems = [];
-    if (totalFunded > 0) {
-        if (initialBalance > 0) {
-            if (prevCarryForward > 0) {
-                breakdownItems.push({ name: "Carry Forward (Last Month)", amount: prevCarryForward, source: "Previous Month Close" });
-            }
-            if (transferDone > 0) {
-                breakdownItems.push({ name: "Salary Leftover Transferred", amount: transferDone, source: "Execute Transfer" });
-            }
-            const accountInitial = initialBalance - transferDone - prevCarryForward;
-            if (accountInitial > 0) {
-                breakdownItems.push({ name: "Account Pre-existing Balance", amount: accountInitial, source: "Account Balance" });
-            }
-            if (breakdownItems.length === 0) {
-                breakdownItems.push({ name: "Balance After Transfer", amount: totalFunded, source: "Post-Transfer Balance" });
-            }
-        } else {
-            if (transferDone > 0) breakdownItems.push({ name: "Salary Leftover Transferred", amount: transferDone, source: "Execute Transfer" });
-            if (prevCarryForward > 0) breakdownItems.push({ name: "Carry Forward (Last Month)", amount: prevCarryForward, source: "Previous Month Close" });
-        }
-        breakdownItems.push({ name: "Current Exp Balance", amount: -newBalance, source: "Account Balance" });
-    }
-    monthData.autoLinkedBreakdown["outflow.variableExpenditure"] = breakdownItems.length > 0
-        ? breakdownItems.filter(b => b.amount !== 0)
-        : [{ name: "No transfer done yet", amount: 0, source: "Pending" }];
+    const prevKey = getMonthKey(prevMonthForCarry);
+    const { varExp, totalFunded } = calcVariableExpenditure(monthData, prevKey, newBalance);
     
     // Ensure monthData is saved back to appData
     appData.monthlyBudgetData[monthKey] = monthData;
@@ -6005,7 +6325,7 @@ if (btnUpdateExpBalance) btnUpdateExpBalance.addEventListener("click", () => {
     const resultEl = document.getElementById("quickUpdateResult");
     const untrackedEl = document.getElementById("quickUpdateUntracked");
     if (resultEl) resultEl.hidden = false;
-    if (untrackedEl) { untrackedEl.textContent = formatMoney(varExp); untrackedEl.style.color = varExp > 0 ? "#eab308" : "#22c55e"; }
+    if (untrackedEl) { untrackedEl.textContent = formatMoney(varExp); untrackedEl.style.color = varExp > 0 ? COLOR_WARNING : COLOR_POSITIVE; }
     
     // Re-render to update the summary cards
     if (!isBudgetEditMode) renderMonthlyBudget();
@@ -6019,7 +6339,7 @@ if (btnUpdateExpBalance) btnUpdateExpBalance.addEventListener("click", () => {
         savedToFirebase: true
     });
     
-    alert(`Expenditure account balance updated to ${formatMoney(newBalance)}`);
+    showToast(`Expenditure account balance updated to ${formatMoney(newBalance)}`, { variant: 'success' });
 });
 
 // Quick Update: Current Month CC Spending (stored as midMonthCCOutstanding)
@@ -6030,7 +6350,7 @@ if (btnUpdateCCOutstanding) btnUpdateCCOutstanding.addEventListener("click", () 
     const newCC = Number(input?.value);
     if (isNaN(newCC) || newCC < 0) { 
         logger.warning('Invalid CC spending amount entered', { newCC });
-        alert("Enter a valid CC spending amount."); 
+        showAlert('Enter a valid CC spending amount.', { variant: 'warning' }); 
         return; 
     }
     const monthKey = getMonthKey(currentMonth);
@@ -6057,7 +6377,7 @@ if (btnUpdateCCOutstanding) btnUpdateCCOutstanding.addEventListener("click", () 
         monthKey,
         savedToFirebase: true
     });
-    alert(`Current month CC spending for ${currentMonth.toLocaleDateString("en-IN", { month: "long", year: "numeric" })} updated to ${formatMoney(newCC)}`);
+    showToast(`Current month CC spending for ${currentMonth.toLocaleDateString("en-IN", { month: "long", year: "numeric" })} updated to ${formatMoney(newCC)}`, { variant: 'success' });
 });
 
 // ── Sort/Filter toolbar event delegation ─────────────────────────────────────
@@ -6250,7 +6570,12 @@ function handleCategoryFieldChange(e) {
     if (!monthData[category]) {
         monthData[category] = {};
     }
-    monthData[category][fieldId] = Number(e.target.value) || 0;
+    // Store description fields as strings, numeric fields as numbers
+    if (e.target.dataset.isDescription === "true") {
+        monthData[category][fieldId] = e.target.value || "";
+    } else {
+        monthData[category][fieldId] = Number(e.target.value) || 0;
+    }
 
     // When PRIMARY INCOME changes, auto-update salary account balance
     if (fieldId === "primaryIncome") {
@@ -6266,7 +6591,7 @@ function handleCategoryFieldChange(e) {
     // Update edit mode totals
     const inflowTotal = Object.values(monthData.inflow).reduce((s, v) => s + Number(v || 0), 0);
     const outflowTotal = Object.values(monthData.outflow).reduce((s, v) => s + Number(v || 0), 0);
-    const investingTotal = Object.values(monthData.investing).reduce((s, v) => s + Number(v || 0), 0);
+    const investingTotal = sumCategoryNumericValues(monthData.investing);
     document.getElementById("inflowTotalEdit").textContent = formatMoney(inflowTotal);
     document.getElementById("outflowTotalEdit").textContent = formatMoney(outflowTotal);
     document.getElementById("investingTotalEdit").textContent = formatMoney(investingTotal);
@@ -6322,18 +6647,18 @@ function addCardEntry(event) {
 
     // Enforce: only one Primary (Expenditure) account
     if (entry.isPrimary === "Yes" && entries.some(c => c.isPrimary === "Yes" && c.id !== editingId)) {
-        alert("A Primary (Expenditure) account already exists.\nOnly one primary account is allowed. Edit the existing one instead.");
+        showAlert("A Primary (Expenditure) account already exists.\nOnly one primary account is allowed. Edit the existing one instead.", { variant: 'warning' });
         renderCardDynamicFields();
         return;
     }
     // Enforce: only one Salary account
     if (entry.purpose === "Salary" && entries.some(c => c.purpose === "Salary" && c.id !== editingId)) {
-        alert("A Salary account already exists.\nOnly one Salary account is allowed.");
+        showAlert("A Salary account already exists.\nOnly one Salary account is allowed.", { variant: 'warning' });
         return;
     }
     // Enforce: only one Saving account
     if ((entry.purpose === "Savings" || entry.purpose === "Saving") && entries.some(c => (c.purpose === "Savings" || c.purpose === "Saving") && c.id !== editingId)) {
-        alert("A Savings account already exists.\nOnly one Savings account is allowed.");
+        showAlert("A Savings account already exists.\nOnly one Savings account is allowed.", { variant: 'warning' });
         return;
     }
 
@@ -6387,7 +6712,7 @@ function addGiftsEntry(event) {
 function saveEmergencyFundFromForm() {
     const fields = TAB_FIELDS.emergencyFund || TAB_FIELDS.monthlyBudget;
     const existingEntries = activeEntries();
-    const entry = { id: (existingEntries.length > 0 ? existingEntries[0].id : String(Date.now())) };
+    const entry = { id: (existingEntries.length > 0 ? existingEntries[0].id : crypto.randomUUID()) };
     
     fields.forEach(f => {
         const input = document.getElementById(`emergencyFund_${f.id}`);
@@ -6411,6 +6736,13 @@ function addEmergencyFundEntry(event) {
     renderEmergencyFund();
 }
 
-function saveMonthBudgetData() {
-    scheduleSave();
-}
+// saveMonthBudgetData removed – was dead code wrapping scheduleSave()
+
+// ── Version Display ──────────────────────────────────────────────────────────
+(function initVersionDisplay() {
+    const versionEl = document.getElementById("appVersionDisplay");
+    if (versionEl) {
+        versionEl.textContent = `SmartFin ${getAppVersion()}`;
+        versionEl.title = `Major: ${APP_VERSION.major} | Minor: ${APP_VERSION.minor} | Build: ${APP_VERSION.build}`;
+    }
+})();

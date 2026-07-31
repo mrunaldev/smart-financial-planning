@@ -1,4 +1,4 @@
-# SmartFin – Application Specification (v4.0)
+# SmartFin – Application Specification (v6.0)
 
 > **Purpose**: Single source of truth for the app's architecture, data models, business logic, and UI structure.
 > Use this file as context when making future modifications. Update it after every significant change.
@@ -9,22 +9,27 @@
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Vanilla HTML/CSS/JS (single-page app) |
+| Frontend | Vanilla HTML/CSS/JS (ES modules, single-page app) |
 | Styling | Custom CSS with CSS variables for theming (dark/light) |
-| Charts | Chart.js |
-| Export | SheetJS (XLSX) |
-| Auth | Firebase Authentication (email/password) |
+| Charts | Chart.js (lazy-loaded) |
+| Export | SheetJS/XLSX (lazy-loaded) |
+| Auth | Firebase Authentication (email/password + password reset) |
 | Database | Firebase Firestore (real-time sync) |
 | Fonts | Google Fonts – Inter |
-| Icons | Inline emoji/text icons (no icon library) |
+| Icons | Inline emoji/text icons + SVG (no icon library) |
+| Modals | Custom async modal system (replaces native alert/confirm/prompt) |
 
 ### Files
 
 | File | Purpose | Approx Lines |
 |------|---------|-------------|
-| `index.html` | All HTML structure (single file, all tabs) | ~1050 |
-| `assets/js/app.js` | All application logic (single file) | ~4900 |
-| `assets/css/styles.css` | All styles (single file) | ~3280 |
+| `index.html` | All HTML structure (single file, all tabs) | ~1390 |
+| `assets/js/app.js` | Main application logic (ES module) | ~6600 |
+| `assets/js/modules/constants.js` | Named constants (timing, limits, colors) | ~45 |
+| `assets/js/modules/modal.js` | Custom modal/toast system | ~265 |
+| `assets/js/modules/dashboard.js` | Dashboard tab renderer | ~255 |
+| `assets/css/styles.css` | All styles (single file) | ~4240 |
+| `APP_SPEC.md` | Project memory / architecture spec (this file) | ~700 |
 
 ---
 
@@ -34,6 +39,7 @@
 
 | Tab ID | Label | Core | Has Custom UI |
 |--------|-------|------|--------------|
+| `dashboard` | Dashboard | Yes | Yes – `dashboardUI` |
 | `cards` | Accounts | Yes | Yes – `cardsUI` |
 | `inflow` | Investments | Yes | Yes – `inflowUI` |
 | `outflow` | Outflow | Yes | Yes – `outflowUI` |
@@ -89,8 +95,8 @@ users/{uid} → single document
   "monthlyBudgetData": {
     "2026-06": {
       "inflow": { "primaryIncome": 0, "secondaryIncome": 0, ... },
-      "outflow": { "loanEMI": 0, "fixedSaving": 0, "fixedInvestment": 0, "fixedExpenditure": 0, "variableExpenditure": 0, "creditCardOutstanding": 0, "midMonthCCOutstanding": 0, ... },
-      "investing": { "onetimeSaving": 0, "onetimeInvestment": 0, ... },
+      "outflow": { "loanEMI": 0, "fixedSaving": 0, "fixedInvestment": 0, "fixedExpenditure": 0, "fixedOthers": 0, "variableExpenditure": 0, "creditCardOutstanding": 0, "midMonthCCOutstanding": 0, ... },
+      "investing": { "onetimeSaving": 0, "onetimeSavingDesc": "", "onetimeInvestment": 0, "onetimeInvestmentDesc": "", "ondemandExpenditure": 0, "ondemandExpenditureDesc": "", "ondemandLiability": 0, "ondemandLiabilityDesc": "" },
       "monthEndBalance": 0,
       "_transferDone": 0,
       "_initialBalance": 0,
@@ -167,7 +173,7 @@ Every entry has:
 | Field ID | Label | Type | Options | Required |
 |----------|-------|------|---------|----------|
 | name | Name | text | — | Yes |
-| type | Type | select | Insurance, Liability, Saving, Expenditure, Investment | — |
+| type | Type | select | Insurance, Liability, Savings, Expenditure, Investment, Others | — |
 | amount | Amount (₹) | number | — | Yes |
 | frequency | Frequency | select | Monthly, Quarterly, Semi-Annual, Annual, One-Time | — |
 | bankName | Bank Name | text | — | — |
@@ -180,6 +186,7 @@ Every entry has:
 - Saving → Saving account
 - Investment → Investment account
 - Expenditure → Primary account
+- Others → leaves system (maps to `fixedOthers` in budget outflow, included in pie chart "Others")
 
 ### insurance
 
@@ -265,9 +272,16 @@ Every entry has:
 inflow:    primaryIncome, secondaryIncome, borrowing, interest, othersInflow
 outflow:   loanEMI, insurancePremiums, fixedSaving, fixedInvestment, fixedExpenditure,
            variableExpenditure, creditCardOutstanding, midMonthCCOutstanding,
-           debtRepayment, utilityBills, familyExpenditure, miscExpenses
+           debtRepayment, utilityBills, familyExpenditure, miscExpenses, fixedOthers
 investing: onetimeSaving, onetimeInvestment, ondemandExpenditure, ondemandLiability
+           (each has optional *Desc string field, e.g. onetimeSavingDesc)
 ```
+
+**On-Demand Description Fields:**
+- Each investing field has an optional description stored as `{fieldId}Desc` (string)
+- In edit mode: rendered as a dashed-border text input below the number field
+- In preview mode: shown as a blue "i" icon with CSS hover tooltip
+- `sumCategoryNumericValues()` helper skips `*Desc` keys when computing totals
 
 ### Auto-Linked Fields
 
@@ -277,6 +291,7 @@ These fields are auto-calculated from other tabs (read-only in budget edit):
 - `outflow.fixedSaving` — Sum of all Saving outflows (monthly equivalent)
 - `outflow.fixedInvestment` — Sum of all Investment outflows (monthly equivalent)
 - `outflow.fixedExpenditure` — Sum of all Expenditure outflows (monthly equivalent)
+- `outflow.fixedOthers` — Sum of all Others outflows (monthly equivalent)
 - `outflow.variableExpenditure` — Auto: totalFunded − currentExpBalance, where totalFunded = account initial balance + carry forward from last month + salary leftover transferred (_initialBalance captures this post-transfer; fallback: _transferDone + prevCarryForward)
 - `outflow.creditCardOutstanding` — Auto from previous month's midMonthCCOutstanding (when prev month is closed)
 
@@ -312,7 +327,13 @@ Execute Transfer:
 
 When primaryIncome is entered, salary account balance is auto-updated to match.
 
-Transfer confirm message shows structured breakdown: Salary Credited → Fixed Outflows Deducted (by type) → Salary Leftover → Transferred to Expenditure A/c → Expenditure A/c balance before/after.
+Transfer confirm message shows structured breakdown in 6 sections:
+1. INCOME: Salary Credited
+2. DEDUCTIONS (leaves salary): Liability, Insurance, Others
+3. INTERNAL TRANSFERS: Savings A/c (before→after), Investment A/c (before→after), Fixed Expenditure
+4. SUMMARY: Total Deducted, Salary Leftover
+5. EXPENDITURE A/C: Existing Balance + Transfer = New Balance
+6. SALARY A/C: Current → ₹0 (fully allocated)
 
 ### Close Current Month Budget
 
@@ -367,9 +388,9 @@ investmentAccount = cards.find(c => c.purpose === "Investment" && c.isPrimary !=
 ### Auto-Debit Type Routing
 
 ```js
-autoDebitByType = { Liability: 0, Insurance: 0, Saving: 0, Expenditure: 0, Investment: 0 }
-// Liability/Insurance → leaves system (paid externally)
-// Saving → savingAccount.balance += amount
+autoDebitByType = { Liability: 0, Insurance: 0, Savings: 0, Expenditure: 0, Investment: 0, Others: 0 }
+// Liability/Insurance/Others → leaves system (paid externally)
+// Savings → savingAccount.balance += amount
 // Investment → investmentAccount.balance += amount
 // Expenditure → expenditureAccount.balance += amount
 ```
@@ -488,6 +509,11 @@ previewMap = {
 | `.budget-status.positive/.negative/.neutral` | Budget status banner variants |
 | `.danger-zone` | Destructive action container in settings |
 | `.danger-btn` | Red destructive action button |
+| `.ondemand-desc-input` | Dashed-border text input for on-demand descriptions |
+| `.desc-tooltip-wrapper` | Wrapper for description tooltip (preview mode) |
+| `.desc-tooltip-icon` | Blue "i" circle icon that triggers tooltip |
+| `.desc-tooltip-text` | Tooltip popup text (hidden until hover) |
+| `.app-version` | Version display in footer |
 
 ---
 
@@ -553,9 +579,11 @@ render()
 | `window._budgetExpAccount` | Reference to expenditure account |
 | `window._budgetSalaryAccount` | Reference to salary account |
 | `window._budgetTransferAmt` | Calculated transfer amount |
-| `window._budgetAutoDebitByType` | Auto-debit amounts by type |
+| `window._budgetAutoDebitByType` | Auto-debit amounts by type (includes Others) |
 | `window._budgetTransferDone` | Transfer done amount for current month |
 | `window._budgetTrackedExpenses` | Variable expenses (variableExp + CC) |
+| `window._mismatchCorrectTransfer` | Correct transfer amount when mismatch detected |
+| `window._mismatchFixedOutflow` | Current fixed outflow when mismatch detected |
 
 ---
 
@@ -572,7 +600,62 @@ render()
 
 ---
 
-## 16. Modification Checklist
+## 16. Version System
+
+```js
+APP_VERSION = { major: 1, minor: 0, build: 73 }
+getAppVersion() → "v1.0.73"
+```
+
+- Displayed in footer: "SmartFin v1.0.73" (via `#appVersionDisplay`)
+- Hover tooltip shows: "Major: 1 | Minor: 0 | Build: 73"
+- Also used in data export payload (`version` field)
+- **Versioning scheme**: `v{MAJOR}.{MINOR}.{BUILD}`
+  - `BUILD` → bump on every deployment
+  - `MINOR` → bump for feature additions
+  - `MAJOR` → bump for breaking changes / major overhauls
+
+---
+
+## 17. Logging System (AppLogger)
+
+**Class**: `AppLogger` (lines 10–224 in app.js)
+- Levels: `info`, `warning`, `error`
+- Stores logs in-memory with device ID, user ID, timestamps
+- UI panel: toggled via settings, filterable by level, searchable
+
+**Key logged events:**
+- Auth: sign-in, sign-out, auth failure, logout initiation
+- Data: Firestore listener error, import success/failure, save success/failure, reset all data
+- Budget: Execute Transfer (success/cancel), month close, tab switch
+- Account: deletion initiated/success/failure, export with no data
+- Entries: active entries get/set errors
+
+---
+
+## 18. Reconciliation / Mismatch Detection
+
+When fixed outflows change mid-month (after transfer is done), the app detects a mismatch:
+
+```
+Stored snapshot: _transferOutflowSnapshot (recorded at transfer time)
+Current outflows: fixedMonthlyOutflow (recalculated from current outflow entries)
+
+If _transferOutflowSnapshot !== fixedMonthlyOutflow:
+  → Show "Transfer Mismatch Detected" warning banner
+  → Show "Recalculate Transfer" button (btnRecalcTransfer)
+  → correctTransfer = primaryIncome - currentFixedOutflow
+  → window._mismatchCorrectTransfer = correctTransfer
+  → window._mismatchFixedOutflow = fixedMonthlyOutflow
+```
+
+**Recalculate Transfer** updates budget metadata only (NOT account balances):
+- `monthData._transferDone = correctTransfer`
+- `monthData._initialBalance = preExistingBalance + correctTransfer`
+
+---
+
+## 19. Modification Checklist
 
 When modifying the app, check these areas:
 
@@ -587,4 +670,4 @@ When modifying the app, check these areas:
 
 ---
 
-*Last updated: 2026-06-18 (v5.1)*
+*Last updated: 2026-07-01 (v5.0 — added Others outflow type, on-demand descriptions, version system, logging, transfer message overhaul)*

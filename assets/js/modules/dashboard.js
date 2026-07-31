@@ -38,23 +38,14 @@ export function renderDashboard(appData, netWorthSummary = {}) {
     const cards = (appData.tabData || {}).cards || [];
     const goals = (appData.tabData || {}).financialGoal || [];
     const outflows = (appData.tabData || {}).outflow || [];
+    const netWorthItems = (appData.tabData || {}).netWorth || [];
     const now = new Date();
     const mk = getMonthKey(now);
     const monthData = (appData.monthlyBudgetData || {})[mk] || {};
 
     let html = '';
 
-    // ── 1. Accounts Overview Card ────────────────────────────────────────────
-    const totalBalance = cards.reduce((s, c) => s + Number(c.balance || 0), 0);
-    const totalCreditLimit = cards.reduce((s, c) => s + Number(c.creditLimit || 0), 0);
-    html += `<div class="dash-card">
-        <div class="dash-card-header"><span class="dash-card-title">Accounts</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Total Accounts</span><span class="dash-stat-value">${cards.length}</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Total Balance</span><span class="dash-stat-value" style="color:${COLOR_POSITIVE}">${fmtMoney(totalBalance)}</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Total Credit Limit</span><span class="dash-stat-value">${fmtMoney(totalCreditLimit)}</span></div>
-    </div>`;
-
-    // ── 2. Budget Status Card ────────────────────────────────────────────────
+    // ── 1. Budget Status Card ────────────────────────────────────────────────
     const income = Number(monthData.inflow?.primaryIncome || 0);
     const totalOutflow = Object.entries(monthData.outflow || {}).reduce((s, [k, v]) => {
         if (k.endsWith('Desc')) return s;
@@ -84,10 +75,16 @@ export function renderDashboard(appData, netWorthSummary = {}) {
         <div class="dash-stat-row"><span class="dash-stat-label">Expenditure A/c</span><span class="dash-stat-value">${fmtMoney(expBalance)}</span></div>
     </div>`;
 
-    // ── 3. Net Worth Card ────────────────────────────────────────────────────
-    const totalAssets = netWorthSummary.totalAssets ?? 0;
-    const totalLiabilities = netWorthSummary.totalLiabilities ?? 0;
-    const netWorth = netWorthSummary.netWorth ?? (totalAssets - totalLiabilities);
+    // ── 2. Net Worth Card ────────────────────────────────────────────────────
+    let totalAssets = 0, totalLiabilities = 0;
+    netWorthItems.forEach(item => {
+        const val = Number(item.value || 0);
+        if (item.type === 'Asset') totalAssets += val;
+        else totalLiabilities += val;
+    });
+    // Add account balances to assets
+    cards.forEach(c => { totalAssets += Number(c.balance || 0); });
+    const netWorth = totalAssets - totalLiabilities;
 
     html += `<div class="dash-card">
         <div class="dash-card-header">
@@ -96,6 +93,8 @@ export function renderDashboard(appData, netWorthSummary = {}) {
         </div>
         <div class="dash-stat-row"><span class="dash-stat-label">Total Assets</span><span class="dash-stat-value" style="color:${COLOR_POSITIVE}">${fmtMoney(totalAssets)}</span></div>
         <div class="dash-stat-row"><span class="dash-stat-label">Total Liabilities</span><span class="dash-stat-value" style="color:${COLOR_NEGATIVE}">${fmtMoney(totalLiabilities)}</span></div>
+        <div class="dash-stat-row"><span class="dash-stat-label">Net Worth Items</span><span class="dash-stat-value">${netWorthItems.length}</span></div>
+        <div class="dash-stat-row"><span class="dash-stat-label">Accounts</span><span class="dash-stat-value">${cards.length}</span></div>
     </div>`;
 
     // ── 3. Goal Progress Card ────────────────────────────────────────────────
@@ -107,10 +106,22 @@ export function renderDashboard(appData, netWorthSummary = {}) {
     const totalNeeded = goals.reduce((s, g) => s + Number(g.amountNeeded || 0), 0);
     const totalAccumulated = goals.reduce((s, g) => s + Number(g.amountAccumulated || 0), 0);
     const goalPct = totalNeeded > 0 ? Math.min(100, (totalAccumulated / totalNeeded) * 100) : 0;
-    const topGoal = activeGoals[0];
-    const topGoalLabel = topGoal
-        ? `${topGoal.name || 'Unnamed'} — ${Math.round((Number(topGoal.amountAccumulated || 0) / Math.max(1, Number(topGoal.amountNeeded || 0))) * 100)}%`
-        : '';
+
+    let goalsHtml = '';
+    activeGoals.slice(0, 4).forEach(g => {
+        const needed = Number(g.amountNeeded || 0);
+        const accumulated = Number(g.amountAccumulated || 0);
+        const pct = needed > 0 ? Math.min(100, (accumulated / needed) * 100) : 0;
+        goalsHtml += `<div class="dash-goal-item">
+            <div style="display:flex;justify-content:space-between">
+                <span class="dash-goal-name">${g.name || 'Unnamed'}</span>
+                <span class="dash-goal-meta">${Math.round(pct)}%</span>
+            </div>
+            <div class="dash-progress-bar"><div class="dash-progress-fill" style="width:${pct}%;background:${pct >= 100 ? COLOR_POSITIVE : '#3b82f6'}"></div></div>
+            <span class="dash-goal-meta">${fmtMoney(accumulated)} / ${fmtMoney(needed)}</span>
+        </div>`;
+    });
+    if (activeGoals.length === 0) goalsHtml = '<span class="dash-stat-label" style="text-align:center;padding:12px 0">No active goals</span>';
 
     html += `<div class="dash-card">
         <div class="dash-card-header">
@@ -118,13 +129,19 @@ export function renderDashboard(appData, netWorthSummary = {}) {
             <span class="dash-card-badge" style="background:#3b82f622;color:#3b82f6">${Math.round(goalPct)}% overall</span>
         </div>
         <div class="dash-stat-row"><span class="dash-stat-label">Total Goals</span><span class="dash-stat-value">${goals.length}</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Active Goals</span><span class="dash-stat-value">${activeGoals.length}</span></div>
-        ${topGoal ? `<div class="dash-card-note">Top active goal: ${topGoalLabel}</div>` : `<div class="dash-card-note" style="color: var(--muted);">No active goals currently. Add one in the Goals tab.</div>`}
+        <div class="dash-stat-row"><span class="dash-stat-label">Active</span><span class="dash-stat-value">${activeGoals.length}</span></div>
+        ${goalsHtml}
     </div>`;
 
     // ── 4. Accounts Overview Card ────────────────────────────────────────────
     const totalBalance = cards.reduce((s, c) => s + Number(c.balance || 0), 0);
     const totalCreditLimit = cards.reduce((s, c) => s + Number(c.creditLimit || 0), 0);
+    html += `<div class="dash-card">
+        <div class="dash-card-header"><span class="dash-card-title">Accounts</span></div>
+        <div class="dash-stat-row"><span class="dash-stat-label">Total Accounts</span><span class="dash-stat-value">${cards.length}</span></div>
+        <div class="dash-stat-row"><span class="dash-stat-label">Total Balance</span><span class="dash-stat-value" style="color:${COLOR_POSITIVE}">${fmtMoney(totalBalance)}</span></div>
+        <div class="dash-stat-row"><span class="dash-stat-label">Total Credit Limit</span><span class="dash-stat-value">${fmtMoney(totalCreditLimit)}</span></div>
+    </div>`;
     grid.innerHTML = html;
 
     // ── 5. Payment Reminders Banner ──────────────────────────────────────────

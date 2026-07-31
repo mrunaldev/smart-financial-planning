@@ -27,7 +27,7 @@
 | `assets/js/app.js` | Main application logic (ES module) | ~6600 |
 | `assets/js/modules/constants.js` | Named constants (timing, limits, colors) | ~45 |
 | `assets/js/modules/modal.js` | Custom modal/toast system | ~265 |
-| `assets/js/modules/dashboard.js` | Dashboard tab renderer | ~255 |
+| `assets/js/modules/dashboard.js` | Dashboard quick-glance renderer | ~175 |
 | `assets/css/styles.css` | All styles (single file) | ~4240 |
 | `APP_SPEC.md` | Project memory / architecture spec (this file) | ~700 |
 
@@ -519,6 +519,26 @@ previewMap = {
 
 ## 12. Rendering Pipeline
 
+### Dashboard quick glance
+
+The Dashboard is intentionally a compact cross-tab snapshot rather than a second
+copy of each workspace. It shows six high-value cards:
+
+- **This month**: usable income, recurring monthly commitments, and the amount
+  available after commitments. Borrowing is excluded from usable income.
+- **Net worth**: current assets, liabilities, and net worth. Totals use the
+  exact same manual and auto-generated entries as the Net Worth tab.
+- **Goals**: active-goal count plus only the next target date goal and its
+  remaining amount.
+- **Preparedness**: emergency-fund balance and total insurance cover.
+- **Accounts**: total cash balance and whether the required Primary and Salary
+  accounts are configured.
+- **Investments & planning**: portfolio value, monthly investment contribution,
+  tax items logged, and a single planned-gifts total when applicable.
+
+Recurring payment item lists and dashboard spending charts are intentionally not
+shown; the Fixed Outflow and Budget tabs remain the detailed sources for those.
+
 ```
 render()
   ├─ getTabs() → merged DEFAULT_TABS + customTabs
@@ -670,4 +690,4 @@ When modifying the app, check these areas:
 
 ---
 
-*Last updated: 2026-07-01 (v5.0 — added Others outflow type, on-demand descriptions, version system, logging, transfer message overhaul)*
+*Last updated: 2026-08-01 (v6.0 — streamlined Dashboard and unified its Net Worth source with the Net Worth tab)*

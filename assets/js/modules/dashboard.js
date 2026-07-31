@@ -1,254 +1,173 @@
 // ── SmartFin Dashboard Module ────────────────────────────────────────────────
-// Full dashboard: budget status, net worth, goal progress, spending trends, reminders
-import { COLOR_POSITIVE, COLOR_NEGATIVE, COLOR_WARNING } from './constants.js';
+// A deliberately compact, decision-oriented summary of the detailed tabs.
+import { COLOR_POSITIVE, COLOR_NEGATIVE, COLOR_WARNING, toMonthlyAmount } from './constants.js';
 
-// Lazy-load Chart.js helper
-let _chartJsLoaded = false;
-async function ensureChart() {
-    if (_chartJsLoaded || typeof Chart !== 'undefined') { _chartJsLoaded = true; return; }
-    await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
-        s.onload = () => { _chartJsLoaded = true; resolve(); };
-        s.onerror = reject;
-        document.head.appendChild(s);
-    });
-}
-
-let _trendChart = null;
-
-function fmtMoney(v) {
+function fmtMoney(value) {
     try {
-        return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v || 0);
-    } catch { return '₹0'; }
+        return new Intl.NumberFormat('en-IN', {
+            style: 'currency', currency: 'INR', maximumFractionDigits: 0
+        }).format(Number(value) || 0);
+    } catch {
+        return '₹0';
+    }
 }
 
-function getMonthKey(d) {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+function getMonthKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function statusColor(val) { return val >= 0 ? COLOR_POSITIVE : COLOR_NEGATIVE; }
+function sumNumbers(values) {
+    return Object.entries(values || {}).reduce((total, [key, value]) => (
+        key.endsWith('Desc') ? total : total + (Number(value) || 0)
+    ), 0);
+}
 
-// ── Render Dashboard ─────────────────────────────────────────────────────────
+function escapeHtml(value) {
+    const element = document.createElement('div');
+    element.textContent = value == null ? '' : String(value);
+    return element.innerHTML;
+}
+
+function formatGoalDate(value) {
+    if (!value) return 'No target date';
+    const date = new Date(`${value}T00:00:00`);
+    return Number.isNaN(date.getTime())
+        ? 'No target date'
+        : date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// `netWorthSummary` is calculated in app.js from the exact combined entries used
+// by the Net Worth tab. Keeping this module presentation-only prevents drift.
 export function renderDashboard(appData, netWorthSummary = {}) {
     const grid = document.getElementById('dashboardGrid');
-    const remindersEl = document.getElementById('dashReminders');
     if (!grid) return;
 
-    const cards = (appData.tabData || {}).cards || [];
-    const goals = (appData.tabData || {}).financialGoal || [];
-    const outflows = (appData.tabData || {}).outflow || [];
-    const netWorthItems = (appData.tabData || {}).netWorth || [];
+    const tabData = appData.tabData || {};
+    const accounts = tabData.cards || [];
+    const investments = tabData.inflow || [];
+    const goals = tabData.financialGoal || [];
+    const outflows = tabData.outflow || [];
+    const emergencyFunds = tabData.emergencyFund || [];
+    const taxItems = tabData.taxPlan || [];
+    const gifts = tabData.gifts || [];
     const now = new Date();
-    const mk = getMonthKey(now);
-    const monthData = (appData.monthlyBudgetData || {})[mk] || {};
+    const monthData = (appData.monthlyBudgetData || {})[getMonthKey(now)] || {};
 
-    let html = '';
-
-    // ── 1. Budget Status Card ────────────────────────────────────────────────
-    const income = Number(monthData.inflow?.primaryIncome || 0);
-    const totalOutflow = Object.entries(monthData.outflow || {}).reduce((s, [k, v]) => {
-        if (k.endsWith('Desc')) return s;
-        return s + Number(v || 0);
-    }, 0);
-    const expAccount = cards.find(c => c.isPrimary === 'Yes');
-    const salaryAccount = cards.find(c => c.purpose === 'Salary' && c.isPrimary !== 'Yes');
-    const expBalance = Number(expAccount?.balance || 0);
-    const salaryBalance = Number(salaryAccount?.balance || 0);
+    // Match the Budget tab: borrowed money is not treated as available income,
+    // and recurring outflows are converted to their monthly equivalent.
+    const totalIncome = sumNumbers(monthData.inflow);
+    const borrowing = Number(monthData.inflow?.borrowing || 0);
+    const usableIncome = totalIncome - borrowing;
+    const recurringOutflows = outflows.filter(item => {
+        return Number(item.amount || 0) > 0 && (item.frequency || 'Monthly') !== 'One-Time';
+    });
+    const monthlyCommitments = recurringOutflows.reduce((total, item) => (
+        total + toMonthlyAmount(Number(item.amount || 0), item.frequency || 'Monthly')
+    ), 0);
+    const availableToPlan = usableIncome - monthlyCommitments;
     const transferred = Number(monthData._transferDone || 0);
-    const monthClosed = !!monthData._monthClosed;
+    const monthClosed = Boolean(monthData._monthClosed);
+    const budgetState = monthClosed ? 'Closed' : transferred > 0 ? 'In progress' : 'Needs setup';
+    const budgetColor = monthClosed ? COLOR_POSITIVE : transferred > 0 ? '#3b82f6' : COLOR_WARNING;
 
-    const statusBadge = monthClosed
-        ? `<span class="dash-card-badge" style="background:${COLOR_POSITIVE}22;color:${COLOR_POSITIVE}">Closed</span>`
-        : transferred > 0
-            ? '<span class="dash-card-badge" style="background:#3b82f622;color:#3b82f6">Active</span>'
-            : `<span class="dash-card-badge" style="background:${COLOR_WARNING}22;color:${COLOR_WARNING}">Pending</span>`;
-
-    html += `<div class="dash-card">
-        <div class="dash-card-header">
-            <span class="dash-card-title">This Month's Budget</span>
-            ${statusBadge}
-        </div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Income</span><span class="dash-stat-value">${fmtMoney(income)}</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Fixed Outflow</span><span class="dash-stat-value" style="color:${COLOR_NEGATIVE}">${fmtMoney(totalOutflow)}</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Salary A/c</span><span class="dash-stat-value">${fmtMoney(salaryBalance)}</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Expenditure A/c</span><span class="dash-stat-value">${fmtMoney(expBalance)}</span></div>
-    </div>`;
-
-    // ── 2. Net Worth Card ────────────────────────────────────────────────────
-    let totalAssets = 0, totalLiabilities = 0;
-    netWorthItems.forEach(item => {
-        const val = Number(item.value || 0);
-        if (item.type === 'Asset') totalAssets += val;
-        else totalLiabilities += val;
+    const activeGoals = goals.filter(goal => {
+        const needed = Number(goal.amountNeeded || 0);
+        const accumulated = Number(goal.amountAccumulated || 0);
+        return needed > 0 && accumulated < needed && goal.status !== 'Achieved';
     });
-    // Add account balances to assets
-    cards.forEach(c => { totalAssets += Number(c.balance || 0); });
-    const netWorth = totalAssets - totalLiabilities;
+    const nextGoal = [...activeGoals].sort((a, b) => {
+        const aDate = a.targetDate ? new Date(`${a.targetDate}T00:00:00`).getTime() : Infinity;
+        const bDate = b.targetDate ? new Date(`${b.targetDate}T00:00:00`).getTime() : Infinity;
+        return aDate - bDate;
+    })[0];
+    const totalGoalGap = activeGoals.reduce((total, goal) => (
+        total + Math.max(0, Number(goal.amountNeeded || 0) - Number(goal.amountAccumulated || 0))
+    ), 0);
+    const nextGoalProgress = nextGoal
+        ? Math.min(100, (Number(nextGoal.amountAccumulated || 0) / Number(nextGoal.amountNeeded || 0)) * 100)
+        : 0;
 
-    html += `<div class="dash-card">
-        <div class="dash-card-header">
-            <span class="dash-card-title">Net Worth</span>
-            <span class="dash-card-badge" style="background:${netWorth >= 0 ? COLOR_POSITIVE + '22' : COLOR_NEGATIVE + '22'};color:${statusColor(netWorth)}">${fmtMoney(netWorth)}</span>
-        </div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Total Assets</span><span class="dash-stat-value" style="color:${COLOR_POSITIVE}">${fmtMoney(totalAssets)}</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Total Liabilities</span><span class="dash-stat-value" style="color:${COLOR_NEGATIVE}">${fmtMoney(totalLiabilities)}</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Net Worth Items</span><span class="dash-stat-value">${netWorthItems.length}</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Accounts</span><span class="dash-stat-value">${cards.length}</span></div>
-    </div>`;
+    const emergencyFund = Number(emergencyFunds[0]?.currentFund || 0);
+    const insurancePolicies = tabData.insurance || [];
+    const insuranceCount = insurancePolicies.length;
+    const insuranceCover = insurancePolicies.reduce((total, policy) => total + Number(policy.sumAssured || 0), 0);
+    const accountBalance = accounts.reduce((total, account) => total + Number(account.balance || 0), 0);
+    const primaryAccount = accounts.find(account => account.isPrimary === 'Yes');
+    const salaryAccount = accounts.find(account => account.purpose === 'Salary' && account.isPrimary !== 'Yes');
+    const portfolioValue = investments.reduce((total, investment) => (
+        total + Number(investment.currentValue || investment.amount || 0)
+    ), 0);
+    const monthlyInvestment = investments.reduce((total, investment) => {
+        if ((investment.frequency || 'Monthly') === 'One-Time') return total;
+        return total + toMonthlyAmount(Number(investment.amount || 0), investment.frequency || 'Monthly');
+    }, 0);
+    const taxPlanned = taxItems.reduce((total, item) => total + Number(item.amount || 0), 0);
+    const plannedGifts = gifts.reduce((total, gift) => total + Number(gift.amount || 0), 0);
+    const netWorth = Number(netWorthSummary.netWorth || 0);
+    const totalAssets = Number(netWorthSummary.totalAssets || 0);
+    const totalLiabilities = Number(netWorthSummary.totalLiabilities || 0);
+    const assetCount = Number(netWorthSummary.assetCount || 0);
 
-    // ── 3. Goal Progress Card ────────────────────────────────────────────────
-    const activeGoals = goals.filter(g => {
-        const needed = Number(g.amountNeeded || 0);
-        const accumulated = Number(g.amountAccumulated || 0);
-        return needed > 0 && accumulated < needed;
-    });
-    const totalNeeded = goals.reduce((s, g) => s + Number(g.amountNeeded || 0), 0);
-    const totalAccumulated = goals.reduce((s, g) => s + Number(g.amountAccumulated || 0), 0);
-    const goalPct = totalNeeded > 0 ? Math.min(100, (totalAccumulated / totalNeeded) * 100) : 0;
-
-    let goalsHtml = '';
-    activeGoals.slice(0, 4).forEach(g => {
-        const needed = Number(g.amountNeeded || 0);
-        const accumulated = Number(g.amountAccumulated || 0);
-        const pct = needed > 0 ? Math.min(100, (accumulated / needed) * 100) : 0;
-        goalsHtml += `<div class="dash-goal-item">
-            <div style="display:flex;justify-content:space-between">
-                <span class="dash-goal-name">${g.name || 'Unnamed'}</span>
-                <span class="dash-goal-meta">${Math.round(pct)}%</span>
+    grid.innerHTML = `
+        <article class="dash-card dash-card-primary">
+            <div class="dash-card-header">
+                <span class="dash-card-title">This month</span>
+                <span class="dash-card-badge" style="background:${budgetColor}22;color:${budgetColor}">${budgetState}</span>
             </div>
-            <div class="dash-progress-bar"><div class="dash-progress-fill" style="width:${pct}%;background:${pct >= 100 ? COLOR_POSITIVE : '#3b82f6'}"></div></div>
-            <span class="dash-goal-meta">${fmtMoney(accumulated)} / ${fmtMoney(needed)}</span>
-        </div>`;
-    });
-    if (activeGoals.length === 0) goalsHtml = '<span class="dash-stat-label" style="text-align:center;padding:12px 0">No active goals</span>';
+            <div class="dash-primary-value" style="color:${availableToPlan >= 0 ? COLOR_POSITIVE : COLOR_NEGATIVE}">${fmtMoney(availableToPlan)}</div>
+            <p class="dash-primary-label">available after recurring commitments</p>
+            <div class="dash-stat-row"><span class="dash-stat-label">Income to plan</span><span class="dash-stat-value">${fmtMoney(usableIncome)}</span></div>
+            <div class="dash-stat-row"><span class="dash-stat-label">Monthly commitments</span><span class="dash-stat-value">${fmtMoney(monthlyCommitments)}</span></div>
+            <div class="dash-card-note">${recurringOutflows.length} recurring commitment${recurringOutflows.length === 1 ? '' : 's'} managed in Fixed Outflow</div>
+        </article>
 
-    html += `<div class="dash-card">
-        <div class="dash-card-header">
-            <span class="dash-card-title">Goals</span>
-            <span class="dash-card-badge" style="background:#3b82f622;color:#3b82f6">${Math.round(goalPct)}% overall</span>
-        </div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Total Goals</span><span class="dash-stat-value">${goals.length}</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Active</span><span class="dash-stat-value">${activeGoals.length}</span></div>
-        ${goalsHtml}
-    </div>`;
+        <article class="dash-card">
+            <div class="dash-card-header">
+                <span class="dash-card-title">Net worth</span>
+                <span class="dash-card-badge" style="background:${netWorth >= 0 ? COLOR_POSITIVE : COLOR_NEGATIVE}22;color:${netWorth >= 0 ? COLOR_POSITIVE : COLOR_NEGATIVE}">Current</span>
+            </div>
+            <div class="dash-primary-value" style="color:${netWorth >= 0 ? COLOR_POSITIVE : COLOR_NEGATIVE}">${fmtMoney(netWorth)}</div>
+            <p class="dash-primary-label">assets less liabilities</p>
+            <div class="dash-stat-row"><span class="dash-stat-label">Assets</span><span class="dash-stat-value" style="color:${COLOR_POSITIVE}">${fmtMoney(totalAssets)}</span></div>
+            <div class="dash-stat-row"><span class="dash-stat-label">Liabilities</span><span class="dash-stat-value" style="color:${COLOR_NEGATIVE}">${fmtMoney(totalLiabilities)}</span></div>
+            <div class="dash-card-note">Synced with Net Worth · ${assetCount} asset${assetCount === 1 ? '' : 's'} tracked</div>
+        </article>
 
-    // ── 4. Accounts Overview Card ────────────────────────────────────────────
-    const totalBalance = cards.reduce((s, c) => s + Number(c.balance || 0), 0);
-    const totalCreditLimit = cards.reduce((s, c) => s + Number(c.creditLimit || 0), 0);
-    html += `<div class="dash-card">
-        <div class="dash-card-header"><span class="dash-card-title">Accounts</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Total Accounts</span><span class="dash-stat-value">${cards.length}</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Total Balance</span><span class="dash-stat-value" style="color:${COLOR_POSITIVE}">${fmtMoney(totalBalance)}</span></div>
-        <div class="dash-stat-row"><span class="dash-stat-label">Total Credit Limit</span><span class="dash-stat-value">${fmtMoney(totalCreditLimit)}</span></div>
-    </div>`;
-    grid.innerHTML = html;
+        <article class="dash-card">
+            <div class="dash-card-header">
+                <span class="dash-card-title">Goals</span>
+                <span class="dash-card-badge" style="background:#3b82f622;color:#3b82f6">${activeGoals.length} active</span>
+            </div>
+            ${nextGoal ? `
+                <div class="dash-goal-focus">
+                    <span class="dash-goal-name">${escapeHtml(nextGoal.name || 'Unnamed goal')}</span>
+                    <span class="dash-goal-meta">Target ${formatGoalDate(nextGoal.targetDate)}</span>
+                    <div class="dash-progress-bar"><div class="dash-progress-fill" style="width:${nextGoalProgress}%;background:#3b82f6"></div></div>
+                    <span class="dash-goal-meta">${Math.round(nextGoalProgress)}% funded · ${fmtMoney(Math.max(0, Number(nextGoal.amountNeeded || 0) - Number(nextGoal.amountAccumulated || 0)))} to go</span>
+                </div>` : '<p class="dash-empty-state">No active goals need attention.</p>'}
+            <div class="dash-card-note">${totalGoalGap > 0 ? `${fmtMoney(totalGoalGap)} remaining across active goals` : 'Add a goal to start tracking progress'}</div>
+        </article>
 
-    // ── 5. Payment Reminders Banner ──────────────────────────────────────────
-    renderReminders(outflows, remindersEl);
+        <article class="dash-card">
+            <div class="dash-card-header"><span class="dash-card-title">Preparedness</span></div>
+            <div class="dash-stat-row"><span class="dash-stat-label">Emergency fund</span><span class="dash-stat-value" style="color:${emergencyFund > 0 ? COLOR_POSITIVE : 'var(--text)'}">${fmtMoney(emergencyFund)}</span></div>
+            <div class="dash-stat-row"><span class="dash-stat-label">Insurance cover</span><span class="dash-stat-value">${fmtMoney(insuranceCover)}</span></div>
+            <div class="dash-card-note">${insuranceCount} polic${insuranceCount === 1 ? 'y' : 'ies'} tracked · review coverage and reserves in their detailed tabs.</div>
+        </article>
 
-    // ── 6. Spending Trend Chart ──────────────────────────────────────────────
-    renderTrendChart(appData).catch(() => {});
-}
+        <article class="dash-card">
+            <div class="dash-card-header"><span class="dash-card-title">Accounts</span></div>
+            <div class="dash-primary-value" style="color:${accountBalance > 0 ? COLOR_POSITIVE : 'var(--text)'}">${fmtMoney(accountBalance)}</div>
+            <p class="dash-primary-label">cash across ${accounts.length} account${accounts.length === 1 ? '' : 's'}</p>
+            <div class="dash-stat-row"><span class="dash-stat-label">Primary account</span><span class="dash-stat-value">${primaryAccount ? 'Set' : 'Missing'}</span></div>
+            <div class="dash-stat-row"><span class="dash-stat-label">Salary account</span><span class="dash-stat-value">${salaryAccount ? 'Set' : 'Missing'}</span></div>
+        </article>
 
-function renderReminders(outflows, el) {
-    if (!el) return;
-    const now = new Date();
-    const upcoming = [];
-
-    outflows.forEach(item => {
-        const amount = Number(item.amount || 0);
-        if (amount <= 0) return;
-        const freq = item.frequency || 'Monthly';
-        if (freq === 'One-Time') return;
-
-        upcoming.push({
-            name: item.name || 'Unnamed',
-            amount,
-            type: item.type || 'Other',
-            frequency: freq,
-        });
-    });
-
-    if (upcoming.length === 0) { el.hidden = true; return; }
-
-    el.hidden = false;
-    let html = `<div class="dash-reminders-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-        Recurring Payments This Month
-    </div>`;
-
-    html += `<div class="dash-reminders-list">`;
-    upcoming.forEach(item => {
-        html += `<div class="dash-reminder-item">
-            <span class="dash-reminder-name">${item.name} <span class="dash-reminder-due">(${item.frequency})</span></span>
-            <span class="dash-reminder-amount">${fmtMoney(item.amount)}</span>
-        </div>`;
-    });
-    html += `</div>`;
-
-    el.innerHTML = html;
-}
-
-async function renderTrendChart(appData) {
-    const card = document.getElementById('dashTrendCard');
-    const canvas = document.getElementById('dashTrendChart');
-    if (!card || !canvas) return;
-
-    const now = new Date();
-    const labels = [];
-    const incomeData = [];
-    const expenseData = [];
-    const savingData = [];
-
-    for (let i = 5; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const mk = getMonthKey(d);
-        const md = (appData.monthlyBudgetData || {})[mk] || {};
-        labels.push(d.toLocaleDateString('en-IN', { month: 'short' }));
-
-        const inc = Number(md.inflow?.primaryIncome || 0);
-        const outTotal = Object.entries(md.outflow || {}).reduce((s, [k, v]) => k.endsWith('Desc') ? s : s + Number(v || 0), 0);
-        incomeData.push(inc);
-        expenseData.push(outTotal);
-        savingData.push(Math.max(0, inc - outTotal));
-    }
-
-    // Only show if there's any data
-    const hasData = incomeData.some(v => v > 0) || expenseData.some(v => v > 0);
-    if (!hasData) { card.hidden = true; return; }
-
-    card.hidden = false;
-
-    try {
-        await ensureChart();
-    } catch { card.hidden = true; return; }
-
-    if (_trendChart) { _trendChart.destroy(); _trendChart = null; }
-
-    const ctx = canvas.getContext('2d');
-    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-    const gridColor = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.08)';
-    const textColor = isDark ? '#aaa' : '#666';
-
-    _trendChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [
-                { label: 'Income', data: incomeData, backgroundColor: COLOR_POSITIVE + '88', borderColor: COLOR_POSITIVE, borderWidth: 1 },
-                { label: 'Expenses', data: expenseData, backgroundColor: COLOR_NEGATIVE + '88', borderColor: COLOR_NEGATIVE, borderWidth: 1 },
-                { label: 'Savings', data: savingData, backgroundColor: '#3b82f688', borderColor: '#3b82f6', borderWidth: 1 },
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: textColor, font: { size: 11 } } } },
-            scales: {
-                x: { grid: { color: gridColor }, ticks: { color: textColor } },
-                y: { grid: { color: gridColor }, ticks: { color: textColor, callback: v => '₹' + (v / 1000).toFixed(0) + 'k' } }
-            }
-        }
-    });
+        <article class="dash-card">
+            <div class="dash-card-header"><span class="dash-card-title">Investments & planning</span></div>
+            <div class="dash-stat-row"><span class="dash-stat-label">Portfolio value</span><span class="dash-stat-value" style="color:${COLOR_POSITIVE}">${fmtMoney(portfolioValue)}</span></div>
+            <div class="dash-stat-row"><span class="dash-stat-label">Monthly investment</span><span class="dash-stat-value">${fmtMoney(monthlyInvestment)}</span></div>
+            <div class="dash-stat-row"><span class="dash-stat-label">Tax items logged</span><span class="dash-stat-value">${fmtMoney(taxPlanned)}</span></div>
+            <div class="dash-card-note">${plannedGifts > 0 ? `${fmtMoney(plannedGifts)} planned for gifts` : 'No gift budget recorded'}</div>
+        </article>`;
 }

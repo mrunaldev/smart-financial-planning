@@ -2352,9 +2352,19 @@ function render() {
     if (entry && entry.panel) {
         entry.panel.hidden = false;
         // P2: Lazy-load Chart.js for chart-heavy tabs, re-render once loaded
-        const chartTabs = ['monthlyBudget', 'inflow', 'outflow', 'netWorth', 'dashboard'];
+        const chartTabs = ['monthlyBudget', 'inflow', 'outflow', 'netWorth'];
         if (chartTabs.includes(activeTabId) && typeof Chart === 'undefined') {
-            ensureChartJs().then(() => entry.render()).catch(() => {});
+            const tabIdWaitingForCharts = activeTabId;
+            ensureChartJs()
+                .then(() => {
+                    // The user may have switched tabs while Chart.js was loading.
+                    if (activeTabId === tabIdWaitingForCharts) entry.render();
+                })
+                .catch(error => {
+                    logger.error('Chart.js failed to load', { message: error.message, tabId: tabIdWaitingForCharts });
+                    showToast('Charts could not be loaded. Please check your connection and try again.', { variant: 'error' });
+                });
+            return;
         }
         entry.render();
     } else {
@@ -2373,7 +2383,9 @@ function renderDashboardTab() {
 
 function getDashboardNetWorthSummary() {
     const manualEntries = (appData.tabData || {}).netWorth || [];
-    const autoEntries = getDashboardAutoNetWorthEntries();
+    // Use the same auto-entry builder as the Net Worth tab. This must remain
+    // shared so both views always show identical totals.
+    const autoEntries = getAutoNetWorthEntries();
     const allEntries = [...autoEntries, ...manualEntries];
     const assets = allEntries.filter(e => e.type === 'Asset');
     const liabilities = allEntries.filter(e => e.type === 'Liability');
@@ -2386,41 +2398,6 @@ function getDashboardNetWorthSummary() {
         assetCount: assets.length,
         liabilityCount: liabilities.length
     };
-}
-
-function getDashboardAutoNetWorthEntries() {
-    const auto = [];
-    const inflowItems = normalizeInvestmentEntries((appData.tabData || {}).inflow || []);
-    inflowItems.forEach(item => {
-        const val = getInflowCurrentValue(item);
-        if (val > 0) {
-            auto.push({
-                id: 'auto_inv_' + item.id,
-                name: item.name || 'Investment',
-                type: 'Asset',
-                value: val,
-                details: 'From Inflow tab',
-                auto: true
-            });
-        }
-    });
-    const outflowItems = (appData.tabData || {}).outflow || [];
-    outflowItems.filter(item => (item.type || '').toLowerCase() === 'liability').forEach(item => {
-        const monthly = Number(item.amount || 0);
-        const months = Number(item.duration || 1) || 1;
-        const outstanding = monthly * months;
-        if (outstanding > 0) {
-            auto.push({
-                id: 'auto_exp_' + item.id,
-                name: item.name || 'Liability',
-                type: 'Liability',
-                value: outstanding,
-                details: `From Outflow: ${formatMoney(monthly)} × ${months}`,
-                auto: true
-            });
-        }
-    });
-    return auto;
 }
 
 function renderMonthlyBudget() {

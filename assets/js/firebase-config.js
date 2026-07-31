@@ -26,10 +26,13 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 // Firebase App Check
-// TEMPORARILY DISABLE for development to allow registration from any device
-// To enable for production: Uncomment below and whitelist domains in Firebase Console → App Check
-firebase.appCheck().activate(
-    "6LdAQAktAAAAAIIUsbiM1Ec4ewcJGxn2oAYyJNPz",
-    true
-);
-// console.log("Firebase App Check is disabled for development. Enable in production for security.");
+// Disable on local development hosts to avoid AppCheck failures during local testing.
+const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '';
+if (!isLocalDev) {
+    firebase.appCheck().activate(
+        "6LdAQAktAAAAAIIUsbiM1Ec4ewcJGxn2oAYyJNPz",
+        true
+    );
+} else {
+    console.log("Firebase App Check disabled for local development.");
+}

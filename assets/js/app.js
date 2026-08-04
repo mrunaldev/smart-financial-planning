@@ -1230,6 +1230,292 @@ exportDataBtn.addEventListener("click", () => {
     showToast(`Backup exported: smartfin-backup-${exportDate}.json`, { variant: 'success' });
 });
 
+// Download Dashboard Report (HTML format - can be printed to PDF)
+const downloadDashboardBtn = document.getElementById('downloadDashboardBtn');
+if (downloadDashboardBtn) {
+    downloadDashboardBtn.addEventListener("click", async () => {
+        if (!currentUser) return;
+
+        try {
+            showToast('Generating dashboard report...', { variant: 'info' });
+            const htmlContent = generateDashboardHTML();
+            const now = new Date();
+
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `smartfin-dashboard-${now.toISOString().slice(0, 10)}.html`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast('Dashboard report downloaded! Desktop: Open file and press Ctrl+P to save as PDF. Mobile: Use share/print menu.', { variant: 'success', duration: 6000 });
+            logger.info('Dashboard report downloaded', { date: now.toISOString() });
+        } catch (err) {
+            console.error('Dashboard report generation error:', err);
+            logger.error('Dashboard report generation failed', { error: err.message });
+            showToast('Failed to generate dashboard report. Please try again.', { variant: 'error' });
+        }
+    });
+}
+
+// Helper function to generate dashboard HTML content
+function generateDashboardHTML() {
+    // Helper function for frequency conversion
+    function toMonthlyAmountInline(amount, frequency) {
+        const divisors = { Monthly: 1, Quarterly: 3, 'Semi-Annual': 6, Annual: 12 };
+        return amount / (divisors[frequency] || 1);
+    }
+
+    // Get dashboard data
+    const tabData = appData.tabData || {};
+    const accounts = tabData.cards || [];
+    const goals = tabData.financialGoal || [];
+    const insurancePolicies = tabData.insurance || [];
+    const emergencyFunds = tabData.emergencyFund || [];
+    const investments = tabData.inflow || [];
+    const outflows = tabData.outflow || [];
+    const taxItems = tabData.taxPlan || [];
+    const now = new Date();
+    const monthKey = getMonthKey(now);
+    const monthData = (appData.monthlyBudgetData || {})[monthKey] || {};
+
+    // Calculate key metrics
+    const totalIncome = sumCategoryNumericValues(monthData.inflow);
+    const totalOutflow = sumCategoryNumericValues(monthData.outflow);
+    const borrowing = Number(monthData.inflow?.borrowing || 0);
+    const usableIncome = totalIncome - borrowing;
+    const recurringOutflows = outflows.filter(item => Number(item.amount || 0) > 0 && (item.frequency || 'Monthly') !== 'One-Time');
+    const monthlyCommitments = recurringOutflows.reduce((total, item) => total + toMonthlyAmountInline(Number(item.amount || 0), item.frequency || 'Monthly'), 0);
+    const availableFunds = usableIncome - monthlyCommitments;
+    const budgetBalance = totalIncome - totalOutflow;
+
+    // Net Worth
+    const netWorthEntries = tabData.netWorth || [];
+    const assets = netWorthEntries.filter(e => e.type === "Asset");
+    const liabilities = netWorthEntries.filter(e => e.type === "Liability");
+    const totalAssets = assets.reduce((s, a) => s + Number(a.value || 0), 0);
+    const totalLiabilities = liabilities.reduce((s, l) => s + Number(l.value || 0), 0);
+    const netWorthValue = totalAssets - totalLiabilities;
+    const debtToAssetRatio = totalAssets > 0 ? Math.round((totalLiabilities / totalAssets) * 100) : 0;
+    
+    // Accounts
+    const accountBalance = accounts.reduce((total, acc) => total + Number(acc.balance || 0), 0);
+    const primaryAccount = accounts.find(acc => acc.isPrimary === 'Yes');
+    const salaryAccount = accounts.find(acc => acc.purpose === 'Salary' && acc.isPrimary !== 'Yes');
+    
+    // Investments
+    const portfolioValue = investments.reduce((total, inv) => total + Number(inv.currentValue || inv.amount || 0), 0);
+    const monthlyInvestment = investments.filter(inv => (inv.frequency || '').toLowerCase() === 'monthly')
+        .reduce((total, inv) => total + Number(inv.amount || 0), 0);
+    
+    // Tax
+    const taxPlanned = taxItems.reduce((total, item) => total + Number(item.amount || 0), 0);
+    
+    // Emergency Fund & Insurance
+    const emergencyFund = Number(emergencyFunds[0]?.currentFund || 0);
+    const healthInsurance = insurancePolicies.filter(p => p.type === 'Health Insurance')
+        .reduce((total, p) => total + Number(p.sumAssured || 0), 0);
+    const termInsurance = insurancePolicies.filter(p => p.type === 'Term Insurance')
+        .reduce((total, p) => total + Number(p.sumAssured || 0), 0);
+    
+    // Goals
+    const activeGoals = goals.filter(g => {
+        const needed = Number(g.amountNeeded || 0);
+        const accumulated = Number(g.amountAccumulated || 0);
+        return needed > 0 && accumulated < needed && g.status !== 'Achieved';
+    });
+    const totalGoalTarget = activeGoals.reduce((sum, g) => sum + Number(g.amountNeeded || 0), 0);
+    const totalGoalAccumulated = activeGoals.reduce((sum, g) => sum + Number(g.amountAccumulated || 0), 0);
+    const goalsProgress = totalGoalTarget > 0 ? Math.round((totalGoalAccumulated / totalGoalTarget) * 100) : 0;
+    
+    // Capture chart as image (if available and ready)
+    let chartImage = '';
+    try {
+        const chartCanvas = document.getElementById('dashboardTrendChart');
+        if (chartCanvas) {
+            chartImage = chartCanvas.toDataURL('image/png');
+        }
+    } catch (e) {
+        console.warn('Could not capture chart (chart may not be ready):', e);
+    }
+
+    // Return HTML content
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SmartFin Dashboard Summary</title>
+    <style>
+        @media print {
+            body { margin: 0; padding: 15mm; }
+            .page-break { page-break-before: always; }
+            @page { size: A4; margin: 15mm; }
+        }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #1a1a1a; background: #fff; max-width: 210mm; margin: 0 auto; }
+        h1 { color: #10b981; margin-bottom: 5px; font-size: 28px; }
+        h2 { color: #059669; margin-top: 25px; margin-bottom: 12px; font-size: 20px; border-bottom: 2px solid #10b981; padding-bottom: 5px; }
+        .header { border-bottom: 3px solid #10b981; padding-bottom: 15px; margin-bottom: 25px; }
+        .header-info { color: #666; font-size: 14px; margin: 3px 0; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; }
+        .card-title { font-size: 14px; color: #6b7280; margin-bottom: 8px; font-weight: 600; }
+        .card-value { font-size: 22px; font-weight: bold; color: #10b981; }
+        .metric { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+        .metric:last-child { border-bottom: none; }
+        .metric-label { font-weight: 500; color: #374151; }
+        .metric-value { font-weight: 600; color: #10b981; }
+        .progress-bar { background: #e5e7eb; height: 20px; border-radius: 10px; overflow: hidden; margin: 8px 0; }
+        .progress-fill { background: #10b981; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; }
+        .chart-container { margin: 20px 0; text-align: center; }
+        .chart-container img { max-width: 100%; height: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
+        .status-good { color: #10b981; }
+        .status-warning { color: #f59e0b; }
+        .status-bad { color: #ef4444; }
+        .footer { margin-top: 40px; padding-top: 15px; border-top: 2px solid #e5e7eb; font-size: 12px; color: #6b7280; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th { background: #f3f4f6; padding: 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #10b981; }
+        td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>₹ SmartFin Dashboard Summary</h1>
+        <div class="header-info">Generated: ${now.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+        <div class="header-info">User: ${appData.userName || currentUser.email}</div>
+        ${appData.userLocation ? `<div class="header-info">Location: ${appData.userLocation}</div>` : ''}
+        <div class="header-info">Version: ${getAppVersion()}</div>
+    </div>
+    
+    <h2>📊 This Month (${now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })})</h2>
+    <div class="grid">
+        <div class="card">
+            <div class="card-title">Total Income</div>
+            <div class="card-value">${formatMoney(totalIncome)}</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Monthly Commitments</div>
+            <div class="card-value">${formatMoney(monthlyCommitments)}</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Available Funds</div>
+            <div class="card-value">${formatMoney(availableFunds)}</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Budget Status</div>
+            <div class="card-value ${budgetBalance >= 0 ? 'status-good' : 'status-bad'}">${budgetBalance >= 0 ? '+' : ''}${formatMoney(budgetBalance)}</div>
+        </div>
+    </div>
+    
+    <h2>💰 Net Worth</h2>
+    <div class="metric">
+        <span class="metric-label">Total Assets</span>
+        <span class="metric-value">${formatMoney(totalAssets)}</span>
+    </div>
+    <div class="metric">
+        <span class="metric-label">Total Liabilities</span>
+        <span class="metric-value">${formatMoney(totalLiabilities)}</span>
+    </div>
+    <div class="metric">
+        <span class="metric-label">Net Worth</span>
+        <span class="metric-value ${netWorthValue >= 0 ? 'status-good' : 'status-bad'}">${formatMoney(netWorthValue)}</span>
+    </div>
+    <div class="metric">
+        <span class="metric-label">Debt-to-Asset Ratio</span>
+        <span class="metric-value">${debtToAssetRatio}%</span>
+    </div>
+    
+    <h2>🎯 Goals Progress</h2>
+    <div class="metric">
+        <span class="metric-label">Overall Progress</span>
+        <span class="metric-value">${goalsProgress}%</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: ${goalsProgress}%">${goalsProgress}%</div>
+    </div>
+    ${activeGoals.length > 0 ? `
+    <table>
+        <thead>
+            <tr>
+                <th>Goal</th>
+                <th>Target</th>
+                <th>Accumulated</th>
+                <th>Progress</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${activeGoals.map(g => {
+                const needed = Number(g.amountNeeded || 0);
+                const accumulated = Number(g.amountAccumulated || 0);
+                const progress = needed > 0 ? Math.round((accumulated / needed) * 100) : 0;
+                return `<tr>
+                    <td>${g.name}</td>
+                    <td>${formatMoney(needed)}</td>
+                    <td>${formatMoney(accumulated)}</td>
+                    <td>${progress}%</td>
+                </tr>`;
+            }).join('')}
+        </tbody>
+    </table>` : '<p>No active goals</p>'}
+    
+    <h2>🛡️ Preparedness</h2>
+    <div class="metric">
+        <span class="metric-label">Emergency Fund</span>
+        <span class="metric-value">${formatMoney(emergencyFund)}</span>
+    </div>
+    <div class="metric">
+        <span class="metric-label">Health Insurance</span>
+        <span class="metric-value">${formatMoney(healthInsurance)}</span>
+    </div>
+    <div class="metric">
+        <span class="metric-label">Term Insurance</span>
+        <span class="metric-value">${formatMoney(termInsurance)}</span>
+    </div>
+    
+    <h2>🏦 Accounts</h2>
+    <div class="metric">
+        <span class="metric-label">Total Balance</span>
+        <span class="metric-value">${formatMoney(accountBalance)}</span>
+    </div>
+    ${primaryAccount ? `<div class="metric">
+        <span class="metric-label">Primary (Expenditure)</span>
+        <span class="metric-value">${formatMoney(Number(primaryAccount.balance || 0))}</span>
+    </div>` : ''}
+    ${salaryAccount ? `<div class="metric">
+        <span class="metric-label">Salary Account</span>
+        <span class="metric-value">${formatMoney(Number(salaryAccount.balance || 0))}</span>
+    </div>` : ''}
+    
+    <h2>📈 Investments & Planning</h2>
+    <div class="metric">
+        <span class="metric-label">Portfolio Value</span>
+        <span class="metric-value">${formatMoney(portfolioValue)}</span>
+    </div>
+    <div class="metric">
+        <span class="metric-label">Monthly Investment</span>
+        <span class="metric-value">${formatMoney(monthlyInvestment)}</span>
+    </div>
+    <div class="metric">
+        <span class="metric-label">Tax Planning</span>
+        <span class="metric-value">${formatMoney(taxPlanned)}</span>
+    </div>
+    
+    ${chartImage ? `
+    <h2>📊 6-Month Trend</h2>
+    <div class="chart-container">
+        <img src="${chartImage}" alt="6-Month Trend Chart" />
+    </div>` : ''}
+    
+    <div class="footer">
+        <p><strong>SmartFin - Smart Financial Planning (v${getAppVersion()})</strong></p>
+        <p>This is a comprehensive dashboard summary. For real-time updates and detailed analysis, please visit the app.</p>
+        <p>© ${now.getFullYear()} SmartFin. All rights reserved.</p>
+    </div>
+</body>
+</html>`;
+}
+
 // P0: Auto-backup before destructive operations
 function autoBackup(reason) {
     try {
@@ -4329,13 +4615,48 @@ function renderGiftsTable(entries) {
 }
 
 function calculateGiftsSummary(entries) {
-    const totalGifts = entries.length;
-    const totalGiftAmount = entries.reduce((s, g) => s + Number(g.amount || 0), 0);
-    const fixedEveryYearCount = entries.filter(g => g.category === "Fixed Every Year").length;
-    
-    document.getElementById("totalGifts").textContent = totalGifts;
-    document.getElementById("totalGiftAmount").textContent = formatMoney(totalGiftAmount);
+    // Total gifts count
+    const totalGiftsCount = entries.length;
+
+    // Fixed Every Year count and amount
+    const fixedEveryYearEntries = entries.filter(g => g.category === "Fixed Every Year");
+    const fixedEveryYearCount = fixedEveryYearEntries.length;
+    const fixedEveryYearAmount = fixedEveryYearEntries.reduce((s, g) => s + Number(g.amount || 0), 0);
+
+    // Calculate This Year spent (current financial year: April to March)
+    const today = new Date();
+    let fyStartYear = today.getFullYear();
+    if (today.getMonth() < 3) { // Before April
+        fyStartYear--;
+    }
+    const fyStart = new Date(fyStartYear, 3, 1); // April 1st
+    const fyEnd = new Date(fyStartYear + 1, 2, 31); // March 31st next year
+
+    const thisYearSpent = entries
+        .filter(g => {
+            if (!g.date) return false;
+            const giftDate = new Date(g.date);
+            return giftDate >= fyStart && giftDate <= fyEnd;
+        })
+        .reduce((s, g) => s + Number(g.amount || 0), 0);
+
+    // Calculate Overall total
+    const overallTotal = entries.reduce((s, g) => s + Number(g.amount || 0), 0);
+
+    document.getElementById("totalGiftsCount").textContent = totalGiftsCount;
     document.getElementById("fixedEveryYearCount").textContent = fixedEveryYearCount;
+    document.getElementById("fixedEveryYearAmount").textContent = formatMoney(fixedEveryYearAmount);
+    document.getElementById("thisYearSpent").textContent = formatMoney(thisYearSpent);
+    document.getElementById("overallTotal").textContent = formatMoney(overallTotal);
+
+    // Return summary for testing
+    return {
+        totalCount: totalGiftsCount,
+        fixedCount: fixedEveryYearCount,
+        fixedAmount: fixedEveryYearAmount,
+        spentThisYear: thisYearSpent,
+        overallTotal: overallTotal
+    };
 }
 
 function renderGiftsPreviewCards(entries) {

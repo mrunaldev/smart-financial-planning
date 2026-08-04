@@ -1,6 +1,16 @@
-# SmartFin – User Manual
+# SmartFin – User Manual (v2.0.4)
 
 A comprehensive guide to using SmartFin for personal financial planning.
+
+## What's New in v2.0.4
+
+- **Location-Based Features**: City selection during registration for accurate insurance calculations
+- **Enhanced Dashboard**: Budget surplus, combined goals progress, preparedness metrics with ideal amounts
+- **Realistic Insurance Calculations**: Health & Term insurance ideals based on income, age, and location
+- **6-Month Trend Chart**: Visual representation of Investment, Liability, Saving, Expenditure, and Others
+- **Gifts Enhancements**: Date tracking and monthly spending visualization
+- **Dashboard Report Download**: Download comprehensive dashboard summary (works on desktop and mobile)
+- **Fixed Tax Calculations**: Now only counts recurring contributions, not portfolio values
 
 ---
 
@@ -22,10 +32,11 @@ A comprehensive guide to using SmartFin for personal financial planning.
 14. [Emergency Fund](#emergency-fund)
 15. [Settings & Danger Zone](#settings--danger-zone)
 16. [Export to Excel](#export-to-excel)
-17. [Backup & Restore](#backup--restore)
-18. [Cross-Device Sync](#cross-device-sync)
-19. [Precautions & Common Pitfalls](#precautions--common-pitfalls)
-20. [FAQ](#faq)
+17. [Download Dashboard Report](#download-dashboard-report)
+18. [Backup & Restore](#backup--restore)
+19. [Cross-Device Sync](#cross-device-sync)
+20. [Precautions & Common Pitfalls](#precautions--common-pitfalls)
+21. [FAQ](#faq)
 
 ---
 
@@ -506,6 +517,61 @@ Access via the ⚙️ Settings button in the header.
 - Downloads `{Tab_Name}_export.xlsx`
 - Contains all entries with column headers
 - Uses SheetJS (XLSX) library
+
+---
+
+## Download Dashboard Report
+
+### What's Included
+
+The dashboard report is a comprehensive snapshot of your financial status including:
+- **This Month Summary**: Total income, monthly commitments, available funds, budget status
+- **Net Worth**: Total assets, total liabilities, net worth, debt-to-asset ratio
+- **Goals Progress**: Overall progress bar with detailed goal-by-goal breakdown
+- **Preparedness**: Emergency fund, health insurance, term insurance status
+- **Accounts**: Total balance, primary account, salary account
+- **Investments & Planning**: Portfolio value, monthly investment, tax planning
+- **6-Month Trend Chart**: Visual chart showing investment, liability, saving, expenditure, and others
+
+### How to Download
+
+1. Go to **Settings** (⚙️)
+2. Scroll to "Download Dashboard Report"
+3. Click **Download Report**
+4. HTML file downloads: `smartfin-dashboard-YYYY-MM-DD.html`
+
+### How to Save as PDF
+
+#### Desktop (Windows/Linux/Mac)
+1. Open the downloaded HTML file in your browser
+2. Press **Ctrl+P** (Windows/Linux) or **Cmd+P** (Mac)
+3. Select **"Save as PDF"** as the printer/destination
+4. Choose location and save
+
+#### Mobile (Android)
+1. Open the downloaded HTML file in your browser (Chrome or Samsung Internet)
+2. Tap the **3-dot menu** (⋮) in top-right
+3. Tap **"Share..."** or **"Print"**
+4. Select **"Save as PDF"** as the printer
+5. Tap the download/save icon
+6. Choose location and save
+
+#### Mobile (iOS - iPhone/iPad)
+1. Open the downloaded HTML file in Safari
+2. Tap the **Share icon** (⬆️ in a square)
+3. Scroll down and tap **"Print"**
+4. Pinch zoom on the preview to see full page
+5. Tap the **Share icon** again
+6. Tap **"Save to Files"**
+7. Choose location and save
+
+### Tips
+
+- ✅ Use Chrome on Android or Safari on iOS for best PDF quality
+- ✅ Ensure you have dashboard data before downloading
+- ✅ The chart is embedded as an image in the HTML
+- ✅ The report is professionally formatted for print
+- ✅ For mobile users, you can also take a screenshot if PDF is difficult
 
 ---
 

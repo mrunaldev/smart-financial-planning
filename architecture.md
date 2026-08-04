@@ -1,6 +1,12 @@
 # SmartFin – Architecture Document
 
-> Version 3.1 | June 2026
+> Version 2.0.4 | January 2026
+
+## Version History
+
+- **v2.0.4** (Jan 2026): Enhanced dashboard with preparedness metrics, 6-month trend chart, location-based insurance calculations, gifts tracking improvements, PDF export, fixed tax calculations
+- **v2.0.3** (Aug 2025): Streamlined dashboard, unified net worth source
+- **v2.0.2** (Jun 2025): Initial modular architecture
 
 ---
 

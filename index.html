@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <title>₹ SmartFin – Financial Planning</title>
 </head>
 <body>
@@ -43,6 +44,31 @@
             <div class="field" id="dobField" hidden>
                 <label for="authDob">Date of Birth</label>
                 <input id="authDob" type="date" autocomplete="bday">
+            </div>
+            <div class="field" id="locationField" hidden>
+                <label for="authLocation">Location (City)</label>
+                <select id="authLocation" autocomplete="off">
+                    <option value="Bengaluru, Karnataka, India" selected>Bengaluru, Karnataka, India</option>
+                    <option value="Mumbai, Maharashtra, India">Mumbai, Maharashtra, India</option>
+                    <option value="Delhi, Delhi, India">Delhi, Delhi, India</option>
+                    <option value="Pune, Maharashtra, India">Pune, Maharashtra, India</option>
+                    <option value="Hyderabad, Telangana, India">Hyderabad, Telangana, India</option>
+                    <option value="Chennai, Tamil Nadu, India">Chennai, Tamil Nadu, India</option>
+                    <option value="Kolkata, West Bengal, India">Kolkata, West Bengal, India</option>
+                    <option value="Ahmedabad, Gujarat, India">Ahmedabad, Gujarat, India</option>
+                    <option value="Jaipur, Rajasthan, India">Jaipur, Rajasthan, India</option>
+                    <option value="Lucknow, Uttar Pradesh, India">Lucknow, Uttar Pradesh, India</option>
+                    <option value="Chandigarh, Chandigarh, India">Chandigarh, Chandigarh, India</option>
+                    <option value="Kochi, Kerala, India">Kochi, Kerala, India</option>
+                    <option value="Indore, Madhya Pradesh, India">Indore, Madhya Pradesh, India</option>
+                    <option value="Coimbatore, Tamil Nadu, India">Coimbatore, Tamil Nadu, India</option>
+                    <option value="Bhopal, Madhya Pradesh, India">Bhopal, Madhya Pradesh, India</option>
+                    <option value="Visakhapatnam, Andhra Pradesh, India">Visakhapatnam, Andhra Pradesh, India</option>
+                    <option value="Nagpur, Maharashtra, India">Nagpur, Maharashtra, India</option>
+                    <option value="Surat, Gujarat, India">Surat, Gujarat, India</option>
+                    <option value="Gurgaon, Haryana, India">Gurgaon, Haryana, India</option>
+                    <option value="Noida, Uttar Pradesh, India">Noida, Uttar Pradesh, India</option>
+                </select>
             </div>
             <div class="field">
                 <label for="authEmail">Email address</label>
@@ -884,16 +910,30 @@
             <div class="gifts-summary">
                 <div class="gifts-summary-item">
                     <span class="gifts-summary-label">Total Gifts</span>
-                    <strong id="totalGifts">₹0</strong>
+                    <strong id="totalGiftsCount">0</strong>
                 </div>
                 <div class="gifts-summary-item">
-                    <span class="gifts-summary-label">Total Amount</span>
-                    <strong id="totalGiftAmount">₹0</strong>
+                    <span class="gifts-summary-label">Fixed Every Year (Count)</span>
+                    <strong id="fixedEveryYearCount">0</strong>
                 </div>
                 <div class="gifts-summary-item">
-                    <span class="gifts-summary-label">Fixed Every Year</span>
-                    <strong id="fixedEveryYearCount">₹0</strong>
+                    <span class="gifts-summary-label">Fixed Every Year (Amount)</span>
+                    <strong id="fixedEveryYearAmount">₹0</strong>
                 </div>
+                <div class="gifts-summary-item">
+                    <span class="gifts-summary-label">Spent This Year</span>
+                    <strong id="thisYearSpent">₹0</strong>
+                </div>
+                <div class="gifts-summary-item">
+                    <span class="gifts-summary-label">Overall Total</span>
+                    <strong id="overallTotal">₹0</strong>
+                </div>
+            </div>
+
+            <!-- Monthly Spending Chart -->
+            <div style="margin: 24px 0; padding: 20px; background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">Monthly Gift Spending (Current Financial Year)</h3>
+                <canvas id="giftsMonthlyChart" style="max-height: 250px;"></canvas>
             </div>
 
             <!-- Preview Mode -->
@@ -1049,6 +1089,13 @@
     <!-- Data Management -->
     <div class="settings-section">
         <h3 class="settings-section-title">Data Management</h3>
+        <div class="settings-action-row">
+            <div>
+                <div class="settings-row-label">Download Dashboard Report</div>
+                <div class="settings-row-sub">Download comprehensive dashboard summary. Desktop: Open file and press Ctrl+P to save as PDF. Mobile: Use browser's share/print menu.</div>
+            </div>
+            <button type="button" id="downloadDashboardBtn" class="btn-settings-action">Download Report</button>
+        </div>
         <div class="settings-action-row">
             <div>
                 <div class="settings-row-label">Export All Data</div>

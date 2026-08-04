@@ -1,7 +1,15 @@
-# SmartFin – Application Specification (v6.0)
+# SmartFin – Application Specification (v2.0.4)
 
 > **Purpose**: Single source of truth for the app's architecture, data models, business logic, and UI structure.
 > Use this file as context when making future modifications. Update it after every significant change.
+>
+> **IMPORTANT**: After making any code changes, update all documentation files to keep them in sync:
+> - Update version numbers in README.md, USER_MANUAL.md, DEVELOPMENT.md, architecture.md to match APP_VERSION in app.js
+> - Add changelog entries to CHANGELOG.md
+> - Update relevant sections in APP_SPEC.md
+> - Update USER_MANUAL.md for user-facing changes
+>
+> **Version 2.0.4 Updates**: Added user location field, enhanced dashboard with budget surplus, cumulative goals progress, preparedness metrics with ideal insurance calculations, 6-month trend graph, gifts date field with monthly spending chart, and PDF dashboard export.
 
 ---
 
@@ -74,6 +82,7 @@ users/{uid} → single document
 ```json
 {
   "userName": "string",
+  "userLocation": "City, State, Country",
   "dateOfBirth": "YYYY-MM-DD",
   "currentAge": 0,
   "fixedMonthlyIncome": 0,
@@ -253,7 +262,12 @@ Every entry has:
 | relativeName | Relative Name | text | — | — |
 | occasion | Occasion | text | — | — |
 | amount | Amount (₹) | number | — | — |
+| date | Date | date | — | — |
 | details | Details | text | — | — |
+
+**New in v6.1:**
+- Added optional `date` field (defaults to current date when creating new entries)
+- Monthly spending chart displays gifts by month for current financial year (April-March)
 
 ### emergencyFund
 
@@ -397,7 +411,56 @@ autoDebitByType = { Liability: 0, Insurance: 0, Savings: 0, Expenditure: 0, Inve
 
 ---
 
-## 8. Delete Account
+## 8. User Registration & Profile
+
+**Registration Fields:**
+- Name (required)
+- Date of Birth (optional)
+- **Location** (new in v6.1): Dropdown selection of Indian cities, defaults to "Bengaluru, Karnataka, India"
+- Email (required)
+- Password (required, min 6 characters)
+
+**Location Field Usage:**
+- Used for calculating ideal health insurance coverage (metro vs non-metro cities)
+- Stored in Firestore as `userLocation` field
+- Limited to Indian cities in current implementation
+- Backward compatible: defaults to "Bengaluru, Karnataka, India" for existing users
+
+---
+
+## 9. Data Management & Export
+
+**Settings Panel Features:**
+
+1. **Download Dashboard Summary** (new in v6.1)
+   - Generates HTML snapshot of dashboard metrics
+   - Includes: monthly income/expenses, account balances, preparedness metrics, active goals
+   - Downloads as HTML file that can be printed to PDF
+   - Quick sharing format for financial overview
+
+2. **Export All Data**
+   - Full JSON backup of all user data
+   - Includes metadata: export date, app version
+   - Filename format: `smartfin-backup-YYYY-MM-DD.json`
+
+3. **Import Data**
+   - Restores from previously exported JSON backup
+   - Auto-backup created before import
+   - Validates and normalizes imported data structure
+
+4. **Reset All Data**
+   - Requires double confirmation (typed "DELETE")
+   - Auto-backup created before reset
+   - Preserves user name and location
+
+5. **Delete Account**
+   - Permanently deletes Firestore data and Firebase Auth account
+   - Requires recent authentication
+   - Cannot be undone
+
+---
+
+## 10. Delete Account (Legacy)
 
 ```
 Settings → Danger Zone → Delete Account
@@ -522,22 +585,25 @@ previewMap = {
 ### Dashboard quick glance
 
 The Dashboard is intentionally a compact cross-tab snapshot rather than a second
-copy of each workspace. It shows six high-value cards:
+copy of each workspace. It shows enhanced cards with actionable insights:
 
-- **This month**: usable income, recurring monthly commitments, and the amount
-  available after commitments. Borrowing is excluded from usable income.
-- **Net worth**: current assets, liabilities, and net worth. Totals use the
-  exact same manual and auto-generated entries as the Net Worth tab.
-- **Goals**: active-goal count plus only the next target date goal and its
-  remaining amount.
-- **Preparedness**: emergency-fund balance and total insurance cover.
-- **Accounts**: total cash balance and whether the required Primary and Salary
-  accounts are configured.
-- **Investments & planning**: portfolio value, monthly investment contribution,
-  tax items logged, and a single planned-gifts total when applicable.
+- **This month**: usable income, recurring monthly commitments, amount available after commitments, and **budget surplus/deficit status** (new in v6.1). Borrowing is excluded from usable income.
+- **Net worth**: current assets, liabilities, and net worth. Totals use the exact same manual and auto-generated entries as the Net Worth tab.
+- **Goals**: **All active goals with individual progress bars** (enhanced in v6.1), showing percentage funded and remaining amount for each goal.
+- **Preparedness**: **Progress bars for Emergency Fund, Health Insurance, and Term Insurance** (enhanced in v6.1) with ideal amounts calculated based on:
+  - Emergency Fund: 6 months of expenses
+  - Health Insurance: Based on age, location (metro/non-metro), and family size
+  - Term Insurance: Based on age, monthly expenses, and current savings (formula: Monthly Expenses × 12 × [65 - Age] - Savings)
+- **Accounts**: total cash balance and whether the required Primary and Salary accounts are configured.
+- **Investments & planning**: portfolio value, monthly investment contribution, tax items logged, and a single planned-gifts total when applicable.
+- **6-Month Trend** (new in v6.1): Stacked bar chart showing Income, Expenditure, Saving, Liability, and Others for the last 6 months.
 
-Recurring payment item lists and dashboard spending charts are intentionally not
-shown; the Fixed Outflow and Budget tabs remain the detailed sources for those.
+**Ideal Insurance Calculation Formulas (v6.1):**
+- Health Insurance: `(Base City Cost × Age Risk Multiplier) × Family Size Variant`
+  - Base City Cost: ₹10L for metro cities, ₹5L for non-metros
+  - Age Risk Multiplier: 1.0 (<35), 1.5 (35-50), 2.0 (>50)
+  - Family Size Variant: 1.0 (individual), 1.5 (couple), 2.0 (family 3+)
+- Term Insurance: `(Monthly Expenses × 12 × [65 - Current Age]) - Current Savings`
 
 ```
 render()
@@ -690,4 +756,4 @@ When modifying the app, check these areas:
 
 ---
 
-*Last updated: 2026-08-01 (v6.0 — streamlined Dashboard and unified its Net Worth source with the Net Worth tab)*
+*Last updated: 2026-08-04 (v6.1 — Enhanced Dashboard with budget surplus, cumulative goals, preparedness metrics with ideal insurance calculations, 6-month trend graph; Added user location field; Gifts tab with date field and monthly spending chart; PDF dashboard export)*

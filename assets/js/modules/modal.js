@@ -1,5 +1,5 @@
 // ── SmartFin Custom Modal System ─────────────────────────────────────────────
-// Replaces native alert(), confirm(), prompt() with styled async modals (P1)
+// Replaces native alert(), confirm(), prompt() with styled async modals
 
 let _modalContainer = null;
 

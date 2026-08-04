@@ -1,5 +1,5 @@
 // ── SmartFin Constants & Configuration ───────────────────────────────────────
-// Extracted from app.js for maintainability (P2 refactor)
+// Extracted from app.js for maintainability
 
 // ── Timing Constants ─────────────────────────────────────────────────────────
 export const SAVE_DEBOUNCE_MS = 600;

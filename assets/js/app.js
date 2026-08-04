@@ -6532,7 +6532,10 @@ if (btnDoTransfer) btnDoTransfer.addEventListener("click", async () => {
     if (savingAccount && autoDebitByType.Savings > 0) {
         savingAccount.balance = Number(savingAccount.balance || 0) + autoDebitByType.Savings;
     }
-    // Credit investment account with auto-debit investment amount
+    // Reset investment account to zero for the new month, then add current month's investment transfer
+    if (investmentAccount) {
+        investmentAccount.balance = 0;
+    }
     if (investmentAccount && autoDebitByType.Investment > 0) {
         investmentAccount.balance = Number(investmentAccount.balance || 0) + autoDebitByType.Investment;
     }
@@ -6557,6 +6560,7 @@ if (btnDoTransfer) btnDoTransfer.addEventListener("click", async () => {
     logger.info('Execute Transfer completed', { monthKey, transferAmount: amt, fixedTotal, primaryIncome });
     scheduleSave();
     renderMonthlyBudget();
+    renderCards();
 });
 
 // ── Recalculate Transfer (fix mismatch) ──────────────────────────────────────
@@ -7073,12 +7077,14 @@ function handleCategoryFieldChange(e) {
         monthData[category][fieldId] = Number(e.target.value) || 0;
     }
 
-    // When PRIMARY INCOME changes, auto-update salary account balance
+    // When PRIMARY INCOME changes, auto-update salary account balance only before transfer is executed.
     if (fieldId === "primaryIncome") {
         const newIncome = Number(e.target.value) || 0;
         const cards = (appData.tabData || {}).cards || [];
         const salary = cards.find(c => c.purpose === "Salary" && c.isPrimary !== "Yes");
-        if (salary) {
+        const monthData = (appData.monthlyBudgetData || {})[monthKey] || {};
+        const transferDone = Number(monthData._transferDone || 0);
+        if (salary && transferDone <= 0) {
             salary.balance = newIncome;
             appData.tabData.cards = cards.map(c => c.id === salary.id ? salary : c);
         }

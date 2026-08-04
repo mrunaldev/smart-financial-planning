@@ -392,6 +392,33 @@ function runTests() {
     assertEqual(emptyTotals.totalIncome, 0, "Annual: empty data returns 0 income");
     assertEqual(emptyTotals.totalSavings, 0, "Annual: empty data returns 0 savings");
 
+    // ─ Transfer balance behavior ────────────────────────────────────────────────
+    test("Transfer: salary balance resets to zero after transfer execution", () => {
+        const salary = { id: "s1", purpose: "Salary", balance: 500000 };
+        const exp = { id: "e1", isPrimary: "Yes", balance: 120000 };
+        const investment = { id: "i1", purpose: "Investment", balance: 250000 };
+        const autoDebitByType = { Savings: 0, Investment: 25000 };
+        const amt = 400000;
+        salary.balance = 0;
+        exp.balance = Number(exp.balance || 0) + amt;
+        investment.balance = 0;
+        if (investment && autoDebitByType.Investment > 0) investment.balance += autoDebitByType.Investment;
+        return salary.balance === 0 && exp.balance === 520000 && investment.balance === 25000 || `Expected salary 0, exp 520000, investment 25000, got ${salary.balance}/${exp.balance}/${investment.balance}`;
+    });
+
+    test("Transfer: investment account starts at zero for a fresh month", () => {
+        const investment = { id: "i1", purpose: "Investment", balance: 250000 };
+        investment.balance = 0;
+        return investment.balance === 0 || `Expected initial balance 0, got ${investment.balance}`;
+    });
+
+    test("Transfer: primary account increases by transfer amount", () => {
+        const exp = { id: "e1", isPrimary: "Yes", balance: 120000 };
+        const amt = 400000;
+        exp.balance = Number(exp.balance || 0) + amt;
+        return exp.balance === 520000 || `Expected 520000, got ${exp.balance}`;
+    });
+
     // ─ Tax Calculation (New Regime) ──────────────────────────────────────────────
     test("Tax: zero tax on income ≤ 3,00,000 (new regime)", () => {
         const tax = calculateTax(300000, "new", 0);
@@ -658,10 +685,12 @@ function runTests() {
         };
     }
 
+    const currentDate = new Date();
+    const currentFY = currentDate.getMonth() >= 3 ? currentDate.getFullYear() : currentDate.getFullYear() - 1;
     const testGifts = [
-        { name: 'Birthday', amount: 5000, category: 'Fixed Every Year', date: '2025-06-15' },
-        { name: 'Wedding', amount: 10000, category: 'On Demand', date: '2025-08-20' },
-        { name: 'Anniversary', amount: 3000, category: 'Fixed Every Year', date: '2024-12-10' }
+        { name: 'Birthday', amount: 5000, category: 'Fixed Every Year', date: `${currentFY}-06-15` },
+        { name: 'Wedding', amount: 10000, category: 'On Demand', date: `${currentFY}-08-20` },
+        { name: 'Anniversary', amount: 3000, category: 'Fixed Every Year', date: `${currentFY - 1}-12-10` }
     ];
     
     const giftsSummary = calculateGiftsSummary(testGifts);

@@ -581,6 +581,13 @@ const DEFAULT_TABS = [
 ];
 
 // ── Tab-specific field configurations ───────────────────────────────────────
+function getDefaultDateValue(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
 const TAB_FIELDS = {
     monthlyBudget: [
         { id: "name",      label: "Item Name",           type: "text",   placeholder: "e.g. Rent, Groceries", required: true },
@@ -648,6 +655,7 @@ const TAB_FIELDS = {
         { id: "relativeName", label: "Relative Name",    type: "text",   placeholder: "e.g. John Doe" },
         { id: "occasion",  label: "Occasion",             type: "text",   placeholder: "e.g. Birthday, Wedding, Anniversary" },
         { id: "amount",    label: "Amount (₹)",          type: "number", placeholder: "0" },
+        { id: "date",      label: "Gift Date",            type: "date",   placeholder: "" },
         { id: "details",   label: "Details",              type: "text",   placeholder: "Optional" }
     ],
     emergencyFund: [
@@ -898,6 +906,7 @@ const giftsDynamicFields = document.getElementById("giftsDynamicFields");
 const giftsTableHead   = document.getElementById("giftsTableHead");
 const giftsTableBody   = document.getElementById("giftsTableBody");
 const giftsEmptyState  = document.getElementById("giftsEmptyState");
+const giftsMonthlyChartCanvas = document.getElementById("giftsMonthlyChart");
 
 // Emergency Fund refs
 const emergencyFundUI          = document.getElementById("emergencyFundUI");
@@ -948,6 +957,7 @@ let outflowBankChart = null;
 let outflowTypeChart = null;
 let inflowBarChart   = null;
 let netWorthProjectionChart = null;
+let giftsMonthlyChart = null;
 let localWritePending = false;
 let budgetEditSnapshot = null;
 
@@ -2197,6 +2207,8 @@ function readSectionFormEntry(tabId) {
         if (!input) return;
         if (f.type === "number") {
             entry[f.id] = input.value === "" ? "" : Number(input.value || 0);
+        } else if (f.type === "date" && input.value.trim() === "") {
+            entry[f.id] = tabId === "gifts" ? getDefaultDateValue() : "";
         } else {
             entry[f.id] = input.value.trim();
         }
@@ -2249,6 +2261,10 @@ function resetSectionForm(tabId) {
         const frequency = document.getElementById("inflow_frequency");
         if (frequency) frequency.value = "One-Time";
         updateInflowCalculatedValuePreview();
+    }
+    if (tabId === "gifts") {
+        const giftDateInput = document.getElementById("gifts_date");
+        if (giftDateInput) giftDateInput.value = getDefaultDateValue();
     }
     updateSectionSubmitButton(tabId);
 }
@@ -2637,7 +2653,7 @@ function render() {
     if (entry && entry.panel) {
         entry.panel.hidden = false;
         // P2: Lazy-load Chart.js for chart-heavy tabs, re-render once loaded
-        const chartTabs = ['monthlyBudget', 'inflow', 'outflow', 'netWorth'];
+        const chartTabs = ['monthlyBudget', 'inflow', 'outflow', 'netWorth', 'gifts'];
         if (chartTabs.includes(activeTabId) && typeof Chart === 'undefined') {
             const tabIdWaitingForCharts = activeTabId;
             ensureChartJs()
@@ -3799,22 +3815,30 @@ function renderCardPreviewCards(entries) {
         const creditCardClass = card.creditCardPresent?.toLowerCase() === "yes" ? "yes" : "no";
         const kycClass      = card.kycUpdated?.toLowerCase()      === "yes" ? "yes" : "no";
         const nomineeClass  = card.nomineeAdded?.toLowerCase()    === "yes" ? "yes" : "no";
+        const displayPurpose = card.purpose === "Others" && card.purposeOther ? card.purposeOther : (card.purpose || "—");
         const primaryBadge  = card.isPrimary === "Yes"
-            ? `<span class="card-item-badge semantic-expenditure">⭐ PRIMARY (Expenditure)</span>` : "";
-        const salaryBadge = card.purpose === "Salary"
-            ? `<span class="card-item-badge semantic-insurance">💼 SALARY</span>` : "";
+            ? `<span class="card-item-badge semantic-expenditure">⭐ PRIMARY</span>` : "";
+        const purposeBadge = card.purpose && card.purpose !== "Others"
+            ? `<span class="card-item-badge semantic-insurance">${esc(card.purpose.toUpperCase())}</span>` : "";
+        const customPurposeBadge = card.purpose === "Others" && card.purposeOther
+            ? `<span class="card-item-badge semantic-insurance">${esc(card.purposeOther.toUpperCase())}</span>` : "";
         const savingBadge = (card.purpose === "Savings" || card.purpose === "Saving")
             ? `<span class="card-item-badge semantic-savings">💰 SAVINGS</span>` : "";
 
         item.innerHTML = `
             <div class="card-item-info">
-                <div class="card-item-title">${esc(card.bankName)}${primaryBadge}${salaryBadge}${savingBadge}</div>
+                <div class="card-item-title-row">
+                    <div class="card-item-title">${esc(card.bankName)}</div>
+                    <div class="card-item-title-badges">
+                        ${primaryBadge}${purposeBadge || customPurposeBadge || savingBadge}
+                    </div>
+                </div>
                 <div class="card-item-details">
                     <span class="card-item-badge ${accountClass} ${accountClass === "yes" ? "semantic-saving" : "semantic-liability"}">Account: ${esc(card.accountPresent || "No")}</span>
                     <span class="card-item-badge ${creditCardClass} ${creditCardClass === "yes" ? "semantic-liability" : "semantic-saving"}">Credit Card: ${esc(card.creditCardPresent || "No")}</span>
                     <span class="card-item-badge ${kycClass} ${kycClass === "yes" ? "semantic-saving" : "semantic-insurance"}">KYC: ${esc(card.kycUpdated || "No")}</span>
                     <span class="card-item-badge ${nomineeClass} ${nomineeClass === "yes" ? "semantic-saving" : "semantic-insurance"}">Nominee: ${esc(card.nomineeAdded || "No")}</span><br>
-                    Purpose: ${esc(card.purpose === "Others" && card.purposeOther ? card.purposeOther : (card.purpose || "—"))}
+                    Purpose: ${esc(displayPurpose)}
                 </div>
             </div>
             <div class="card-item-amounts">
@@ -4535,7 +4559,63 @@ function renderGifts() {
         
         // Render preview cards
         renderGiftsPreviewCards(entries);
+        renderGiftsMonthlyChart(entries);
     }
+}
+
+function renderGiftsMonthlyChart(entries) {
+    if (giftsMonthlyChart) {
+        giftsMonthlyChart.destroy();
+        giftsMonthlyChart = null;
+    }
+
+    if (!giftsMonthlyChartCanvas) return;
+
+    const currentDate = new Date();
+    const fyStartYear = currentDate.getMonth() < 3 ? currentDate.getFullYear() - 1 : currentDate.getFullYear();
+    const fyStart = new Date(fyStartYear, 3, 1);
+    const fyEnd = new Date(fyStartYear + 1, 2, 31);
+
+    const monthlyTotals = Array(12).fill(0);
+    const monthLabels = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+
+    entries.forEach(gift => {
+        if (!gift.date) return;
+        const giftDate = new Date(gift.date);
+        if (giftDate < fyStart || giftDate > fyEnd) return;
+        const monthIndex = (giftDate.getMonth() + 9) % 12;
+        monthlyTotals[monthIndex] += Number(gift.amount || 0);
+    });
+
+    const ctx = giftsMonthlyChartCanvas.getContext("2d");
+    const chartColors = getChartThemeColors();
+    giftsMonthlyChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: monthLabels,
+            datasets: [{
+                label: "Gift Spend (₹)",
+                data: monthlyTotals,
+                backgroundColor: chartColors.bar,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    ticks: { color: chartColors.text },
+                    grid: { color: chartColors.grid }
+                },
+                y: {
+                    ticks: { color: chartColors.text },
+                    grid: { color: chartColors.grid }
+                }
+            }
+        }
+    });
 }
 
 function renderGiftsDynamicFields() {
@@ -4570,6 +4650,9 @@ function renderGiftsDynamicFields() {
         }
         input.id = `gifts_${field.id}`;
         if (field.required) input.required = true;
+        if (field.type === "date") {
+            input.value = getDefaultDateValue();
+        }
         div.appendChild(input);
         
         giftsDynamicFields.appendChild(div);
@@ -6449,7 +6532,10 @@ if (btnDoTransfer) btnDoTransfer.addEventListener("click", async () => {
     if (savingAccount && autoDebitByType.Savings > 0) {
         savingAccount.balance = Number(savingAccount.balance || 0) + autoDebitByType.Savings;
     }
-    // Credit investment account with auto-debit investment amount
+    // Reset investment account to zero for the new month, then add current month's investment transfer
+    if (investmentAccount) {
+        investmentAccount.balance = 0;
+    }
     if (investmentAccount && autoDebitByType.Investment > 0) {
         investmentAccount.balance = Number(investmentAccount.balance || 0) + autoDebitByType.Investment;
     }
@@ -6474,6 +6560,7 @@ if (btnDoTransfer) btnDoTransfer.addEventListener("click", async () => {
     logger.info('Execute Transfer completed', { monthKey, transferAmount: amt, fixedTotal, primaryIncome });
     scheduleSave();
     renderMonthlyBudget();
+    renderCards();
 });
 
 // ── Recalculate Transfer (fix mismatch) ──────────────────────────────────────
@@ -6990,12 +7077,14 @@ function handleCategoryFieldChange(e) {
         monthData[category][fieldId] = Number(e.target.value) || 0;
     }
 
-    // When PRIMARY INCOME changes, auto-update salary account balance
+    // When PRIMARY INCOME changes, auto-update salary account balance only before transfer is executed.
     if (fieldId === "primaryIncome") {
         const newIncome = Number(e.target.value) || 0;
         const cards = (appData.tabData || {}).cards || [];
         const salary = cards.find(c => c.purpose === "Salary" && c.isPrimary !== "Yes");
-        if (salary) {
+        const monthData = (appData.monthlyBudgetData || {})[monthKey] || {};
+        const transferDone = Number(monthData._transferDone || 0);
+        if (salary && transferDone <= 0) {
             salary.balance = newIncome;
             appData.tabData.cards = cards.map(c => c.id === salary.id ? salary : c);
         }

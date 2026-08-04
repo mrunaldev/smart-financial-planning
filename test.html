@@ -658,10 +658,12 @@ function runTests() {
         };
     }
 
+    const currentDate = new Date();
+    const currentFY = currentDate.getMonth() >= 3 ? currentDate.getFullYear() : currentDate.getFullYear() - 1;
     const testGifts = [
-        { name: 'Birthday', amount: 5000, category: 'Fixed Every Year', date: '2025-06-15' },
-        { name: 'Wedding', amount: 10000, category: 'On Demand', date: '2025-08-20' },
-        { name: 'Anniversary', amount: 3000, category: 'Fixed Every Year', date: '2024-12-10' }
+        { name: 'Birthday', amount: 5000, category: 'Fixed Every Year', date: `${currentFY}-06-15` },
+        { name: 'Wedding', amount: 10000, category: 'On Demand', date: `${currentFY}-08-20` },
+        { name: 'Anniversary', amount: 3000, category: 'Fixed Every Year', date: `${currentFY - 1}-12-10` }
     ];
     
     const giftsSummary = calculateGiftsSummary(testGifts);

@@ -1940,11 +1940,25 @@ td.amount {
     flex: 1;
 }
 
+.card-item-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
 .card-item-title {
     font-size: 1.1rem;
     font-weight: 600;
     color: var(--white);
-    margin-bottom: 8px;
+}
+
+.card-item-title-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .card-item-details {

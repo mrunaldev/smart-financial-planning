@@ -2281,6 +2281,40 @@ td.amount {
     gap: 20px;
 }
 
+.tax-saving-banner {
+    background: var(--surf2);
+    border: 2px solid #3b82f6;
+    border-radius: 12px;
+    padding: 20px 24px;
+    color: var(--text);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.tax-saving-banner h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tax-saving-banner p {
+    margin: 8px 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.tax-saving-banner ul {
+    margin: 12px 0;
+    padding-left: 20px;
+}
+
+.tax-saving-banner li {
+    margin: 6px 0;
+    font-size: 0.9rem;
+}
+
 .tax-deductions-section,
 .tax-breakdown-section {
     background: var(--surf1);
@@ -3664,6 +3698,7 @@ td.amount {
     margin-top: 6px !important;
     letter-spacing: 0.3px;
     opacity: 0.8;
+    background: transparent !important;
 }
 
 /* ── On-Demand Description Input ────────────────────── */
@@ -4126,14 +4161,22 @@ td.amount {
 
 .dash-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 14px;
     margin-bottom: 16px;
+    /* Ensure cards are evenly distributed */
+    align-items: stretch;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1024px) {
     .dash-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .dash-grid {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -4194,6 +4237,277 @@ td.amount {
 .dash-goal-name { font-size: .85rem; font-weight: 500; color: var(--text); }
 .dash-goal-meta { font-size: .73rem; color: var(--muted); }
 
+/* ── Alerts & Notifications (Carousel - One at a Time) ────────────────────── */
+.dash-alerts-carousel {
+    padding: 14px 16px !important;
+}
+.dash-alerts-carousel-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.dash-alerts-carousel-track {
+    flex: 1;
+    position: relative;
+    min-height: 100px;
+    overflow: hidden;
+}
+.dash-alert-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    background: var(--surf2);
+    border: 2px solid var(--border);
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: translateX(100%);
+    pointer-events: none;
+}
+.dash-alert-card.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+}
+.dash-alert-card:hover {
+    transform: translateX(0) translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+.dash-alert-card:active {
+    transform: translateX(0) translateY(0);
+}
+.dash-alert-warning {
+    border-color: #f59e0b;
+    background: color-mix(in srgb, #f59e0b 10%, var(--surf2));
+}
+.dash-alert-warning:hover {
+    border-color: #f59e0b;
+    background: color-mix(in srgb, #f59e0b 15%, var(--surf2));
+}
+.dash-alert-info {
+    border-color: #3b82f6;
+    background: color-mix(in srgb, #3b82f6 10%, var(--surf2));
+}
+.dash-alert-info:hover {
+    border-color: #3b82f6;
+    background: color-mix(in srgb, #3b82f6 15%, var(--surf2));
+}
+.dash-alert-card .dash-alert-icon {
+    font-size: 2.2rem;
+    flex-shrink: 0;
+    line-height: 1;
+}
+.dash-alert-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.dash-alert-card .dash-alert-message {
+    font-size: .92rem;
+    color: var(--text);
+    line-height: 1.5;
+    font-weight: 500;
+}
+.dash-alert-card .dash-alert-action {
+    font-size: .8rem;
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+/* Carousel Navigation Buttons */
+.dash-carousel-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--surf2);
+    border: 2px solid var(--border);
+    color: var(--text);
+    font-size: 1.5rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    line-height: 1;
+    padding: 0;
+}
+.dash-carousel-btn:hover {
+    background: var(--surf3);
+    border-color: #3b82f6;
+    color: #3b82f6;
+    transform: scale(1.1);
+}
+.dash-carousel-btn:active {
+    transform: scale(0.95);
+}
+
+/* Carousel Dots */
+.dash-carousel-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+.dash-carousel-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.dash-carousel-dot:hover {
+    background: var(--muted);
+    transform: scale(1.2);
+}
+.dash-carousel-dot.active {
+    background: #3b82f6;
+    width: 24px;
+    border-radius: 4px;
+}
+
+/* ── Insights & Recommendations ───────────────────────────────────────────── */
+.dash-insights-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.dash-insight-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--surf2);
+    border: 1px solid var(--border);
+}
+.dash-insight-positive {
+    background: color-mix(in srgb, #10b981 6%, var(--surf2));
+    border-color: color-mix(in srgb, #10b981 20%, var(--border));
+}
+.dash-insight-suggestion {
+    background: color-mix(in srgb, #3b82f6 6%, var(--surf2));
+    border-color: color-mix(in srgb, #3b82f6 20%, var(--border));
+}
+.dash-insight-warning {
+    background: color-mix(in srgb, #f59e0b 6%, var(--surf2));
+    border-color: color-mix(in srgb, #f59e0b 20%, var(--border));
+}
+.dash-insight-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    line-height: 1;
+}
+.dash-insight-message {
+    flex: 1;
+    font-size: .88rem;
+    color: var(--text);
+    line-height: 1.5;
+}
+
+/* ── Financial Health Score ───────────────────────────────────────────────── */
+.dash-health-score-main {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+}
+.dash-health-score-circle {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+}
+.dash-health-score-svg {
+    width: 100%;
+    height: 100%;
+}
+.dash-health-score-number {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text);
+}
+.dash-health-breakdown {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.dash-health-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.dash-health-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.dash-health-item-label {
+    font-size: .82rem;
+    color: var(--text);
+    font-weight: 500;
+}
+.dash-health-item-score {
+    font-size: .75rem;
+    color: var(--muted);
+    font-weight: 600;
+}
+.dash-health-item-bar {
+    height: 6px;
+    background: var(--surf3);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.dash-health-item-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s ease;
+}
+
+/* ── Quick Actions ────────────────────────────────────────────────────────── */
+.dash-quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+}
+.dash-quick-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 8px;
+    background: var(--surf2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.dash-quick-btn:hover {
+    background: var(--surf3);
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+}
+.dash-quick-icon {
+    font-size: 1.5rem;
+}
+.dash-quick-label {
+    font-size: .75rem;
+    font-weight: 500;
+    color: var(--text);
+}
 
 /* ── Input Validation Styles ──────────────────────────────────────────────── */
 input:invalid:not(:placeholder-shown) {
@@ -4217,6 +4531,12 @@ input:invalid:not(:placeholder-shown) {
     .dash-card {
         padding: 14px 15px;
         min-height: 170px;
+    }
+    
+    /* Quick Actions - Tablet */
+    .dash-quick-actions-grid {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 10px;
     }
 }
 
@@ -4248,6 +4568,90 @@ input:invalid:not(:placeholder-shown) {
         grid-template-columns: 1fr;
         gap: 12px;
         margin-bottom: 14px;
+        /* Ensure cards are evenly distributed on mobile */
+        align-items: stretch;
+    }
+    
+    /* Quick Actions - Mobile */
+    .dash-quick-actions-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    .dash-quick-btn {
+        padding: 12px 6px;
+    }
+    .dash-quick-icon {
+        font-size: 1.3rem;
+    }
+    .dash-quick-label {
+        font-size: .7rem;
+    }
+    
+    /* Alerts Carousel - Mobile */
+    .dash-alerts-carousel {
+        padding: 12px !important;
+    }
+    .dash-alerts-carousel-container {
+        gap: 8px;
+    }
+    .dash-alert-card {
+        padding: 14px 16px;
+    }
+    .dash-alert-card .dash-alert-icon {
+        font-size: 1.8rem;
+    }
+    .dash-alert-card .dash-alert-message {
+        font-size: .85rem;
+    }
+    .dash-alert-card .dash-alert-action {
+        font-size: .76rem;
+    }
+    .dash-carousel-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 1.3rem;
+    }
+    .dash-carousel-dots {
+        margin-top: 10px;
+        gap: 6px;
+    }
+    .dash-carousel-dot {
+        width: 6px;
+        height: 6px;
+    }
+    .dash-carousel-dot.active {
+        width: 20px;
+    }
+    
+    /* Health Score - Mobile */
+    .dash-health-score-main {
+        flex-direction: column;
+        gap: 16px;
+    }
+    .dash-health-score-circle {
+        width: 100px;
+        height: 100px;
+    }
+    .dash-health-score-number {
+        font-size: 1.6rem;
+    }
+    .dash-health-item-label {
+        font-size: .78rem;
+    }
+    .dash-health-item-score {
+        font-size: .72rem;
+    }
+    
+    /* Insights - Mobile */
+    .dash-insight-item {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+    .dash-insight-icon {
+        font-size: 1.1rem;
+    }
+    .dash-insight-message {
+        font-size: .82rem;
     }
     .dash-card { 
         padding: 12px 14px; 
@@ -4307,3 +4711,88 @@ input:invalid:not(:placeholder-shown) {
     .settings-panel, .help-panel, .logs-panel { transition: none; }
     .dash-progress-fill { transition: none; }
 }
+
+/* -- Expense Tracking -------------------------------------------------------- */
+.expense-ui { display: block; }
+.expense-preview { margin-top: 24px; }
+.expense-edit { margin-top: 24px; }
+
+.summary-card {
+    background: var(--surf2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+}
+
+.summary-label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+
+.summary-value {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.summary-note {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--dim);
+}
+
+.category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.category-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--surf2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.category-name {
+    flex: 1;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.category-amount {
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.category-percent {
+    font-size: 0.85rem;
+    color: var(--muted);
+    min-width: 50px;
+    text-align: right;
+}
+
+
+/* -- Tax Plan Subsections ----------------------------------------------------- */
+.tax-subsection {
+    margin-bottom: 32px;
+    padding: 20px;
+    background: var(--surf2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.tax-subsection h4 {
+    margin: 0 0 16px 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+}
+

@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="assets/logo.png" id="apple-touch-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="assets/css/styles.css?v=1785884544">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <title>₹ SmartFin – Financial Planning</title>
 </head>
@@ -68,7 +68,12 @@
                     <option value="Surat, Gujarat, India">Surat, Gujarat, India</option>
                     <option value="Gurgaon, Haryana, India">Gurgaon, Haryana, India</option>
                     <option value="Noida, Uttar Pradesh, India">Noida, Uttar Pradesh, India</option>
+                    <option value="Other">Other (Custom City)</option>
                 </select>
+            </div>
+            <div class="field" id="customLocationField" hidden>
+                <label for="authCustomLocation">Enter Your City</label>
+                <input id="authCustomLocation" type="text" placeholder="e.g. Mysore, Karnataka, India" autocomplete="off">
             </div>
             <div class="field">
                 <label for="authEmail">Email address</label>
@@ -739,6 +744,36 @@
             </div>
         </div>
 
+        <!-- Expense Tracking Specific UI -->
+        <div id="expenseUI" class="expense-ui" hidden>
+            <div class="goal-header">
+                <h2>Expense Tracking</h2>
+                <button type="button" id="toggleExpenseEdit" class="btn-nav btn-icon">✎ Edit</button>
+            </div>
+
+            <!-- Preview Mode - Summary -->
+            <div id="expensePreview" class="expense-preview">
+                <div id="expenseSummary"></div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="expenseEdit" class="expense-edit" hidden>
+                <form class="entry-form" id="expenseForm" autocomplete="off">
+                    <div id="expenseDynamicFields"></div>
+                    <div class="field field-btn">
+                        <button type="submit" class="btn-add">Add Expense</button>
+                    </div>
+                </form>
+                <div class="table-wrap">
+                    <table>
+                        <thead id="expenseTableHead"></thead>
+                        <tbody id="expenseTableBody"></tbody>
+                    </table>
+                    <p class="empty-state" id="expenseEmptyState">No expenses tracked yet. Add one above.</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Net Worth Specific UI -->
         <div id="netWorthUI" class="net-worth-ui" hidden>
             <div class="goal-header">
@@ -871,6 +906,20 @@
 
             <!-- Preview Mode -->
             <div id="taxPlanPreview" class="tax-plan-preview">
+                <div id="taxSavingBanner" class="tax-saving-banner" style="display:none;"></div>
+                
+                <!-- Salary Details Section -->
+                <div class="tax-deductions-section">
+                    <h3>Salary Details</h3>
+                    <div id="salaryDetailsList" class="tax-deductions-list"></div>
+                </div>
+                
+                <!-- House Property Section -->
+                <div class="tax-deductions-section">
+                    <h3>House Property</h3>
+                    <div id="housePropertyList" class="tax-deductions-list"></div>
+                </div>
+                
                 <div class="tax-deductions-section">
                     <h3>Tax Deductions</h3>
                     <div id="taxDeductionsList" class="tax-deductions-list"></div>
@@ -883,18 +932,74 @@
 
             <!-- Edit Mode -->
             <div id="taxPlanEdit" class="tax-plan-edit" hidden>
-                <form class="entry-form" id="taxPlanForm" autocomplete="off">
-                    <div id="taxPlanDynamicFields"></div>
-                    <div class="field field-btn">
-                        <button type="submit" class="btn-add">Add Tax Saving Item</button>
+                <!-- Salary Details Form -->
+                <div class="tax-subsection">
+                    <h4>Salary Details (Optional - for HRA exemption)</h4>
+                    <div class="entry-form">
+                        <div class="field">
+                            <label for="basicSalary">Basic Salary (₹/year)</label>
+                            <input type="number" id="basicSalary" placeholder="0" min="0">
+                        </div>
+                        <div class="field">
+                            <label for="hraReceived">HRA Received (₹/year)</label>
+                            <input type="number" id="hraReceived" placeholder="0" min="0">
+                        </div>
+                        <div class="field">
+                            <label for="rentPaid">Rent Paid (₹/year)</label>
+                            <input type="number" id="rentPaid" placeholder="0" min="0">
+                        </div>
+                        <div class="field">
+                            <label for="isMetroCity">Metro City?</label>
+                            <select id="isMetroCity">
+                                <option value="yes">Yes (50% HRA exemption)</option>
+                                <option value="no">No (40% HRA exemption)</option>
+                            </select>
+                        </div>
                     </div>
-                </form>
-                <div class="table-wrap">
-                    <table>
-                        <thead id="taxPlanTableHead"></thead>
-                        <tbody id="taxPlanTableBody"></tbody>
-                    </table>
-                    <p class="empty-state" id="taxPlanEmptyState">No tax saving items yet. Add one above.</p>
+                </div>
+
+                <!-- House Property Form -->
+                <div class="tax-subsection">
+                    <h4>House Property (Optional - for Section 24(b))</h4>
+                    <div class="entry-form">
+                        <div class="field">
+                            <label for="rentalIncome">Rental Income (₹/year)</label>
+                            <input type="number" id="rentalIncome" placeholder="0" min="0">
+                        </div>
+                        <div class="field">
+                            <label for="municipalTaxes">Municipal Taxes Paid (₹/year)</label>
+                            <input type="number" id="municipalTaxes" placeholder="0" min="0">
+                        </div>
+                        <div class="field">
+                            <label for="homeLoanInterest">Home Loan Interest (₹/year)</label>
+                            <input type="number" id="homeLoanInterest" placeholder="0" min="0">
+                        </div>
+                        <div class="field">
+                            <label for="isSelfOccupied">Property Type</label>
+                            <select id="isSelfOccupied">
+                                <option value="yes">Self-Occupied (Max ₹2L interest deduction)</option>
+                                <option value="no">Let Out (No interest limit)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tax Saving Items Form -->
+                <div class="tax-subsection">
+                    <h4>Tax Saving Items</h4>
+                    <form class="entry-form" id="taxPlanForm" autocomplete="off">
+                        <div id="taxPlanDynamicFields"></div>
+                        <div class="field field-btn">
+                            <button type="submit" class="btn-add">Add Tax Saving Item</button>
+                        </div>
+                    </form>
+                    <div class="table-wrap">
+                        <table>
+                            <thead id="taxPlanTableHead"></thead>
+                            <tbody id="taxPlanTableBody"></tbody>
+                        </table>
+                        <p class="empty-state" id="taxPlanEmptyState">No tax saving items yet. Add one above.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1119,6 +1224,17 @@
                 <div class="settings-row-sub">View application logs and debug information</div>
             </div>
             <button type="button" id="logsBtn" class="btn-settings-action">View Logs</button>
+        </div>
+    </div>
+
+    <!-- App Version -->
+    <div class="settings-section">
+        <h3 class="settings-section-title">App Information</h3>
+        <div class="settings-row">
+            <div>
+                <div class="settings-row-label">Version</div>
+                <div class="settings-row-sub" id="settingsVersionDisplay">Loading...</div>
+            </div>
         </div>
     </div>
 
@@ -1363,6 +1479,10 @@
     <div class="help-content">
         <div class="logs-controls">
             <div class="logs-filter-group">
+                <label for="logSearchInput">Search:</label>
+                <input type="text" id="logSearchInput" placeholder="Search logs..." style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surf1); color: var(--text); width: 200px;">
+            </div>
+            <div class="logs-filter-group">
                 <label for="logLevelFilter">Log Level:</label>
                 <select id="logLevelFilter">
                     <option value="all">All</option>
@@ -1412,7 +1532,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <!-- SheetJS + Chart.js are lazy-loaded on demand (see app.js loadScript) -->
-<script src="assets/js/firebase-config.js?v=3"></script>
-<script type="module" src="assets/js/app.js?v=3"></script>
+<script src="assets/js/firebase-config.js?v=1785884544"></script>
+<script type="module" src="assets/js/app.js?v=1785884544"></script>
 </body>
 </html>

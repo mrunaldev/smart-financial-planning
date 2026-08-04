@@ -340,6 +340,8 @@ function stopLogsAutoRefresh() {
 
 async function loadLogs() {
     const levelFilter = document.getElementById('logLevelFilter').value;
+    const searchInput = document.getElementById('logSearchInput');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const filters = {};
     
     if (levelFilter !== 'all') {
@@ -347,7 +349,17 @@ async function loadLogs() {
     }
     
     try {
-        const logs = await logger.getLogs(filters);
+        let logs = await logger.getLogs(filters);
+        
+        // Apply search filter
+        if (searchTerm) {
+            logs = logs.filter(log => {
+                const message = log.message.toLowerCase();
+                const context = log.context ? JSON.stringify(log.context).toLowerCase() : '';
+                return message.includes(searchTerm) || context.includes(searchTerm);
+            });
+        }
+        
         renderLogs(logs);
         updateLogsStats(logs);
     } catch (error) {
@@ -459,6 +471,7 @@ const logRefreshBtn = document.getElementById('logRefreshBtn');
 const logExportBtn = document.getElementById('logExportBtn');
 const logClearBtn = document.getElementById('logClearBtn');
 const logLevelFilter = document.getElementById('logLevelFilter');
+const logSearchInput = document.getElementById('logSearchInput');
 
 if (logsBtn) {
     logsBtn.addEventListener('click', (e) => {
@@ -488,6 +501,10 @@ if (logClearBtn) {
 
 if (logLevelFilter) {
     logLevelFilter.addEventListener('change', loadLogs);
+}
+
+if (logSearchInput) {
+    logSearchInput.addEventListener('input', loadLogs);
 }
 
 // Close logs panel when clicking overlay
@@ -552,10 +569,15 @@ function semanticBadgeStyle(value, paid = false) {
 }
 
 // ── Version Info ──────────────────────────────────────────────────────────────
-const APP_VERSION = { major: 2, minor: 0, build: 10 };
+const APP_VERSION = { major: 2, minor: 3, build: 21 };
 function getAppVersion() {
     return `v${APP_VERSION.major}.${APP_VERSION.minor}.${APP_VERSION.build}`;
 }
+
+// Log version on load
+console.log(`%c🚀 SmartFin ${getAppVersion()} loaded`, 'color: #3b82f6; font-weight: bold; font-size: 14px;');
+console.log('If you see errors about "saveData is not defined", please hard refresh (Ctrl+Shift+R)');
+console.log('Current APP_VERSION:', APP_VERSION);
 
 // ── Utility: sum only numeric values from a category data object ─────────────
 function sumCategoryNumericValues(data) {
@@ -573,6 +595,7 @@ const DEFAULT_TABS = [
     { id: "outflow",             label: "Fixed Outflow",          semantic: "Liability", core: true },
     { id: "insurance",           label: "Insurance",             semantic: "Insurance", core: true },
     { id: "monthlyBudget",       label: "Budget",                semantic: "Expenditure", core: true },
+    { id: "expenseTracking",     label: "Expense Tracking",      semantic: "Expenditure", core: true },
     { id: "financialGoal",       label: "Goals",                 semantic: "Savings", core: true },
     { id: "netWorth",            label: "Net Worth",             semantic: "Others" },
     { id: "taxPlan",             label: "Tax Plan",              semantic: "Savings" },
@@ -595,6 +618,14 @@ const TAB_FIELDS = {
         { id: "actual",    label: "Actual Amount (₹)",  type: "number", placeholder: "0" },
         { id: "date",      label: "Date",               type: "date",   placeholder: "" },
         { id: "note",      label: "Note",               type: "text",   placeholder: "Optional" }
+    ],
+    expenseTracking: [
+        { id: "date",      label: "Date",               type: "date",   placeholder: "", required: true },
+        { id: "category",  label: "Category",           type: "select", options: ["Groceries", "Vegetables & Fruits", "Dairy & Bakery", "Meat & Seafood", "Dining Out", "Food Delivery", "Snacks & Beverages", "Medical & Healthcare", "Medicines", "Doctor Consultation", "Lab Tests", "Travel & Transport", "Fuel/Petrol", "Public Transport", "Cab/Auto", "Vehicle Maintenance", "Shopping & Clothing", "Clothes & Footwear", "Accessories", "Personal Care", "Home & Living", "House Rent", "Electricity Bill", "Water Bill", "Gas/LPG", "Internet/Broadband", "Mobile Recharge", "DTH/Cable", "Home Maintenance", "Furniture & Appliances", "Entertainment", "Movies & Shows", "Events & Concerts", "Hobbies", "Subscriptions", "Education", "Books & Stationery", "Courses & Training", "School/College Fees", "Gifts & Donations", "Gifts", "Charity", "Religious", "Pet Care", "Pet Food", "Vet Visits", "Pet Supplies", "Beauty & Wellness", "Salon/Spa", "Gym/Fitness", "Sports", "Miscellaneous", "Others"], required: true },
+        { id: "amount",    label: "Amount (₹)",         type: "number", placeholder: "0", required: true },
+        { id: "paymentMode", label: "Payment Mode",     type: "select", options: ["Cash", "Debit Card", "Credit Card", "UPI", "Net Banking", "Wallet", "Others"] },
+        { id: "merchant",  label: "Merchant/Store",     type: "text",   placeholder: "e.g. Big Bazaar, Amazon" },
+        { id: "note",      label: "Note",               type: "text",   placeholder: "Optional details" }
     ],
     financialGoal: [
         { id: "name",      label: "Goal Name",           type: "text",   placeholder: "e.g. Emergency Fund", required: true },
@@ -646,7 +677,7 @@ const TAB_FIELDS = {
     taxPlan: [
         { id: "name",      label: "Tax Saving Item",     type: "text",   placeholder: "e.g. PPF, ELSS, 80C", required: true },
         { id: "amount",   label: "Amount Invested (₹)", type: "number", placeholder: "0", required: true },
-        { id: "section",  label: "Section",             type: "select", options: ["80C", "80D", "80CCD(1B)", "80CCD(2)", "80E", "80EEA", "80G", "Others"] },
+        { id: "section",  label: "Section",             type: "select", options: ["80C", "80D", "80CCD(1B)", "80CCD(2)", "80E", "80EEA", "80G", "24(b)", "80TTA", "HRA", "Others"] },
         { id: "details",   label: "Details",            type: "text",   placeholder: "Optional" }
     ],
     gifts: [
@@ -715,6 +746,8 @@ const appScreen         = document.getElementById("appScreen");
 const authForm          = document.getElementById("authForm");
 const authNameInput     = document.getElementById("authName");
 const authDobInput      = document.getElementById("authDob");
+const authLocationInput = document.getElementById("authLocation");
+const authCustomLocationInput = document.getElementById("authCustomLocation");
 const authEmailInput    = document.getElementById("authEmail");
 const authPasswordInput = document.getElementById("authPassword");
 const authSubmitBtn     = document.getElementById("authSubmitBtn");
@@ -864,6 +897,19 @@ const cardTableHead     = document.getElementById("cardTableHead");
 const cardTableBody     = document.getElementById("cardTableBody");
 const cardEmptyState    = document.getElementById("cardEmptyState");
 
+// Expense Tracking refs
+const expenseUI           = document.getElementById("expenseUI");
+const toggleExpenseEdit   = document.getElementById("toggleExpenseEdit");
+const expensePreview      = document.getElementById("expensePreview");
+const expenseEdit         = document.getElementById("expenseEdit");
+const expenseList         = document.getElementById("expenseList");
+const expenseForm         = document.getElementById("expenseForm");
+const expenseDynamicFields = document.getElementById("expenseDynamicFields");
+const expenseTableHead    = document.getElementById("expenseTableHead");
+const expenseTableBody    = document.getElementById("expenseTableBody");
+const expenseEmptyState   = document.getElementById("expenseEmptyState");
+const expenseSummary      = document.getElementById("expenseSummary");
+
 // Net Worth refs
 const netWorthUI        = document.getElementById("netWorthUI");
 const toggleNetWorthEdit = document.getElementById("toggleNetWorthEdit");
@@ -881,19 +927,46 @@ const netWorthEmptyState = document.getElementById("netWorthEmptyState");
 const netWorthProjectionChartCanvas = document.getElementById("netWorthProjectionChart");
 
 // Tax Plan refs
-const taxPlanUI         = document.getElementById("taxPlanUI");
-const toggleTaxPlanEdit = document.getElementById("toggleTaxPlanEdit");
-const taxRegimeSelect   = document.getElementById("taxRegime");
-const financialYearSelect = document.getElementById("financialYear");
-const taxPlanPreview   = document.getElementById("taxPlanPreview");
-const taxPlanEdit      = document.getElementById("taxPlanEdit");
-const taxDeductionsList = document.getElementById("taxDeductionsList");
-const taxBreakdown     = document.getElementById("taxBreakdown");
-const taxPlanForm      = document.getElementById("taxPlanForm");
-const taxPlanDynamicFields = document.getElementById("taxPlanDynamicFields");
-const taxPlanTableHead = document.getElementById("taxPlanTableHead");
-const taxPlanTableBody = document.getElementById("taxPlanTableBody");
-const taxPlanEmptyState = document.getElementById("taxPlanEmptyState");
+let taxPlanUI = null;
+let toggleTaxPlanEdit = null;
+let taxRegimeSelect = null;
+let financialYearSelect = null;
+let taxPlanPreview = null;
+let taxPlanEdit = null;
+let taxDeductionsList = null;
+let taxBreakdown = null;
+let salaryDetailsList = null;
+let housePropertyList = null;
+let taxPlanForm = null;
+let salaryDetailsForm = null;
+let housePropertyForm = null;
+let taxPlanDynamicFields = null;
+let taxPlanTableHead = null;
+let taxPlanTableBody = null;
+let taxPlanEmptyState = null;
+let taxSavingBanner = null;
+
+// Initialize tax plan elements after DOM is loaded
+function initTaxPlanElements() {
+    taxPlanUI = document.getElementById("taxPlanUI");
+    toggleTaxPlanEdit = document.getElementById("toggleTaxPlanEdit");
+    taxRegimeSelect = document.getElementById("taxRegime");
+    financialYearSelect = document.getElementById("financialYear");
+    taxPlanPreview = document.getElementById("taxPlanPreview");
+    taxPlanEdit = document.getElementById("taxPlanEdit");
+    taxDeductionsList = document.getElementById("taxDeductionsList");
+    taxBreakdown = document.getElementById("taxBreakdown");
+    salaryDetailsList = document.getElementById("salaryDetailsList");
+    housePropertyList = document.getElementById("housePropertyList");
+    taxPlanForm = document.getElementById("taxPlanForm");
+    salaryDetailsForm = document.getElementById("salaryDetailsForm");
+    housePropertyForm = document.getElementById("housePropertyForm");
+    taxPlanDynamicFields = document.getElementById("taxPlanDynamicFields");
+    taxPlanTableHead = document.getElementById("taxPlanTableHead");
+    taxPlanTableBody = document.getElementById("taxPlanTableBody");
+    taxPlanEmptyState = document.getElementById("taxPlanEmptyState");
+    taxSavingBanner = document.getElementById("taxSavingBanner");
+}
 
 // Gifts refs
 const giftsUI          = document.getElementById("giftsUI");
@@ -935,7 +1008,7 @@ const fieldInputs = {};
 let isRegisterMode = false;
 let currentUser    = null;
 let activeTabId    = "dashboard";
-let appData        = { tabData: {}, customTabs: [], userName: "", monthlyBudgetData: {} };
+let appData        = { tabData: {}, customTabs: [], userName: "", monthlyBudgetData: {}, taxData: {} };
 let firestoreUnsub = null;
 let saveTimer      = null;
 let currentMonth    = new Date(); // For monthly budget navigation
@@ -947,6 +1020,7 @@ let isGoalEditMode  = false;
 let isInflowEditMode = false;
 let isOutflowEditMode = false;
 let isCardEditMode = false;
+let isExpenseEditMode = false;
 let isNetWorthEditMode = false;
 let isTaxPlanEditMode = false;
 let isGiftsEditMode = false;
@@ -987,6 +1061,7 @@ const sectionConfig = {
     inflow: { prefix: "inflow", form: () => inflowForm, submitText: "Save Inflow", addText: "Add Inflow", render: () => renderInflow() },
     outflow: { prefix: "outflow", form: () => outflowForm, submitText: "Save Outflow", addText: "Add Outflow", render: () => renderOutflow() },
     cards: { prefix: "card", form: () => cardForm, submitText: "Save Account", addText: "Add Account", render: () => renderCards() },
+    expenseTracking: { prefix: "expense", form: () => expenseForm, submitText: "Save Expense", addText: "Add Expense", render: () => renderExpenseTracking() },
     netWorth: { prefix: "netWorth", form: () => netWorthForm, submitText: "Save Asset/Liability", addText: "Add Asset/Liability", render: () => renderNetWorth() },
     taxPlan: { prefix: "taxPlan", form: () => taxPlanForm, submitText: "Save Tax Item", addText: "Add Tax Saving Item", render: () => renderTaxPlan() },
     gifts: { prefix: "gifts", form: () => giftsForm, submitText: "Save Gift", addText: "Add Gift", render: () => renderGifts() },
@@ -1006,6 +1081,9 @@ auth.onAuthStateChanged(user => {
         logger.setUserId(user.uid);
         logger.info('User signed in', { uid: user.uid, email: user.email });
         authScreen.hidden = true;
+        // Initialize tax plan elements and event listeners
+        initTaxPlanElements();
+        initTaxPlanEventListeners();
         // Don't show app screen yet — wait for first Firestore snapshot to avoid flash
         startListening();
     } else {
@@ -1070,12 +1148,38 @@ if (forgotPasswordBtn) {
     });
 }
 
+// Handle location dropdown change to show/hide custom location field
+authLocationInput.addEventListener("change", () => {
+    const customLocationField = document.getElementById("customLocationField");
+    if (authLocationInput.value === "Other") {
+        customLocationField.hidden = false;
+        authCustomLocationInput.required = true;
+    } else {
+        customLocationField.hidden = true;
+        authCustomLocationInput.required = false;
+        authCustomLocationInput.value = "";
+    }
+});
+
 authForm.addEventListener("submit", async e => {
     e.preventDefault();
     const email    = authEmailInput.value.trim();
     const password = authPasswordInput.value;
     const name     = authNameInput.value.trim();
     const dob      = authDobInput.value;
+    const location = authLocationInput.value;
+    const customLocation = authCustomLocationInput.value.trim();
+    
+    // Handle custom location
+    let finalLocation = location;
+    if (location === "Other") {
+        if (!customLocation) {
+            setAuthError("Please enter your city when 'Other' is selected.");
+            return;
+        }
+        finalLocation = customLocation;
+    }
+    
     // P1: Input validation improvements
     if (!email || !password) { setAuthError("Please fill in all required fields."); return; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1094,6 +1198,7 @@ authForm.addEventListener("submit", async e => {
                 customTabs: [],
                 userName: name,
                 dateOfBirth: dob,
+                userLocation: finalLocation,
                 monthlyBudgetData: {},
                 onboardingComplete: false,
                 onboardingDate: new Date().toISOString().slice(0, 10),
@@ -1178,6 +1283,12 @@ function openSettings() {
     settingsOverlay.hidden = false;
     settingsPanel.classList.add("open");
     settingsPanel.setAttribute("aria-hidden", "false");
+    
+    // Display app version in settings
+    const versionDisplay = document.getElementById("settingsVersionDisplay");
+    if (versionDisplay) {
+        versionDisplay.textContent = `v${APP_VERSION.major}.${APP_VERSION.minor}.${APP_VERSION.build}`;
+    }
 }
 
 function closeSettings() {
@@ -1584,6 +1695,7 @@ importFileInput.addEventListener("change", async (e) => {
                 onboardingComplete: imported.onboardingComplete || false,
                 onboardingDate: imported.onboardingDate || "",
                 dataMigrated: imported.dataMigrated || false,
+                taxData: imported.taxData || {}
             };
 
             db.collection("users").doc(currentUser.uid)
@@ -1732,6 +1844,9 @@ function startListening() {
 
             if (snap.exists) {
                 const d = snap.data();
+                console.log('📥 Loading data from Firestore...');
+                console.log('Firestore taxData:', d.taxData);
+                
                 appData = {
                     tabData: d.tabData || {},
                     customTabs: d.customTabs || [],
@@ -1743,7 +1858,10 @@ function startListening() {
                     onboardingComplete: d.onboardingComplete || false,
                     onboardingDate: d.onboardingDate || "",
                     dataMigrated: d.dataMigrated || false,
+                    taxData: d.taxData || {},
                 };
+                
+                console.log('Loaded appData.taxData:', appData.taxData);
                 userEmailDisplay.textContent = appData.userName || currentUser.email;
 
                 // Data migration: convert old tab structure on first load
@@ -1768,7 +1886,7 @@ function startListening() {
                     }
                 }
             } else {
-                appData = { tabData: {}, customTabs: [], userName: "", monthlyBudgetData: {}, fixedMonthlyIncome: 0, dateOfBirth: "", currentAge: 0, onboardingComplete: false, onboardingDate: "", dataMigrated: false };
+                appData = { tabData: {}, customTabs: [], userName: "", monthlyBudgetData: {}, fixedMonthlyIncome: 0, dateOfBirth: "", currentAge: 0, onboardingComplete: false, onboardingDate: "", dataMigrated: false, taxData: {} };
                 userEmailDisplay.textContent = currentUser.email;
                 if (firstLoad) {
                     firstLoad = false;
@@ -1777,6 +1895,12 @@ function startListening() {
             }
             // Show app screen now that data is ready (prevents flash of intermediate content)
             appScreen.hidden = false;
+            
+            // Ensure taxData exists (for backward compatibility with old data)
+            if (!appData.taxData) {
+                appData.taxData = {};
+            }
+            
             render();
             
             // Restore focused input state after re-render (prevents value loss while typing)
@@ -1814,11 +1938,16 @@ function doSave() {
     if (!currentUser) return;
     localWritePending = true;
     
-    logger.info('Saving data to Firebase', { userId: currentUser.uid });
+    console.log('💾 Saving to Firestore...');
+    console.log('appData.taxData:', appData.taxData);
+    console.log('appData.tabData.taxPlan:', appData.tabData?.taxPlan);
+    
+    logger.info('Saving data to Firebase', { userId: currentUser.uid, hasTaxData: !!appData.taxData });
     
     db.collection("users").doc(currentUser.uid)
         .set(appData, { merge: true })
         .then(() => {
+            console.log('✅ Saved successfully');
             logger.info('Data saved successfully', { userId: currentUser.uid });
         })
         .catch(err => { 
@@ -1844,6 +1973,7 @@ function doSave() {
 
 function normalizeAppDataModel() {
     if (!appData.tabData) appData.tabData = {};
+    if (!appData.taxData) appData.taxData = {};
     if (Array.isArray(appData.tabData.inflow)) {
         const before = JSON.stringify(appData.tabData.inflow);
         appData.tabData.inflow = normalizeInvestmentEntries(appData.tabData.inflow);
@@ -3838,7 +3968,7 @@ function renderCardPreviewCards(entries) {
                     <span class="card-item-badge ${creditCardClass} ${creditCardClass === "yes" ? "semantic-liability" : "semantic-saving"}">Credit Card: ${esc(card.creditCardPresent || "No")}</span>
                     <span class="card-item-badge ${kycClass} ${kycClass === "yes" ? "semantic-saving" : "semantic-insurance"}">KYC: ${esc(card.kycUpdated || "No")}</span>
                     <span class="card-item-badge ${nomineeClass} ${nomineeClass === "yes" ? "semantic-saving" : "semantic-insurance"}">Nominee: ${esc(card.nomineeAdded || "No")}</span><br>
-                    Purpose: ${esc(displayPurpose)}
+                    ${esc(displayPurpose)}
                 </div>
             </div>
             <div class="card-item-amounts">
@@ -3865,6 +3995,179 @@ function calculateCardSummary(entries) {
     document.getElementById("totalBalance").textContent = formatMoney(totalBalance);
     document.getElementById("totalCreditLimit").textContent = formatMoney(totalCreditLimit);
     document.getElementById("totalCreditCards").textContent = totalCreditCards;
+}
+
+// ── Expense Tracking Tab ──────────────────────────────────────────────────────
+function renderExpenseTracking() {
+    const entries = activeEntries();
+    const monthKey = getMonthKey();
+    const monthData = (appData.monthlyBudgetData || {})[monthKey] || {};
+    const autoVariableExp = Number(monthData.outflow?.variableExpenditure || 0);
+    
+    // Calculate total from tracked expenses
+    const trackedTotal = entries.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    const difference = trackedTotal - autoVariableExp;
+    const matchPercentage = autoVariableExp > 0 ? Math.round((trackedTotal / autoVariableExp) * 100) : 0;
+    
+    // Update toggle button text
+    if (toggleExpenseEdit) toggleExpenseEdit.textContent = isExpenseEditMode ? "✓ Done" : "✎ Edit";
+    
+    // Show/hide preview/edit modes
+    if (isExpenseEditMode) {
+        if (expensePreview) expensePreview.hidden = true;
+        if (expenseEdit) expenseEdit.hidden = false;
+        
+        // Render form fields
+        renderExpenseDynamicFields();
+        updateSectionSubmitButton("expenseTracking");
+        
+        // Render table
+        renderExpenseTable(entries);
+    } else {
+        if (expensePreview) expensePreview.hidden = false;
+        if (expenseEdit) expenseEdit.hidden = true;
+        
+        // Render summary
+        renderExpenseSummary(entries, autoVariableExp, trackedTotal, difference, matchPercentage);
+    }
+}
+
+function renderExpenseDynamicFields() {
+    if (!expenseDynamicFields) return;
+    expenseDynamicFields.innerHTML = "";
+    const fields = TAB_FIELDS.expenseTracking;
+    
+    fields.forEach(field => {
+        const div = document.createElement("div");
+        div.className = "field";
+        
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        div.appendChild(label);
+        
+        let input;
+        if (field.type === "select") {
+            input = document.createElement("select");
+            field.options.forEach(opt => {
+                const option = document.createElement("option");
+                option.value = opt;
+                option.textContent = opt;
+                input.appendChild(option);
+            });
+        } else {
+            input = document.createElement("input");
+            input.type = field.type;
+            input.placeholder = field.placeholder || "";
+            if (field.type === "number") {
+                input.min = "0";
+                input.step = field.step || "1";
+            }
+            if (field.type === "date" && !field.placeholder) {
+                input.value = getDefaultDateValue();
+            }
+        }
+        input.id = `expense_${field.id}`;
+        if (field.required) input.required = true;
+        div.appendChild(input);
+        
+        expenseDynamicFields.appendChild(div);
+    });
+}
+
+function renderExpenseTable(entries) {
+    if (!expenseTableHead || !expenseTableBody) return;
+    
+    const fields = TAB_FIELDS.expenseTracking;
+    
+    // Render table head
+    expenseTableHead.innerHTML = fields.map(f => `<th>${f.label}</th>`).join('') + '<th>Actions</th>';
+    
+    // Render table body
+    expenseTableBody.innerHTML = "";
+    if (entries.length === 0) {
+        if (expenseEmptyState) expenseEmptyState.hidden = false;
+        return;
+    }
+    if (expenseEmptyState) expenseEmptyState.hidden = true;
+    
+    // Sort by date descending
+    const sorted = [...entries].sort((a, b) => {
+        const dateA = new Date(a.date || 0);
+        const dateB = new Date(b.date || 0);
+        return dateB - dateA;
+    });
+    
+    sorted.forEach(entry => {
+        const row = document.createElement("tr");
+        fields.forEach(f => {
+            const td = document.createElement("td");
+            let val = entry[f.id] || "";
+            if (f.type === "number") val = formatMoney(Number(val));
+            if (f.type === "date" && val) val = formatDate(val);
+            td.textContent = val;
+            row.appendChild(td);
+        });
+        
+        const actionTd = document.createElement("td");
+        actionTd.innerHTML = `
+            <button class="btn-edit" onclick="editEntry('expenseTracking', '${entry.id}')">Edit</button>
+            <button class="btn-delete" onclick="deleteEntry('expenseTracking', '${entry.id}')">Delete</button>
+        `;
+        row.appendChild(actionTd);
+        expenseTableBody.appendChild(row);
+    });
+}
+
+function renderExpenseSummary(entries, autoVariableExp, trackedTotal, difference, matchPercentage) {
+    if (!expenseSummary) return;
+    
+    // Group by category
+    const byCategory = {};
+    entries.forEach(e => {
+        const cat = e.category || "Others";
+        if (!byCategory[cat]) byCategory[cat] = 0;
+        byCategory[cat] += Number(e.amount || 0);
+    });
+    
+    const categories = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+    
+    const statusColor = Math.abs(difference) < 100 ? '#10b981' : difference > 0 ? '#ef4444' : '#3b82f6';
+    const statusText = Math.abs(difference) < 100 ? 'Matched!' : difference > 0 ? 'Over' : 'Under';
+    
+    expenseSummary.innerHTML = `
+        <div class="budget-status" style="background: ${statusColor}22; color: ${statusColor}; margin-bottom: 20px;">
+            <strong>Expense Tracking vs Budget:</strong> ${statusText} by ${formatMoney(Math.abs(difference))} (${matchPercentage}% match)
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div class="summary-card">
+                <div class="summary-label">Auto-calculated Variable Exp</div>
+                <div class="summary-value" style="color: #3b82f6;">${formatMoney(autoVariableExp)}</div>
+                <div class="summary-note">From Budget tab</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Tracked Expenses</div>
+                <div class="summary-value" style="color: ${trackedTotal > autoVariableExp ? '#ef4444' : '#10b981'};">${formatMoney(trackedTotal)}</div>
+                <div class="summary-note">${entries.length} transaction${entries.length !== 1 ? 's' : ''}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">Difference</div>
+                <div class="summary-value" style="color: ${statusColor};">${difference >= 0 ? '+' : ''}${formatMoney(difference)}</div>
+                <div class="summary-note">${statusText}</div>
+            </div>
+        </div>
+        
+        <h3 style="margin: 24px 0 12px; font-size: 1.1rem;">Category Breakdown</h3>
+        <div class="category-list">
+            ${categories.map(([cat, amount]) => `
+                <div class="category-item">
+                    <span class="category-name">${cat}</span>
+                    <span class="category-amount">${formatMoney(amount)}</span>
+                    <span class="category-percent">${autoVariableExp > 0 ? Math.round((amount / autoVariableExp) * 100) : 0}%</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
 }
 
 function getAutoNetWorthEntries() {
@@ -4269,72 +4572,213 @@ function getAnnualIncomeFromBudget(fyStartYear = getFinancialYearStartYear(new D
 
 function getAutoTaxDeductions() {
     const auto = [];
+    const fyStartYear = getSelectedTaxFyStartYear();
+    const fyStartDate = new Date(fyStartYear, 3, 1); // April 1
+    const fyEndDate = new Date(fyStartYear + 1, 2, 31); // March 31
+    
     // Outflow items with type Insurance → 80D
     const outflowItems = (appData.tabData || {}).outflow || [];
     outflowItems.filter(e => e.type === 'Insurance').forEach(item => {
-        const annual = getOutflowAnnualAmount(item);
-        if (annual > 0) auto.push({ id: 'atax_ins_' + item.id, name: item.name || 'Insurance', amount: annual, section: '80D', details: 'From Outflow tab', auto: true });
+        const amount = Number(item.amount || 0);
+        const freq = item.frequency || "Monthly";
+        let fyAmount = 0;
+        
+        // Calculate amount for current financial year only
+        if (freq === "One-Time") {
+            // One-time payment - check if it falls in current FY
+            // Outflow doesn't have startDate, so we can't filter by date accurately
+            // For now, include all one-time payments (user can manually adjust if needed)
+            fyAmount = amount;
+        } else if (freq === "Monthly") {
+            // Monthly - assume full year for now (can be refined with date tracking)
+            fyAmount = amount * 12;
+        } else if (freq === "Quarterly") {
+            fyAmount = amount * 4;
+        } else if (freq === "Semi-Annual") {
+            fyAmount = amount * 2;
+        } else if (freq === "Annual") {
+            fyAmount = amount;
+        } else {
+            fyAmount = amount;
+        }
+        
+        if (fyAmount > 0) auto.push({ id: 'atax_ins_' + item.id, name: item.name || 'Insurance', amount: fyAmount, section: '80D', details: 'From Outflow tab', auto: true });
     });
+    
     // Inflow items → 80C
     const inflowItems = normalizeInvestmentEntries((appData.tabData || {}).inflow || []);
     inflowItems.forEach(item => {
         const freq = (item.frequency || '').toLowerCase();
         const base = Number(item.amount || 0);
-        const annual = freq === 'monthly' ? base * 12 : base;
-        if (annual > 0) auto.push({ id: 'atax_inv_' + item.id, name: item.name || 'Investment', amount: annual, section: '80C', details: 'From Inflow tab', auto: true });
+        
+        // Calculate amount for current financial year only
+        let fyAmount = 0;
+        
+        if (freq === 'one-time' || freq === 'annual') {
+            // One-time or annual investment - check if it falls in current FY
+            const startDate = item.startDate ? new Date(item.startDate) : null;
+            if (startDate && startDate >= fyStartDate && startDate <= fyEndDate) {
+                fyAmount = base;
+            }
+        } else if (freq === 'monthly') {
+            // Monthly - calculate based on months in current FY
+            const startDate = item.startDate ? new Date(item.startDate) : null;
+            const endDate = item.endDate ? new Date(item.endDate) : null;
+            
+            // If no start date, assume started before current FY (use full 12 months)
+            if (!startDate) {
+                fyAmount = base * 12;
+            } else {
+                // Calculate months within FY
+                const startMonth = startDate >= fyStartDate ? startDate.getMonth() : 3; // April = 3
+                const endMonth = (endDate && endDate < fyEndDate) ? endDate.getMonth() : 14; // March = 14 (exclusive)
+                const monthsInFY = Math.max(0, Math.min(12, endMonth - startMonth));
+                fyAmount = base * monthsInFY;
+            }
+        } else if (freq === 'quarterly') {
+            // Quarterly - 4 payments per year
+            fyAmount = base * 4;
+        } else if (freq === 'semi-annual') {
+            // Semi-annual - 2 payments per year
+            fyAmount = base * 2;
+        } else {
+            // Default to full annual amount for other frequencies
+            fyAmount = freq === 'monthly' ? base * 12 : base;
+        }
+        
+        if (fyAmount > 0) {
+            auto.push({ id: 'atax_inv_' + item.id, name: item.name || 'Investment', amount: fyAmount, section: '80C', details: 'From Inflow tab', auto: true });
+        }
     });
+    
     return auto;
 }
 
 function getAllTaxDeductions() {
-    return [...getAutoTaxDeductions(), ...activeEntries()];
+    try {
+        const manualEntries = (appData.tabData || {}).taxPlan || [];
+        const autoDeductions = getAutoTaxDeductions();
+        return [...autoDeductions, ...manualEntries];
+    } catch (error) {
+        console.error("Error in getAllTaxDeductions:", error);
+        return [];
+    }
 }
 
 function getEffectiveDeductions(allEntries, regime) {
-    if (regime === 'new') return { total80C: 0, total80D: 0, totalOther: 0, totalDeductions: 0, stdDeduction: 75000 };
+    if (regime === 'new') return { total80C: 0, total80D: 0, totalOther: 0, totalDeductions: 0, stdDeduction: 75000, hraExemption: 0, housePropertyLoss: 0 };
+    
     const raw80C  = allEntries.filter(e => e.section === '80C').reduce((s, e) => s + Number(e.amount || 0), 0);
     const raw80D  = allEntries.filter(e => e.section === '80D').reduce((s, e) => s + Number(e.amount || 0), 0);
-    const other   = allEntries.filter(e => !['80C','80D'].includes(e.section || '')).reduce((s, e) => s + Number(e.amount || 0), 0);
+    const raw24b  = allEntries.filter(e => e.section === '24(b)').reduce((s, e) => s + Number(e.amount || 0), 0);
+    const raw80TTA = allEntries.filter(e => e.section === '80TTA').reduce((s, e) => s + Number(e.amount || 0), 0);
+    const other   = allEntries.filter(e => !['80C','80D','24(b)','80TTA','HRA'].includes(e.section || '')).reduce((s, e) => s + Number(e.amount || 0), 0);
+    
     const total80C = Math.min(150000, raw80C);
     const total80D = Math.min(50000,  raw80D);
-    return { total80C, total80D, totalOther: other, totalDeductions: total80C + total80D + other, stdDeduction: 50000 };
+    const total24b = Math.min(200000, raw24b); // Section 24(b) limit for self-occupied
+    const total80TTA = Math.min(10000, raw80TTA); // Section 80TTA limit
+    
+    // Calculate HRA exemption from salary details
+    const salary = (appData.taxData || {}).salary || {};
+    const hraExemption = calculateHRAExemption(salary);
+    
+    // Calculate house property loss (can be set off up to ₹2L)
+    const hp = (appData.taxData || {}).houseProperty || {};
+    const housePropertyIncome = calculateIncomeFromHouseProperty(hp);
+    const housePropertyLoss = Math.min(200000, Math.max(0, -housePropertyIncome)); // Max ₹2L loss set-off
+    
+    const totalDeductions = total80C + total80D + total24b + total80TTA + other + hraExemption + housePropertyLoss;
+    
+    return { 
+        total80C, 
+        total80D, 
+        total24b,
+        total80TTA,
+        totalOther: other, 
+        totalDeductions, 
+        stdDeduction: 50000,
+        hraExemption,
+        housePropertyLoss
+    };
 }
 
 function renderTaxPlan() {
-    const entries = activeEntries();
-    const taxRegime = taxRegimeSelect.value;
-    populateFinancialYearOptions();
-    
-    // Update toggle button text
-    toggleTaxPlanEdit.textContent = isTaxPlanEditMode ? "✓ Done" : "✎ Edit";
-    
-    // Show/hide preview/edit modes
-    if (isTaxPlanEditMode) {
-        taxPlanPreview.hidden = true;
-        taxPlanEdit.hidden = false;
+    try {
+        // Check if elements are initialized
+        if (!taxRegimeSelect || !taxPlanPreview || !taxPlanEdit) {
+            console.error("Tax plan elements not initialized. Initializing now...");
+            initTaxPlanElements();
+            if (!taxRegimeSelect || !taxPlanPreview || !taxPlanEdit) {
+                console.error("Failed to initialize tax plan elements");
+                alert("Failed to initialize tax plan. Please refresh the page.");
+                return;
+            }
+        }
         
-        // Render form fields
-        renderTaxPlanDynamicFields();
-        updateSectionSubmitButton("taxPlan");
+        // Get tax plan entries specifically
+        const entries = (appData.tabData || {}).taxPlan || [];
+        const taxRegime = taxRegimeSelect.value || 'new';
+        populateFinancialYearOptions();
         
-        // Render table
-        renderTaxPlanTable(entries);
-    } else {
-        taxPlanPreview.hidden = false;
-        taxPlanEdit.hidden = true;
+        // Update toggle button text
+        if (toggleTaxPlanEdit) {
+            toggleTaxPlanEdit.textContent = isTaxPlanEditMode ? "✓ Done" : "✎ Edit";
+        }
         
-        // Calculate and display tax summary
-        calculateTaxSummary(entries, taxRegime);
-        
-        // Render tax deductions list
-        renderTaxDeductionsList(entries);
-        
-        // Render tax breakdown
-        renderTaxBreakdown(entries, taxRegime);
+        // Show/hide preview/edit modes
+        if (isTaxPlanEditMode) {
+            if (taxPlanPreview) taxPlanPreview.hidden = true;
+            if (taxPlanEdit) taxPlanEdit.hidden = false;
+            
+            // Populate salary details form
+            populateSalaryDetailsForm();
+            
+            // Populate house property form
+            populateHousePropertyForm();
+            
+            // Render form fields
+            renderTaxPlanDynamicFields();
+            updateSectionSubmitButton("taxPlan");
+            
+            // Render table
+            renderTaxPlanTable(entries);
+        } else {
+            if (taxPlanPreview) taxPlanPreview.hidden = false;
+            if (taxPlanEdit) taxPlanEdit.hidden = true;
+
+            // Render salary details
+            renderSalaryDetails();
+
+            // Render house property details
+            renderHousePropertyDetails();
+
+            // Calculate and display tax summary
+            calculateTaxSummary(taxRegime);
+
+            // Render tax deductions list
+            renderTaxDeductionsList();
+
+            // Render tax breakdown
+            renderTaxBreakdown(taxRegime);
+
+            // Render tax saving banner
+            renderTaxSavingBanner(taxRegime);
+        }
+    } catch (error) {
+        console.error("Error rendering tax plan:", error);
+        console.error("Error stack:", error.stack);
+        logger.error("Tax plan render error", { error: error.message, stack: error.stack });
+        alert("An error occurred while rendering tax plan. Check console for details.");
     }
 }
 
 function renderTaxPlanDynamicFields() {
+    if (!taxPlanDynamicFields) {
+        console.error("taxPlanDynamicFields element not found");
+        return;
+    }
+    
     taxPlanDynamicFields.innerHTML = "";
     const fields = TAB_FIELDS.taxPlan || TAB_FIELDS.monthlyBudget;
     
@@ -4373,6 +4817,11 @@ function renderTaxPlanDynamicFields() {
 }
 
 function renderTaxPlanTable(entries) {
+    if (!taxPlanTableHead || !taxPlanTableBody || !taxPlanEmptyState) {
+        console.error("Tax plan table elements not found");
+        return;
+    }
+    
     const fields = TAB_FIELDS.taxPlan || TAB_FIELDS.monthlyBudget;
     
     taxPlanTableHead.innerHTML = "";
@@ -4383,7 +4832,7 @@ function renderTaxPlanTable(entries) {
         tr.appendChild(th);
     });
     const actionTh = document.createElement("th");
-    actionTh.textContent = "";
+    actionTh.textContent = "Actions";
     tr.appendChild(actionTh);
     taxPlanTableHead.appendChild(tr);
     
@@ -4409,12 +4858,19 @@ function renderTaxPlanTable(entries) {
     });
 }
 
-function calculateTaxSummary(entries, taxRegime) {
-    const fyStartYear = getSelectedTaxFyStartYear();
-    const annualIncome  = getAnnualIncomeFromBudget(fyStartYear);
-    const allDeductions = getAllTaxDeductions();
-    const ded = getEffectiveDeductions(allDeductions, taxRegime);
-    const taxableIncome = Math.max(0, annualIncome - ded.stdDeduction - ded.totalDeductions);
+function calculateTaxSummary(taxRegime) {
+    try {
+        const fyStartYear = getSelectedTaxFyStartYear();
+        const annualIncome  = getAnnualIncomeFromBudget(fyStartYear);
+        const allDeductions = getAllTaxDeductions();
+        const ded = getEffectiveDeductions(allDeductions, taxRegime);
+    
+    // Add house property income to gross income
+    const hp = (appData.taxData || {}).houseProperty || {};
+    const housePropertyIncome = calculateIncomeFromHouseProperty(hp);
+    const grossTotalIncome = annualIncome + Math.max(0, housePropertyIncome);
+    
+    const taxableIncome = Math.max(0, grossTotalIncome - ded.stdDeduction - ded.totalDeductions);
     const annualTaxLiability = calculateTax(taxableIncome, taxRegime);
 
     // YTD: based on FY month index (Apr=1, May=2 … Mar=12)
@@ -4427,18 +4883,30 @@ function calculateTaxSummary(entries, taxRegime) {
     // Regime comparison
     const oldDed  = getEffectiveDeductions(allDeductions, 'old');
     const newDed  = getEffectiveDeductions(allDeductions, 'new');
-    const oldTax  = calculateTax(Math.max(0, annualIncome - oldDed.stdDeduction - oldDed.totalDeductions), 'old') * 1.04;
-    const newTax  = calculateTax(Math.max(0, annualIncome - newDed.stdDeduction), 'new') * 1.04;
+    const oldTax  = calculateTax(Math.max(0, grossTotalIncome - oldDed.stdDeduction - oldDed.totalDeductions), 'old') * 1.04;
+    const newTax  = calculateTax(Math.max(0, grossTotalIncome - newDed.stdDeduction), 'new') * 1.04;
     const bestRegime = oldTax <= newTax ? 'Old Regime' : 'New Regime';
     const saved = Math.abs(oldTax - newTax);
 
-    document.getElementById("annualIncome").textContent          = formatMoney(annualIncome);
-    document.getElementById("totalDeductions").textContent       = formatMoney(ded.stdDeduction + ded.totalDeductions);
-    document.getElementById("taxableIncome").textContent         = formatMoney(taxableIncome);
-    document.getElementById("annualTaxLiability").textContent    = formatMoney(annualTaxLiability * 1.04);
-    document.getElementById("taxLiabilityYTD").textContent       = formatMoney(taxLiabilityYTD * 1.04);
-    document.getElementById("recommendedRegime").textContent     = bestRegime;
-    document.getElementById("regimeSavingsNote").textContent     = saved > 0 ? `saves ${formatMoney(saved)}/yr` : 'Equal tax';
+    const annualIncomeEl = document.getElementById("annualIncome");
+    const totalDeductionsEl = document.getElementById("totalDeductions");
+    const taxableIncomeEl = document.getElementById("taxableIncome");
+    const annualTaxLiabilityEl = document.getElementById("annualTaxLiability");
+    const taxLiabilityYTDEl = document.getElementById("taxLiabilityYTD");
+    const recommendedRegimeEl = document.getElementById("recommendedRegime");
+    const regimeSavingsNoteEl = document.getElementById("regimeSavingsNote");
+    
+    if (annualIncomeEl) annualIncomeEl.textContent = formatMoney(grossTotalIncome);
+    if (totalDeductionsEl) totalDeductionsEl.textContent = formatMoney(ded.stdDeduction + ded.totalDeductions);
+    if (taxableIncomeEl) taxableIncomeEl.textContent = formatMoney(taxableIncome);
+    if (annualTaxLiabilityEl) annualTaxLiabilityEl.textContent = formatMoney(annualTaxLiability * 1.04);
+    if (taxLiabilityYTDEl) taxLiabilityYTDEl.textContent = formatMoney(taxLiabilityYTD * 1.04);
+    if (recommendedRegimeEl) recommendedRegimeEl.textContent = bestRegime;
+    if (regimeSavingsNoteEl) regimeSavingsNoteEl.textContent = saved > 0 ? `saves ${formatMoney(saved)}/yr` : 'Equal tax';
+    } catch (error) {
+        console.error("Error in calculateTaxSummary:", error);
+        throw error;
+    }
 }
 
 function calculateTax(income, regime) {
@@ -4464,7 +4932,11 @@ function calculateTax(income, regime) {
     }
 }
 
-function renderTaxDeductionsList(entries) {
+function renderTaxDeductionsList() {
+    if (!taxDeductionsList) {
+        console.error("taxDeductionsList element not found");
+        return;
+    }
     taxDeductionsList.innerHTML = "";
     const allDeductions = getAllTaxDeductions();
     if (allDeductions.length === 0) {
@@ -4492,12 +4964,22 @@ function renderTaxDeductionsList(entries) {
     });
 }
 
-function renderTaxBreakdown(entries, taxRegime) {
+function renderTaxBreakdown(taxRegime) {
+    if (!taxBreakdown) {
+        console.error("taxBreakdown element not found");
+        return;
+    }
     taxBreakdown.innerHTML = "";
     const annualIncome  = getAnnualIncomeFromBudget(getSelectedTaxFyStartYear());
     const allDeductions = getAllTaxDeductions();
     const ded = getEffectiveDeductions(allDeductions, taxRegime);
-    const taxableIncome = Math.max(0, annualIncome - ded.stdDeduction - ded.totalDeductions);
+
+    // Add house property income
+    const hp = (appData.taxData || {}).houseProperty || {};
+    const housePropertyIncome = calculateIncomeFromHouseProperty(hp);
+    const grossTotalIncome = annualIncome + Math.max(0, housePropertyIncome);
+
+    const taxableIncome = Math.max(0, grossTotalIncome - ded.stdDeduction - ded.totalDeductions);
     const tax      = calculateTax(taxableIncome, taxRegime);
     const cess     = tax * 0.04;
     const totalTax = tax + cess;
@@ -4505,17 +4987,23 @@ function renderTaxBreakdown(entries, taxRegime) {
     // Regime comparison
     const oldDed = getEffectiveDeductions(allDeductions, 'old');
     const newDed = getEffectiveDeductions(allDeductions, 'new');
-    const oldTotalTax = calculateTax(Math.max(0, annualIncome - oldDed.stdDeduction - oldDed.totalDeductions), 'old') * 1.04;
-    const newTotalTax = calculateTax(Math.max(0, annualIncome - newDed.stdDeduction), 'new') * 1.04;
+    const oldTotalTax = calculateTax(Math.max(0, grossTotalIncome - oldDed.stdDeduction - oldDed.totalDeductions), 'old') * 1.04;
+    const newTotalTax = calculateTax(Math.max(0, grossTotalIncome - newDed.stdDeduction), 'new') * 1.04;
     const bestRegime  = oldTotalTax <= newTotalTax ? 'Old Regime' : 'New Regime';
     const saving      = Math.abs(oldTotalTax - newTotalTax);
 
     const breakdown = [
-        { label: 'Gross Annual Income (avg from budget)', value: formatMoney(annualIncome) },
+        { label: 'Gross Annual Income (from budget)', value: formatMoney(annualIncome) },
+        ...(housePropertyIncome > 0 ? [{ label: 'Income from House Property', value: formatMoney(housePropertyIncome) }] : []),
+        ...(housePropertyIncome < 0 ? [{ label: 'Loss from House Property (set off)', value: formatMoney(housePropertyIncome) }] : []),
         { label: `Standard Deduction (${taxRegime === 'new' ? 'New' : 'Old'} Regime)`, value: formatMoney(ded.stdDeduction) },
         ...(taxRegime === 'old' ? [
             { label: '80C Deductions (auto+manual, cap ₹1.5L)', value: formatMoney(ded.total80C) },
             { label: '80D Deductions (auto+manual, cap ₹50K)',  value: formatMoney(ded.total80D) },
+            ...(ded.total24b > 0 ? [{ label: '24(b) Home Loan Interest (cap ₹2L)', value: formatMoney(ded.total24b) }] : []),
+            ...(ded.total80TTA > 0 ? [{ label: '80TTA Savings Account Interest (cap ₹10K)', value: formatMoney(ded.total80TTA) }] : []),
+            ...(ded.hraExemption > 0 ? [{ label: 'HRA Exemption (Section 10(13A))', value: formatMoney(ded.hraExemption) }] : []),
+            ...(ded.housePropertyLoss > 0 ? [{ label: 'House Property Loss Set-off (max ₹2L)', value: formatMoney(ded.housePropertyLoss) }] : []),
             ...(ded.totalOther > 0 ? [{ label: 'Other Deductions', value: formatMoney(ded.totalOther) }] : [])
         ] : []),
         { label: 'Taxable Income', value: formatMoney(taxableIncome), highlight: true },
@@ -4531,6 +5019,306 @@ function renderTaxBreakdown(entries, taxRegime) {
         div.innerHTML = `<span>${item.label}</span><strong>${item.value}</strong>`;
         taxBreakdown.appendChild(div);
     });
+}
+
+function renderTaxSavingBanner(taxRegime) {
+    const bannerEl = document.getElementById("taxSavingBanner");
+    if (!bannerEl) return;
+
+    // Show banner for both regimes
+    const annualIncome = getAnnualIncomeFromBudget(getSelectedTaxFyStartYear());
+    const allDeductions = getAllTaxDeductions();
+    const ded = getEffectiveDeductions(allDeductions, taxRegime);
+
+    if (taxRegime === 'new') {
+        // New regime banner
+        bannerEl.style.display = 'block';
+        bannerEl.innerHTML = `
+            <h3>🎯 New Tax Regime - Tax Saving Scope</h3>
+            <p><strong>New Regime offers lower tax rates but limited deductions.</strong></p>
+            <p><strong>Available Deductions:</strong></p>
+            <ul>
+                <li><strong>Standard Deduction:</strong> ₹75,000 (increased from ₹50K in Budget 2025)</li>
+                <li><strong>Family Pension:</strong> ₹15,000 (if applicable)</li>
+                <li><strong>Agneepath Scheme:</strong> 40% of corpus tax-exempt (if applicable)</li>
+            </ul>
+            <p><strong>Total Potential:</strong> ₹90,000+</p>
+            <p style="margin-top:12px;font-size:0.9rem;opacity:0.9;">
+                <strong>Best For:</strong> Low deductions, high income, simpler tax filing
+            </p>
+        `;
+        return;
+    }
+
+    // Old regime banner
+    const cap80C = 150000;
+    const cap80D = 50000;
+    const cap24b = 200000;
+    const cap80TTA = 10000;
+
+    const remaining80C = Math.max(0, cap80C - ded.total80C);
+    const remaining80D = Math.max(0, cap80D - ded.total80D);
+    const remaining24b = Math.max(0, cap24b - ded.total24b);
+    const remaining80TTA = Math.max(0, cap80TTA - ded.total80TTA);
+
+    // Calculate HRA exemption scope
+    const salary = (appData.taxData || {}).salary || {};
+    const currentHRAExemption = calculateHRAExemption(salary);
+    const hraScope = salary.basicSalary ? (salary.basicSalary * (salary.isMetroCity === 'yes' ? 0.50 : 0.40)) - currentHRAExemption : 0;
+
+    const totalRemainingScope = remaining80C + remaining80D + remaining24b + remaining80TTA + Math.max(0, hraScope);
+
+    // Calculate potential tax savings (assuming 30% tax bracket for ITR-2 filers)
+    const potentialTaxSavings = totalRemainingScope * 0.30 * 1.04; // 30% tax + 4% cess
+
+    if (totalRemainingScope === 0) {
+        bannerEl.style.display = 'none';
+        return;
+    }
+
+    bannerEl.style.display = 'block';
+    bannerEl.innerHTML = `
+        <h3>🎯 Old Tax Regime - Tax Saving Scope</h3>
+        <p><strong>You can save up to ${formatMoney(potentialTaxSavings)} in taxes</strong> by utilizing the remaining investment scope under the Old Tax Regime (ITR-2).</p>
+        <p><strong>Maximum Tax Saving Potential: ₹5,85,000+</strong></p>
+        <p><strong>Remaining Investment Scope:</strong></p>
+        <ul>
+            ${remaining80C > 0 ? `<li><strong>Section 80C:</strong> ${formatMoney(remaining80C)} available (PPF, ELSS, EPF, LIC, Tax Saver FD, NSC, SSY, Tuition fees, Home loan principal)</li>` : ''}
+            ${remaining80D > 0 ? `<li><strong>Section 80D:</strong> ${formatMoney(remaining80D)} available (Health insurance for self/family/parents, Preventive health checkup ₹5K)</li>` : ''}
+            ${remaining24b > 0 ? `<li><strong>Section 24(b):</strong> ${formatMoney(remaining24b)} available (Home loan interest for self-occupied property)</li>` : ''}
+            ${remaining80TTA > 0 ? `<li><strong>Section 80TTA:</strong> ${formatMoney(remaining80TTA)} available (Savings account interest)</li>` : ''}
+            ${hraScope > 0 ? `<li><strong>HRA Exemption:</strong> ${formatMoney(hraScope)} available (Add salary details to calculate)</li>` : ''}
+        </ul>
+        <p style="margin-top:12px;font-size:0.9rem;opacity:0.9;">
+            <strong>Current Utilization:</strong> ${formatMoney(ded.totalDeductions)} / ₹5,85,000+<br>
+            <strong>Remaining Scope:</strong> ${formatMoney(totalRemainingScope)}
+        </p>
+        <p style="margin-top:12px;font-size:0.9rem;opacity:0.9;">
+            <strong>Note:</strong> This calculation assumes ITR-2 filing (income from salary/house property/capital gains).
+            Add investments in the Investments tab or Fixed Outflow tab to automatically track your 80C/80D deductions.
+            Add salary and house property details in Edit mode to calculate HRA and Section 24(b) exemptions.
+        </p>
+    `;
+}
+
+// ── Salary Details Functions ──────────────────────────────────────────────────
+function populateSalaryDetailsForm() {
+    const salary = (appData.taxData || {}).salary || {};
+    if (document.getElementById("basicSalary")) document.getElementById("basicSalary").value = salary.basicSalary || '';
+    if (document.getElementById("hraReceived")) document.getElementById("hraReceived").value = salary.hraReceived || '';
+    if (document.getElementById("rentPaid")) document.getElementById("rentPaid").value = salary.rentPaid || '';
+    if (document.getElementById("isMetroCity")) document.getElementById("isMetroCity").value = salary.isMetroCity || 'yes';
+}
+
+function saveSalaryDetailsAuto() {
+    try {
+        console.log('💼 Saving salary details...');
+        const basicSalary = Number(document.getElementById("basicSalary")?.value) || 0;
+        const hraReceived = Number(document.getElementById("hraReceived")?.value) || 0;
+        const rentPaid = Number(document.getElementById("rentPaid")?.value) || 0;
+        const isMetroCity = document.getElementById("isMetroCity")?.value || 'yes';
+        
+        console.log('Salary values:', { basicSalary, hraReceived, rentPaid, isMetroCity });
+        
+        if (!appData.taxData) appData.taxData = {};
+        appData.taxData.salary = {
+            basicSalary,
+            hraReceived,
+            rentPaid,
+            isMetroCity
+        };
+        
+        console.log('appData.taxData after update:', appData.taxData);
+        scheduleSave();
+        console.log('✅ Salary save scheduled');
+    } catch (error) {
+        console.error("Error saving salary details:", error);
+        logger.error("Salary details save error", { error: error.message });
+    }
+}
+
+function renderSalaryDetails() {
+    if (!salaryDetailsList) return;
+    
+    const salary = (appData.taxData || {}).salary || {};
+    
+    if (!salary.basicSalary) {
+        salaryDetailsList.innerHTML = `<div class="empty-state visible">No salary details added. Add in Edit mode.</div>`;
+        return;
+    }
+    
+    // Calculate HRA exemption
+    const hraExemption = calculateHRAExemption(salary);
+    
+    salaryDetailsList.innerHTML = `
+        <div class="tax-deduction-item">
+            <div class="asset-label-group">
+                <span class="manual-badge">Manual</span>
+                <span class="label">Basic Salary</span>
+            </div>
+            <div>
+                <span class="value">${formatMoney(salary.basicSalary)}</span>
+            </div>
+        </div>
+        <div class="tax-deduction-item">
+            <div class="asset-label-group">
+                <span class="manual-badge">Manual</span>
+                <span class="label">HRA Received</span>
+            </div>
+            <div>
+                <span class="value">${formatMoney(salary.hraReceived)}</span>
+            </div>
+        </div>
+        <div class="tax-deduction-item">
+            <div class="asset-label-group">
+                <span class="manual-badge">Manual</span>
+                <span class="label">Rent Paid</span>
+            </div>
+            <div>
+                <span class="value">${formatMoney(salary.rentPaid)}</span>
+            </div>
+        </div>
+        <div class="tax-deduction-item" style="background: #10b98122; border-color: #10b981;">
+            <div class="asset-label-group">
+                <span class="auto-badge">Calculated</span>
+                <span class="label">HRA Exemption (Section 10(13A))</span>
+            </div>
+            <div>
+                <span class="value" style="color: #10b981;">${formatMoney(hraExemption)}</span>
+            </div>
+        </div>
+    `;
+}
+
+function calculateHRAExemption(salary) {
+    if (!salary || !salary.basicSalary) return 0;
+    
+    // HRA exemption is the minimum of:
+    // 1. Actual HRA received
+    // 2. Rent paid - 10% of basic salary
+    // 3. 50% of basic salary (metro) or 40% (non-metro)
+    
+    const hraReceived = salary.hraReceived;
+    const rentPaid = salary.rentPaid;
+    const basicSalary = salary.basicSalary;
+    const isMetro = salary.isMetroCity === 'yes';
+    
+    const option1 = hraReceived;
+    const option2 = Math.max(0, rentPaid - (basicSalary * 0.10));
+    const option3 = basicSalary * (isMetro ? 0.50 : 0.40);
+    
+    return Math.min(option1, option2, option3);
+}
+
+// ── House Property Functions ──────────────────────────────────────────────────
+function populateHousePropertyForm() {
+    const hp = (appData.taxData || {}).houseProperty || {};
+    if (document.getElementById("rentalIncome")) document.getElementById("rentalIncome").value = hp.rentalIncome || '';
+    if (document.getElementById("municipalTaxes")) document.getElementById("municipalTaxes").value = hp.municipalTaxes || '';
+    if (document.getElementById("homeLoanInterest")) document.getElementById("homeLoanInterest").value = hp.homeLoanInterest || '';
+    if (document.getElementById("isSelfOccupied")) document.getElementById("isSelfOccupied").value = hp.isSelfOccupied || 'yes';
+}
+
+function saveHousePropertyDetailsAuto() {
+    try {
+        const rentalIncome = Number(document.getElementById("rentalIncome")?.value) || 0;
+        const municipalTaxes = Number(document.getElementById("municipalTaxes")?.value) || 0;
+        const homeLoanInterest = Number(document.getElementById("homeLoanInterest")?.value) || 0;
+        const isSelfOccupied = document.getElementById("isSelfOccupied")?.value || 'yes';
+        
+        if (!appData.taxData) appData.taxData = {};
+        appData.taxData.houseProperty = {
+            rentalIncome,
+            municipalTaxes,
+            homeLoanInterest,
+            isSelfOccupied
+        };
+        
+        scheduleSave();
+    } catch (error) {
+        console.error("Error saving house property details:", error);
+        logger.error("House property save error", { error: error.message });
+    }
+}
+
+function renderHousePropertyDetails() {
+    if (!housePropertyList) return;
+    
+    const hp = (appData.taxData || {}).houseProperty || {};
+    
+    if (!hp.rentalIncome && !hp.homeLoanInterest) {
+        housePropertyList.innerHTML = `<div class="empty-state visible">No house property details added. Add in Edit mode.</div>`;
+        return;
+    }
+    
+    // Calculate income from house property
+    const incomeFromHP = calculateIncomeFromHouseProperty(hp);
+    
+    housePropertyList.innerHTML = `
+        ${hp.rentalIncome ? `
+        <div class="tax-deduction-item">
+            <div class="asset-label-group">
+                <span class="manual-badge">Manual</span>
+                <span class="label">Rental Income</span>
+            </div>
+            <div>
+                <span class="value">${formatMoney(hp.rentalIncome)}</span>
+            </div>
+        </div>` : ''}
+        ${hp.municipalTaxes ? `
+        <div class="tax-deduction-item">
+            <div class="asset-label-group">
+                <span class="manual-badge">Manual</span>
+                <span class="label">Municipal Taxes</span>
+            </div>
+            <div>
+                <span class="value" style="color: #ef4444;">-${formatMoney(hp.municipalTaxes)}</span>
+            </div>
+        </div>` : ''}
+        ${hp.homeLoanInterest ? `
+        <div class="tax-deduction-item">
+            <div class="asset-label-group">
+                <span class="manual-badge">Manual</span>
+                <span class="label">Home Loan Interest</span>
+            </div>
+            <div>
+                <span class="value" style="color: #ef4444;">-${formatMoney(hp.homeLoanInterest)}</span>
+            </div>
+        </div>` : ''}
+        <div class="tax-deduction-item" style="background: ${incomeFromHP >= 0 ? '#10b98122' : '#ef444422'}; border-color: ${incomeFromHP >= 0 ? '#10b981' : '#ef4444'};">
+            <div class="asset-label-group">
+                <span class="auto-badge">Calculated</span>
+                <span class="label">Income from House Property</span>
+            </div>
+            <div>
+                <span class="value" style="color: ${incomeFromHP >= 0 ? '#10b981' : '#ef4444'};">${incomeFromHP >= 0 ? '+' : ''}${formatMoney(incomeFromHP)}</span>
+            </div>
+        </div>
+    `;
+}
+
+function calculateIncomeFromHouseProperty(hp) {
+    if (!hp) return 0;
+    
+    const rentalIncome = hp.rentalIncome || 0;
+    const municipalTaxes = hp.municipalTaxes || 0;
+    const homeLoanInterest = hp.homeLoanInterest || 0;
+    const isSelfOccupied = hp.isSelfOccupied === 'yes';
+    
+    // Standard deduction: 30% of rental income
+    const standardDeduction = rentalIncome * 0.30;
+    
+    // For self-occupied: Max ₹2L interest deduction
+    // For let out: No limit on interest deduction
+    const allowedInterest = isSelfOccupied ? Math.min(200000, homeLoanInterest) : homeLoanInterest;
+    
+    // Income from house property = Rental Income - Municipal Taxes - Standard Deduction - Interest
+    let income = rentalIncome - municipalTaxes - standardDeduction - allowedInterest;
+    
+    // For self-occupied, if negative, it's a loss (can be set off up to ₹2L)
+    // For let out, if negative, it's a loss (can be set off against other income)
+    
+    return income;
 }
 
 function renderGifts() {
@@ -4761,13 +5549,28 @@ function renderGiftsPreviewCards(entries) {
         
         const categoryClass = gift.category === "Fixed Every Year" ? "fixed" : "demand";
         
+        // Format date/month display
+        let dateDisplay = "";
+        if (gift.date) {
+            const giftDate = new Date(gift.date);
+            if (!isNaN(giftDate.getTime())) {
+                if (gift.category === "Fixed Every Year") {
+                    // Show month for recurring gifts
+                    dateDisplay = giftDate.toLocaleDateString('en-IN', { month: 'long' });
+                } else {
+                    // Show full date for on-demand gifts
+                    dateDisplay = giftDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                }
+            }
+        }
+        
         item.innerHTML = `
             <div class="gift-item-info">
                 <div class="gift-item-title">${esc(gift.name)}</div>
                 <div class="gift-item-details">
                     <span class="gift-item-category ${categoryClass}">${esc(gift.category || "On Demand")}</span>
                     ${esc(gift.relativeName || "—")}<br>
-                    Occasion: ${esc(gift.occasion || "—")}<br>
+                    Occasion: ${esc(gift.occasion || "—")}${dateDisplay ? ` · ${dateDisplay}` : ""}<br>
                     ${gift.details ? `Details: ${esc(gift.details)}` : ""}
                 </div>
             </div>
@@ -6963,6 +7766,28 @@ cardTableBody.addEventListener("click", e => {
     handleTableAction("cards", e);
 });
 
+// Expense Tracking event bindings
+if (toggleExpenseEdit) {
+    toggleExpenseEdit.addEventListener("click", () => {
+        isExpenseEditMode = !isExpenseEditMode;
+        renderExpenseTracking();
+    });
+}
+
+if (expenseForm) {
+    expenseForm.addEventListener("submit", e => {
+        e.preventDefault();
+        const entry = readSectionFormEntry("expenseTracking");
+        addEntry("expenseTracking", entry);
+    });
+}
+
+if (expenseTableBody) {
+    expenseTableBody.addEventListener("click", e => {
+        handleTableAction("expenseTracking", e);
+    });
+}
+
 // Net Worth event bindings
 toggleNetWorthEdit.addEventListener("click", () => {
     isNetWorthEditMode = !isNetWorthEditMode;
@@ -6975,24 +7800,51 @@ netWorthTableBody.addEventListener("click", e => {
 });
 
 // Tax Plan event bindings
-toggleTaxPlanEdit.addEventListener("click", () => {
-    isTaxPlanEditMode = !isTaxPlanEditMode;
-    renderTaxPlan();
-});
-
-taxRegimeSelect.addEventListener("change", () => {
-    if (!isTaxPlanEditMode) {
-        renderTaxPlan();
+function initTaxPlanEventListeners() {
+    if (toggleTaxPlanEdit) {
+        toggleTaxPlanEdit.addEventListener("click", () => {
+            try {
+                if (isTaxPlanEditMode) {
+                    // Switching from Edit to Preview - save salary and house property data
+                    saveSalaryDetailsAuto();
+                    saveHousePropertyDetailsAuto();
+                }
+                isTaxPlanEditMode = !isTaxPlanEditMode;
+                renderTaxPlan();
+            } catch (error) {
+                console.error("Error toggling tax plan edit mode:", error);
+                logger.error("Tax plan toggle error", { error: error.message, stack: error.stack });
+                alert("Error switching modes. Please try again.");
+            }
+        });
     }
-});
-financialYearSelect.addEventListener("change", () => {
-    if (!isTaxPlanEditMode) renderTaxPlan();
-});
+    
+    if (taxRegimeSelect) {
+        taxRegimeSelect.addEventListener("change", () => {
+            if (!isTaxPlanEditMode) {
+                renderTaxPlan();
+            }
+        });
+    }
+    
+    if (financialYearSelect) {
+        financialYearSelect.addEventListener("change", () => {
+            if (!isTaxPlanEditMode) renderTaxPlan();
+        });
+    }
+    
+    if (taxPlanForm) {
+        taxPlanForm.addEventListener("submit", addTaxPlanEntry);
+    }
+    
+    if (taxPlanTableBody) {
+        taxPlanTableBody.addEventListener("click", e => {
+            handleTableAction("taxPlan", e);
+        });
+    }
+}
 
-taxPlanForm.addEventListener("submit", addTaxPlanEntry);
-taxPlanTableBody.addEventListener("click", e => {
-    handleTableAction("taxPlan", e);
-});
+// Tax plan event listeners are now initialized in initTaxPlanEventListeners()
 
 // Gifts event bindings
 toggleGiftsEdit.addEventListener("click", () => {
@@ -7246,5 +8098,6 @@ function addEmergencyFundEntry(event) {
     if (versionEl) {
         versionEl.textContent = `SmartFin ${getAppVersion()}`;
         versionEl.title = `Major: ${APP_VERSION.major} | Minor: ${APP_VERSION.minor} | Build: ${APP_VERSION.build}`;
+        versionEl.style.background = "transparent";
     }
 })();

@@ -1,19 +1,117 @@
-# SmartFin – Application Specification (v2.0.4)
+# SmartFin – Application Specification (v2.3.15)
 
 > **Purpose**: Single source of truth for the app's architecture, data models, business logic, and UI structure.
 > Use this file as context when making future modifications. Update it after every significant change.
 >
-> **IMPORTANT**: After making any code changes, update all documentation files to keep them in sync:
+> **IMPORTANT**: After making any code changes, follow this complete process to maintain project quality:
 > - Update version numbers in README.md, USER_MANUAL.md, DEVELOPMENT.md, architecture.md to match APP_VERSION in app.js
-> - Add changelog entries to CHANGELOG.md
-> - Update relevant sections in APP_SPEC.md
+> - Add changelog entries to CHANGELOG.md with detailed description of changes
+> - Update relevant sections in APP_SPEC.md with technical details
 > - Update USER_MANUAL.md for user-facing changes
+> - Add test cases for new logic/algorithm changes (place in tests/ directory)
+> - Verify all changes work correctly before marking as complete
+> - Test on different screen sizes (mobile, tablet, desktop) for UI changes
 >
-> **Version 2.0.4 Updates**: Added user location field, enhanced dashboard with budget surplus, cumulative goals progress, preparedness metrics with ideal insurance calculations, 6-month trend graph, gifts date field with monthly spending chart, and PDF dashboard export.
+> **CRITICAL REQUIREMENT - Mobile & Web Compatibility**:
+> - ALL features MUST work on both web app (desktop/laptop browsers) AND mobile devices (phones/tablets)
+> - Test on multiple browsers: Chrome, Firefox, Safari, Edge
+> - Test on mobile: iOS Safari, Android Chrome
+> - Implement touch/swipe gestures for mobile interactions
+> - Provide keyboard shortcuts for desktop accessibility
+> - Use responsive CSS with proper breakpoints: Mobile (<768px), Tablet (768-1024px), Desktop (>1024px)
+> - Ensure tap targets are at least 44x44px for mobile usability
+> - Test with different screen orientations (portrait/landscape)
+> - Verify smooth performance on lower-end mobile devices
+> - Use passive event listeners for scroll/touch events to improve performance
+>
+> **Version 2.1.0 Updates - Major Dashboard Enhancement**: 
+> - **P1 Features (High Priority)**: Alerts & Notifications, Quick Actions Panel, Financial Health Score (0-100), Cash Flow Summary, Budget vs Actual Comparison
+> - **P2 Features (Medium Priority)**: Insights & Recommendations with AI-like suggestions
+> - All features use existing data and calculations - no duplicates, ensuring data consistency
+> - Fully responsive design for mobile, tablet, and desktop
+> - Enhanced user experience with actionable insights and quick navigation
 
 ---
 
-## 1. Tech Stack
+## 1. Mobile & Web Compatibility Standards
+
+### Platform Support
+- **Web Browsers**: Chrome, Firefox, Safari, Edge (latest 2 versions)
+- **Mobile Browsers**: iOS Safari, Android Chrome
+- **Screen Sizes**: 
+  - Mobile: 320px - 767px (portrait & landscape)
+  - Tablet: 768px - 1024px
+  - Desktop: 1025px+
+
+### Interaction Patterns
+
+#### Touch Gestures (Mobile/Tablet)
+- **Swipe Left/Right**: Navigate carousels, switch between items
+- **Tap**: Select items, trigger actions (minimum 44x44px tap targets)
+- **Long Press**: Context menus, additional options
+- **Pinch to Zoom**: Disabled for app UI, enabled for images/charts where appropriate
+- **Pull to Refresh**: Not implemented (use explicit refresh buttons)
+
+#### Mouse/Keyboard (Desktop)
+- **Click**: Primary action
+- **Hover**: Show tooltips, highlight interactive elements
+- **Arrow Keys**: Navigate carousels, move between fields
+- **Tab**: Keyboard navigation through interactive elements
+- **Enter/Space**: Activate buttons and links
+- **Escape**: Close modals and dialogs
+
+#### Dual Support (All Platforms)
+- All interactive elements must support both touch and mouse/keyboard
+- Use passive event listeners for scroll/touch events
+- Prevent default only when necessary
+- Test with both input methods
+
+### Performance Requirements
+- **Mobile**: Smooth 60fps animations on mid-range devices (2-3 year old phones)
+- **Load Time**: Initial page load < 3 seconds on 3G
+- **Interaction**: Response to user input < 100ms
+- **Animations**: Use CSS transforms and opacity (GPU-accelerated)
+- **Images**: Lazy load, use appropriate formats (WebP with fallbacks)
+
+### Responsive Design Checklist
+- [ ] Test on physical mobile devices (iOS and Android)
+- [ ] Test in browser device emulation mode
+- [ ] Test both portrait and landscape orientations
+- [ ] Verify touch targets are at least 44x44px
+- [ ] Check text readability (minimum 16px base font)
+- [ ] Ensure adequate spacing between interactive elements
+- [ ] Test with slow network (3G throttling)
+- [ ] Verify no horizontal scrolling on mobile
+- [ ] Check that all features work without hover states
+- [ ] Test keyboard navigation on desktop
+
+### Implementation Guidelines
+```javascript
+// ✅ Good: Passive listeners for better performance
+element.addEventListener('touchstart', handler, { passive: true });
+
+// ✅ Good: Support both touch and mouse
+element.addEventListener('touchstart', handleStart);
+element.addEventListener('mousedown', handleStart);
+
+// ✅ Good: Responsive breakpoints
+@media (max-width: 767px) { /* Mobile */ }
+@media (min-width: 768px) and (max-width: 1024px) { /* Tablet */ }
+@media (min-width: 1025px) { /* Desktop */ }
+
+// ✅ Good: Touch-friendly sizing
+.button { min-width: 44px; min-height: 44px; }
+
+// ❌ Bad: Hover-only interactions
+.menu:hover .submenu { display: block; } // Won't work on touch
+
+// ❌ Bad: Fixed pixel widths
+.container { width: 1200px; } // Will break on mobile
+```
+
+---
+
+## 2. Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -82,7 +180,7 @@ users/{uid} → single document
 ```json
 {
   "userName": "string",
-  "userLocation": "City, State, Country",
+  "userLocation": "City, State, Country (can be preset or custom)",
   "dateOfBirth": "YYYY-MM-DD",
   "currentAge": 0,
   "fixedMonthlyIncome": 0,
@@ -587,16 +685,18 @@ previewMap = {
 The Dashboard is intentionally a compact cross-tab snapshot rather than a second
 copy of each workspace. It shows enhanced cards with actionable insights:
 
-- **This month**: usable income, recurring monthly commitments, amount available after commitments, and **budget surplus/deficit status** (new in v6.1). Borrowing is excluded from usable income.
-- **Net worth**: current assets, liabilities, and net worth. Totals use the exact same manual and auto-generated entries as the Net Worth tab.
-- **Goals**: **All active goals with individual progress bars** (enhanced in v6.1), showing percentage funded and remaining amount for each goal.
-- **Preparedness**: **Progress bars for Emergency Fund, Health Insurance, and Term Insurance** (enhanced in v6.1) with ideal amounts calculated based on:
-  - Emergency Fund: 6 months of expenses
-  - Health Insurance: Based on age, location (metro/non-metro), and family size
-  - Term Insurance: Based on age, monthly expenses, and current savings (formula: Monthly Expenses × 12 × [65 - Age] - Savings)
-- **Accounts**: total cash balance and whether the required Primary and Salary accounts are configured.
-- **Investments & planning**: portfolio value, monthly investment contribution, tax items logged, and a single planned-gifts total when applicable.
-- **6-Month Trend** (new in v6.1): Stacked bar chart showing Income, Expenditure, Saving, Liability, and Others for the last 6 months.
+**Layout**: 2x2 grid (2 rows, 2 columns) for the 4 main cards on desktop, responsive to 2 columns on tablet and 1 column on mobile.
+
+- **This month**: usable income, recurring monthly commitments, amount available after commitments, credit card usage, expenditure account balance, and **budget surplus/deficit status**. Borrowing is excluded from usable income. Includes navigation links to Budget and Fixed Outflow tabs.
+- **Accounts & Net Worth** (combined card): current assets, liabilities, net worth, cash in accounts, and account configuration status. Totals use the exact same manual and auto-generated entries as the Net Worth tab. Includes navigation link to Net Worth tab.
+- **Goals & Investment Planning** (combined card): portfolio value, monthly investment contribution, tax items logged, planned-gifts total, and **All active goals with individual progress bars** showing percentage funded and remaining amount. Includes navigation link to Goals tab.
+- **Preparedness & Budget** (merged card): 
+  - **Preparedness Section**: Progress bars for Emergency Fund, Health Insurance, and Term Insurance with ideal amounts calculated based on:
+    - Emergency Fund: 6 months of expenses
+    - Health Insurance: Based on age, location (metro/non-metro), and family size. Custom cities are assumed non-metro.
+    - Term Insurance: Based on age, monthly expenses, and current savings (formula: Monthly Expenses × 12 × [65 - Age] - Savings)
+  - **Budget Section**: Budgeted amount, spent amount, balance, and adherence percentage for variable expenses and credit card spending
+- **6-Month Trend**: Stacked bar chart showing Income, Expenditure, Saving, Liability, and Others for the last 6 months. Numbers hidden on mobile (< 768px) for better readability.
 
 **Ideal Insurance Calculation Formulas (v6.1):**
 - Health Insurance: `(Base City Cost × Age Risk Multiplier) × Family Size Variant`
@@ -703,7 +803,64 @@ getAppVersion() → "v1.0.73"
 
 ---
 
-## 17. Logging System (AppLogger)
+## 17. Development Process & Testing
+
+### Change Implementation Process
+
+When implementing changes to SmartFin, follow this systematic approach:
+
+1. **Understand Requirements**
+   - Read APP_SPEC.md for context and existing patterns
+   - Review relevant code sections before making changes
+   - Plan the implementation step by step
+
+2. **Implement Changes**
+   - Make code changes carefully, one at a time
+   - Follow existing code patterns and conventions
+   - Test each change before moving to the next
+
+3. **Add Tests**
+   - For new logic/algorithms, add test cases in `tests/` directory
+   - Test edge cases and error conditions
+   - Ensure tests are comprehensive and maintainable
+
+4. **Update Documentation**
+   - Update APP_VERSION in `app.js`
+   - Update version numbers in README.md, USER_MANUAL.md, DEVELOPMENT.md, architecture.md
+   - Add changelog entries to CHANGELOG.md
+   - Update relevant sections in APP_SPEC.md
+   - Update USER_MANUAL.md for user-facing changes
+
+5. **Verify Changes**
+   - Test on different screen sizes (mobile, tablet, desktop)
+   - Test user flows end-to-end
+   - Verify no existing features are broken
+   - Check for performance issues
+
+### Testing Guidelines
+
+- **UI Changes**: Test on mobile (< 768px), tablet (768px-1024px), and desktop (> 1024px)
+- **Logic Changes**: Add unit tests in `tests/` directory
+- **Data Changes**: Test with various data scenarios (empty, partial, full)
+- **Integration Changes**: Test complete user flows
+
+### Test File Structure
+
+```
+tests/
+├── tax-calculation.test.js    # Tax calculation logic tests
+├── [future-test-files].test.js
+```
+
+Test files should be:
+- Self-contained with mock functions
+- Clear and well-documented
+- Cover both positive and negative cases
+- Easy to run in browser console or test runner
+
+---
+
+## 18. Logging System (AppLogger)
 
 **Class**: `AppLogger` (lines 10–224 in app.js)
 - Levels: `info`, `warning`, `error`
@@ -756,4 +913,4 @@ When modifying the app, check these areas:
 
 ---
 
-*Last updated: 2026-08-04 (v6.1 — Enhanced Dashboard with budget surplus, cumulative goals, preparedness metrics with ideal insurance calculations, 6-month trend graph; Added user location field; Gifts tab with date field and monthly spending chart; PDF dashboard export)*
+*Last updated: 2026-08-05 (v2.3.15 — Tax data persistence fix: Added taxData to default appData structure and Firestore loading, ensures persistence after refresh)*

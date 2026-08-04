@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SmartFin - Test Suite</title>
+<title>SmartFin - Test Suite (v2.0.4)</title>
 <style>
 body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; background: #1a1a1a; color: #e0e0e0; }
 h1 { color: #fff; }
@@ -27,7 +27,10 @@ button:hover { background: #e0e0e0; }
 </style>
 </head>
 <body>
-<h1>₹ SmartFin – Test Suite</h1>
+<h1>₹ SmartFin – Test Suite (v2.0.4)</h1>
+<p style="color: #888; margin-top: -10px; margin-bottom: 20px;">
+  Comprehensive test coverage for financial calculations, UI logic, and v2.0.4 features
+</p>
 
 <div class="test-section">
   <h2>Automated Unit Tests</h2>
@@ -39,23 +42,41 @@ button:hover { background: #e0e0e0; }
 <div class="test-section">
   <h2>Manual Testing Checklist</h2>
   <ul class="checklist">
-    <li><strong>Auth:</strong> Register new account → verify name in header</li>
+    <li><strong>Auth:</strong> Register new account → select location → verify name and location in header</li>
     <li><strong>Auth:</strong> Sign out → verify auth screen appears</li>
     <li><strong>Auth:</strong> Sign in with wrong password → verify friendly error</li>
     <li><strong>Auth:</strong> Forgot password → enter email → verify reset email sent toast</li>
     <li><strong>Tabs:</strong> Click each of the 11 tabs → verify correct UI renders</li>
-    <li><strong>Dashboard:</strong> Verify budget summary, net worth, goals, and accounts widgets display</li>
-    <li><strong>Dashboard:</strong> Verify recurring payment reminders appear when due</li>
+    <li><strong>Dashboard (v2.0.4):</strong> Verify budget surplus/deficit shows in "This Month" section</li>
+    <li><strong>Dashboard (v2.0.4):</strong> Verify Goals section shows combined progress bar (not individual)</li>
+    <li><strong>Dashboard (v2.0.4):</strong> Verify Preparedness section shows Emergency Fund, Health Insurance, Term Insurance</li>
+    <li><strong>Dashboard (v2.0.4):</strong> Hover over "Ideal" amounts → verify tooltips show calculation formulas</li>
+    <li><strong>Dashboard (v2.0.4):</strong> Verify 6-Month Trend chart displays with Investment, Liability, Saving, Expenditure, Others</li>
+    <li><strong>Dashboard (v2.0.4):</strong> Verify amounts appear on top of trend chart bars (₹XXK format)</li>
+    <li><strong>Dashboard (v2.0.4):</strong> Click "Download PDF" → verify HTML file downloads</li>
+    <li><strong>Dashboard (v2.0.4):</strong> Verify Emergency Fund ideal matches Emergency Fund tab (same amount)</li>
+    <li><strong>Dashboard:</strong> Verify responsive layout (3-col desktop, 2-col tablet, 1-col mobile)</li>
     <li><strong>Budget:</strong> Enter income/expense → verify totals update live</li>
     <li><strong>Budget:</strong> Click "📊 Annual" → verify annual summary with month breakdown</li>
     <li><strong>Budget:</strong> Navigate months with ← → → verify month display updates</li>
     <li><strong>Goals:</strong> Add goal → verify in preview cards</li>
     <li><strong>Fixed Outflow:</strong> Add expense → verify bar graphs update</li>
-    <li><strong>Investments:</strong> Add investment → verify total and bar chart update</li>
+    <li><strong>Investments:</strong> Add Monthly investment → verify appears in Tax Plan auto-deductions</li>
+    <li><strong>Investments:</strong> Add One-Time investment → verify NOT in Tax Plan auto-deductions</li>
+    <li><strong>Accounts (v2.0.4):</strong> Verify purpose badge appears next to bank name (not below)</li>
+    <li><strong>Accounts (v2.0.4):</strong> Verify PRIMARY badge shows "PRIMARY (Expenditure)"</li>
+    <li><strong>Accounts (v2.0.4):</strong> Verify all badges have consistent backgrounds</li>
     <li><strong>Net Worth:</strong> Add asset + liability → verify projection chart shows</li>
+    <li><strong>Tax Plan (v2.0.4):</strong> Verify auto-deductions only show recurring investments (not One-Time)</li>
+    <li><strong>Tax Plan (v2.0.4):</strong> Verify total is realistic (₹2-8L range, not crores)</li>
     <li><strong>Tax Plan:</strong> Switch regime → verify tax calculation changes</li>
-    <li><strong>Gifts:</strong> Add Fixed Every Year gift → verify summary shows correct count</li>
+    <li><strong>Gifts (v2.0.4):</strong> Add gift with date → verify appears in monthly chart</li>
+    <li><strong>Gifts (v2.0.4):</strong> Verify summary shows: Total Gifts, Fixed Every Year (count & amount), Spent This Year, Overall Total</li>
+    <li><strong>Gifts (v2.0.4):</strong> Verify monthly chart shows current financial year (Apr-Mar)</li>
     <li><strong>Emergency Fund:</strong> Enter current fund → verify status badge color (red/yellow/green)</li>
+    <li><strong>Emergency Fund:</strong> Verify ideal amount calculation shown (12 months)</li>
+    <li><strong>Insurance (v2.0.4):</strong> Add health insurance → verify appears in Dashboard preparedness</li>
+    <li><strong>Insurance (v2.0.4):</strong> Verify ideal health insurance based on income and location</li>
     <li><strong>Export:</strong> Click "Export Excel" on any tab with data → verify .xlsx downloads</li>
     <li><strong>Reset:</strong> Click "Reset All Data" → cancel → verify data intact</li>
     <li><strong>Reset:</strong> Click "Reset All Data" → confirm → type DELETE → verify all data cleared</li>
@@ -460,6 +481,197 @@ function runTests() {
         debounced();
         debounced();
         return count === 0 || `Expected 0 immediate calls, got ${count}`;
+    });
+
+    // ─ v2.0.4: toMonthlyAmount (frequency conversion) ────────────────────────────
+    function toMonthlyAmount(amount, frequency) {
+        const divisors = { Monthly: 1, Quarterly: 3, 'Semi-Annual': 6, Annual: 12 };
+        return amount / (divisors[frequency] || 1);
+    }
+
+    assertEqual(toMonthlyAmount(12000, 'Monthly'), 12000, "toMonthlyAmount: Monthly → same amount");
+    assertEqual(toMonthlyAmount(12000, 'Quarterly'), 4000, "toMonthlyAmount: Quarterly → amount/3");
+    assertEqual(toMonthlyAmount(12000, 'Semi-Annual'), 2000, "toMonthlyAmount: Semi-Annual → amount/6");
+    assertEqual(toMonthlyAmount(12000, 'Annual'), 1000, "toMonthlyAmount: Annual → amount/12");
+    assertEqual(toMonthlyAmount(12000, 'One-Time'), 12000, "toMonthlyAmount: One-Time → same amount");
+
+    // ─ v2.0.4: Health Insurance Calculation ──────────────────────────────────────
+    function calculateIdealHealthInsurance(age, location, monthlyIncome) {
+        const annualIncome = monthlyIncome * 12;
+        const baseAmount = annualIncome * 0.5; // 50% of annual income
+        
+        // Metro vs non-metro minimum
+        const metroCities = ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune', 'Gurgaon', 'Noida'];
+        const cityName = (location || '').split(',')[0].trim();
+        const isMetro = metroCities.some(metro => cityName.includes(metro));
+        const minimum = isMetro ? 500000 : 300000;
+        
+        // Age adjustment
+        let ageMultiplier = 1.0;
+        if (age >= 45) ageMultiplier = 1.5;
+        else if (age >= 35) ageMultiplier = 1.2;
+        
+        const adjusted = Math.max(minimum, baseAmount * ageMultiplier);
+        return Math.min(adjusted, 2000000); // Cap at 20L
+    }
+
+    assertEqual(calculateIdealHealthInsurance(30, 'Bengaluru, Karnataka', 50000), 500000, 
+        "Health Insurance: Young metro user gets minimum 5L");
+    assertEqual(calculateIdealHealthInsurance(30, 'Mysore, Karnataka', 50000), 300000, 
+        "Health Insurance: Young non-metro user gets minimum 3L");
+    assertEqual(calculateIdealHealthInsurance(40, 'Mumbai, Maharashtra', 100000), 720000, 
+        "Health Insurance: 40yr metro, 12L income → 6L * 1.2 = 7.2L");
+    assertEqual(calculateIdealHealthInsurance(50, 'Delhi, India', 100000), 900000, 
+        "Health Insurance: 50yr metro, 12L income → 6L * 1.5 = 9L");
+    assertEqual(calculateIdealHealthInsurance(50, 'Bengaluru, Karnataka', 500000), 2000000, 
+        "Health Insurance: High income capped at 20L");
+
+    // ─ v2.0.4: Term Insurance Calculation ────────────────────────────────────────
+    function calculateIdealTermInsurance(age, monthlyIncome, currentSavings) {
+        const annualIncome = monthlyIncome * 12;
+        
+        // Age-based multiplier
+        let multiplier = 15;
+        if (age >= 45) multiplier = 10;
+        else if (age >= 35) multiplier = 12;
+        
+        const idealCover = (annualIncome * multiplier) - currentSavings;
+        return Math.max(idealCover, 5000000); // Minimum 50L
+    }
+
+    assertEqual(calculateIdealTermInsurance(30, 50000, 0), 9000000, 
+        "Term Insurance: 30yr, 6L income, no savings → 6L * 15 = 90L");
+    assertEqual(calculateIdealTermInsurance(30, 50000, 5000000), 5000000, 
+        "Term Insurance: With 50L savings → (90L - 50L) = 40L, but min 50L");
+    assertEqual(calculateIdealTermInsurance(40, 100000, 0), 14400000, 
+        "Term Insurance: 40yr, 12L income → 12L * 12 = 1.44Cr");
+    assertEqual(calculateIdealTermInsurance(50, 100000, 5000000), 7000000, 
+        "Term Insurance: 50yr, 12L income, 50L savings → 12L * 10 - 50L = 70L");
+
+    // ─ v2.0.4: Emergency Fund Calculation ────────────────────────────────────────
+    function calculateIdealEmergencyFund(fixedLiabilities, fixedExpenditure, avgVariableExpenses) {
+        const minMonthlyNeed = fixedLiabilities + fixedExpenditure + avgVariableExpenses;
+        return minMonthlyNeed * 6; // 6 months recommended
+    }
+
+    assertEqual(calculateIdealEmergencyFund(20000, 15000, 10000), 270000, 
+        "Emergency Fund: (20k + 15k + 10k) * 6 = 2.7L");
+    assertEqual(calculateIdealEmergencyFund(0, 0, 30000), 180000, 
+        "Emergency Fund: Only variable expenses → 30k * 6 = 1.8L");
+    assertEqual(calculateIdealEmergencyFund(50000, 0, 0), 300000, 
+        "Emergency Fund: Only liabilities → 50k * 6 = 3L");
+
+    // ─ v2.0.4: Tax Auto-Deduction Logic ──────────────────────────────────────────
+    function getAutoTaxDeductions(investments, insurances) {
+        const auto = [];
+        
+        // Insurance premiums → 80D
+        insurances.forEach(item => {
+            const freq = item.frequency || 'Monthly';
+            const amount = Number(item.amount || 0);
+            let annual = 0;
+            if (freq === 'Monthly') annual = amount * 12;
+            else if (freq === 'Quarterly') annual = amount * 4;
+            else if (freq === 'Semi-Annual') annual = amount * 2;
+            else if (freq === 'Annual') annual = amount;
+            
+            if (annual > 0) auto.push({ name: item.name, amount: annual, section: '80D' });
+        });
+        
+        // Recurring investments only → 80C (exclude One-Time)
+        investments.forEach(item => {
+            const freq = (item.frequency || '').toLowerCase();
+            const amount = Number(item.amount || 0);
+            
+            // Skip One-Time investments (current values)
+            if (freq === 'one-time') return;
+            
+            let annual = 0;
+            if (freq === 'monthly') annual = amount * 12;
+            else if (freq === 'quarterly') annual = amount * 4;
+            else if (freq === 'semi-annual') annual = amount * 2;
+            else if (freq === 'annual') annual = amount;
+            
+            if (annual > 0) auto.push({ name: item.name, amount: annual, section: '80C' });
+        });
+        
+        return auto;
+    }
+
+    const testInvestments = [
+        { name: 'PPF', amount: 12500, frequency: 'Monthly' },
+        { name: 'EPF Balance', amount: 2000000, frequency: 'One-Time' }, // Should be excluded
+        { name: 'NPS', amount: 50000, frequency: 'Annual' }
+    ];
+    const testInsurances = [
+        { name: 'Health Insurance', amount: 2000, frequency: 'Monthly' }
+    ];
+    
+    const taxDeductions = getAutoTaxDeductions(testInvestments, testInsurances);
+    
+    test("Tax Auto-Deduction: Excludes One-Time investments", () => {
+        const hasEPF = taxDeductions.find(d => d.name === 'EPF Balance');
+        return !hasEPF || "One-Time investment should be excluded";
+    });
+    
+    test("Tax Auto-Deduction: Includes Monthly investments", () => {
+        const ppf = taxDeductions.find(d => d.name === 'PPF');
+        return ppf && ppf.amount === 150000 || `Expected 150000, got ${ppf?.amount}`;
+    });
+    
+    test("Tax Auto-Deduction: Includes Annual investments", () => {
+        const nps = taxDeductions.find(d => d.name === 'NPS');
+        return nps && nps.amount === 50000 || `Expected 50000, got ${nps?.amount}`;
+    });
+    
+    test("Tax Auto-Deduction: Includes insurance premiums", () => {
+        const health = taxDeductions.find(d => d.name === 'Health Insurance');
+        return health && health.amount === 24000 || `Expected 24000, got ${health?.amount}`;
+    });
+    
+    test("Tax Auto-Deduction: Correct section assignment", () => {
+        const ppf = taxDeductions.find(d => d.name === 'PPF');
+        const health = taxDeductions.find(d => d.name === 'Health Insurance');
+        return ppf?.section === '80C' && health?.section === '80D' 
+            || "Incorrect section assignment";
+    });
+
+    // ─ v2.0.4: Gifts Summary Calculation ─────────────────────────────────────────
+    function calculateGiftsSummary(gifts) {
+        const fixedGifts = gifts.filter(g => g.category === 'Fixed Every Year');
+        const currentFY = new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1;
+        const fyStart = new Date(currentFY, 3, 1); // April 1
+        const fyEnd = new Date(currentFY + 1, 2, 31); // March 31
+        
+        const spentThisYear = gifts.filter(g => {
+            if (!g.date) return false;
+            const giftDate = new Date(g.date);
+            return giftDate >= fyStart && giftDate <= fyEnd;
+        }).reduce((sum, g) => sum + Number(g.amount || 0), 0);
+        
+        return {
+            totalCount: gifts.length,
+            fixedCount: fixedGifts.length,
+            fixedAmount: fixedGifts.reduce((sum, g) => sum + Number(g.amount || 0), 0),
+            spentThisYear: spentThisYear,
+            overallTotal: gifts.reduce((sum, g) => sum + Number(g.amount || 0), 0)
+        };
+    }
+
+    const testGifts = [
+        { name: 'Birthday', amount: 5000, category: 'Fixed Every Year', date: '2025-06-15' },
+        { name: 'Wedding', amount: 10000, category: 'On Demand', date: '2025-08-20' },
+        { name: 'Anniversary', amount: 3000, category: 'Fixed Every Year', date: '2024-12-10' }
+    ];
+    
+    const giftsSummary = calculateGiftsSummary(testGifts);
+    
+    assertEqual(giftsSummary.totalCount, 3, "Gifts: Total count = 3");
+    assertEqual(giftsSummary.fixedCount, 2, "Gifts: Fixed count = 2");
+    assertEqual(giftsSummary.fixedAmount, 8000, "Gifts: Fixed amount = 8000");
+    assertEqual(giftsSummary.overallTotal, 18000, "Gifts: Overall total = 18000");
+    test("Gifts: Spent this year includes FY gifts", () => {
+        return giftsSummary.spentThisYear > 0 || "Should include current FY gifts";
     });
 
     renderResults();

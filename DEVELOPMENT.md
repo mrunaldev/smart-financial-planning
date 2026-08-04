@@ -1,6 +1,51 @@
-# SmartFin – Developer Guide
+# SmartFin – Developer Guide (v2.0.4)
 
 > Local development, testing, and deployment instructions.
+
+## Documentation Maintenance
+
+**IMPORTANT**: After making any code changes, update all documentation to keep it in sync:
+
+1. **Check APP_VERSION**: Current version is in `assets/js/app.js` line 556:
+   ```javascript
+   const APP_VERSION = { major: 2, minor: 0, build: 4 };
+   ```
+
+2. **Update version numbers** in these files to match APP_VERSION:
+   - `README.md` - Header and "What's New" section
+   - `USER_MANUAL.md` - Header and "What's New" section
+   - `DEVELOPMENT.md` - Header and "Recent Changes" section
+   - `architecture.md` - Header and version history
+   - `APP_SPEC.md` - Header and version updates section
+   - `CHANGELOG.md` - Add new entry at the top
+
+3. **Update content** based on changes:
+   - Add changelog entry to `CHANGELOG.md` with details
+   - Update `APP_SPEC.md` if data models or business logic changed
+   - Update `USER_MANUAL.md` for user-facing features
+   - Update `README.md` for major feature announcements
+
+4. **Version increment**: If the change is significant, increment the build number in app.js:
+   - `build`: Bug fixes, minor improvements
+   - `minor`: New features, UI changes
+   - `major`: Breaking changes, major rewrites
+
+## Recent Changes (v2.0.4)
+
+### New Features
+- **User Location Field**: Added to registration and Firestore data model (`userLocation`)
+- **Dashboard Enhancements**: Budget surplus, cumulative goals, preparedness metrics, 6-month trend chart
+- **Insurance Calculations**: Realistic formulas in `dashboard.js` for Health & Term insurance
+- **Gifts Date Field**: Optional date tracking with monthly chart visualization
+- **PDF Export**: Dashboard summary download functionality
+- **Tax Calculation Fix**: Only counts recurring contributions (excludes one-time/current values)
+
+### Modified Files
+- `index.html`: Location dropdown, gifts date field, PDF button, dashboard chart canvas
+- `assets/js/app.js`: Tax calculation logic, gifts summary, location handling
+- `assets/js/modules/dashboard.js`: Enhanced calculations, 6-month chart, preparedness formulas
+- `assets/css/styles.css`: Compact dashboard cards, responsive grid (3-column → 2-column → 1-column)
+- `APP_SPEC.md`: Updated to v2.0.4 with all new features documented
 
 ---
 

@@ -1,6 +1,15 @@
-# SmartFin – Smart Financial Planning
+# SmartFin – Smart Financial Planning (v2.0.4)
 
 A comprehensive dark-themed personal finance app with login/register, cross-device sync via Firebase, and tabbed sections for complete financial management.
+
+## What's New in v2.0.4
+
+- **User Location**: Added city selection during registration for location-based insurance calculations
+- **Enhanced Dashboard**: Budget surplus/deficit, cumulative goals progress, preparedness metrics, 6-month trend chart
+- **Ideal Insurance Calculations**: Realistic formulas for Health and Term Insurance based on income, age, and location
+- **Gifts Tracking**: Optional date field and monthly spending chart for current financial year
+- **PDF Export**: Download dashboard summary as HTML/PDF
+- **Tax Items**: Fixed auto-calculation to only count recurring contributions (not current values)
 
 ## Features
 
@@ -63,13 +72,17 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
    - Net worth projection graph (till age 70), inflation-adjusted (6%)
 
 7. **Tax Plan** – Tax liability under new/old regimes
-   - Auto-pulled deductions from Inflow & Outflow tabs (80C, 80D, 80CCD, etc.)
-   - Manual tax saving items
+   - Auto-pulled deductions from recurring investments (Monthly/Annual SIPs, not one-time holdings)
+   - Insurance premiums from Outflow tab
+   - Manual tax saving items (80C, 80D, 80CCD, etc.)
    - New Tax Regime (FY 2024-25) and Old Tax Regime calculations
+   - Dashboard shows total tax items logged
 
 8. **Gifts** – Track gifts and charitable giving
    - Category: Fixed Every Year / On Demand
-   - Summary: Total Gifts, Total Amount, Fixed Every Year count
+   - Optional date field (defaults to current date)
+   - Summary: Total Gifts count, Fixed Every Year count & amount, Spent This Year, Overall Total
+   - Monthly spending chart for current financial year (April-March)
 
 9. **Emergency Fund** – Calculate emergency fund requirements
    - Minimum Monthly Need = Fixed Liabilities/Insurance + Fixed Expenditure + Avg Variable Expenses
@@ -79,16 +92,30 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
    - Status: EXCELLENT (≥12), READY (6–12), ADEQUATE (3–6), LOW (<3)
    - Click **Done** to save changes (removed separate Update button)
 
+### Dashboard Features (v6.1)
+
+- **This Month**: Income, commitments, available funds, and budget surplus/deficit status
+- **Net Worth**: Assets, liabilities, and net worth with auto-sync from Net Worth tab
+- **Goals**: Combined progress bar showing all active goals together
+- **Preparedness**: Progress bars for Emergency Fund, Health Insurance, and Term Insurance with ideal calculations
+  - Emergency Fund: 6 months of expenses (fixed + variable)
+  - Health Insurance: Based on 50% annual income, age adjustment, and location (metro/non-metro)
+  - Term Insurance: Based on 10-15x annual income minus savings (age-dependent multiplier)
+- **Accounts**: Total balance and mandatory account setup status
+- **Investments & Planning**: Portfolio value, monthly investment, and tax items logged
+- **6-Month Trend**: Bar chart showing Investment, Liability, Saving, Expenditure, and Others
+- **PDF Export**: Download dashboard summary as HTML (print to PDF from browser)
+
 ### Additional Features
 
 - **Add/Edit/Delete** – Edit and Delete buttons side-by-side on desktop, stacked on mobile. Delete requires confirmation for all entries.
 - **Preview/Edit Toggle** – Switch between view and edit modes. Budget edit supports Cancel with snapshot/restore.
 - **Data Migration** – Automatic one-time migration from old tab structure (investments/liabilities/insurances → inflow/outflow)
-- **Onboarding** – New users start on Accounts tab; existing users go to Budget
+- **Onboarding** – New users start on Accounts tab with location selection; existing users go to Budget
 - **Excel Export** – Export tab data as `.xlsx`
 - **Data Reset** – Double confirmation (confirm + type "DELETE")
 - **Cross-Device Sync** – Firebase Firestore real-time sync
-- **Responsive Design** – Desktop & mobile with iOS safe-area support
+- **Responsive Design** – Desktop & mobile with iOS safe-area support, compact dashboard cards
 
 ## Structure
 

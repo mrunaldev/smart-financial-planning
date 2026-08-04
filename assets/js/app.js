@@ -1,5 +1,4 @@
 // ── SmartFin v2.0 ────────────────────────────────────────────────────────────
-// ES Module — all P1/P2 refactors applied
 
 import { showAlert, showConfirm, showPrompt, showTypedConfirm, showToast } from './modules/modal.js';
 import { renderDashboard } from './modules/dashboard.js';

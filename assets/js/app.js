@@ -912,6 +912,7 @@ const netWorthUI        = document.getElementById("netWorthUI");
 const toggleNetWorthEdit = document.getElementById("toggleNetWorthEdit");
 // currentAgeInput removed – age computed from dateOfBirth
 const currentAgeDisplay = document.getElementById("currentAgeDisplay");
+const currentLocationDisplay = document.getElementById("currentLocationDisplay");
 const netWorthPreview  = document.getElementById("netWorthPreview");
 const netWorthEdit     = document.getElementById("netWorthEdit");
 const assetsList       = document.getElementById("assetsList");
@@ -4610,6 +4611,7 @@ function renderNetWorth() {
         if (netWorthSummaryCards) netWorthSummaryCards.hidden = false;
         
         currentAgeDisplay.textContent = calculatedAge ? calculatedAge + " yrs" : "—";
+        currentLocationDisplay.textContent = (appData.userLocation || "").trim() || "—";
 
         // Calculate and display summary using combined entries
         calculateNetWorthSummary(allEntries);

@@ -1610,11 +1610,6 @@ td.amount {
 
 .edit-icon {
     display: inline-block;
-    transform: scaleX(-1);
-}
-
-.edit-icon {
-    display: inline-block;
 }
 
 .btn-icon:hover {
@@ -2725,14 +2720,22 @@ td.amount {
 }
 
 .age-display-section {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
     background: var(--surf1);
     border: 1px solid var(--border2);
     border-radius: 10px;
     padding: 12px 18px;
     align-self: flex-start;
+}
+
+.age-display-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.age-display-divider {
+    color: var(--border2);
+    font-size: 1.2rem;
 }
 
 .age-display-label {
@@ -4519,6 +4522,15 @@ td.amount {
     font-style: italic;
     cursor: help;
     line-height: 1;
+    padding: 8px; /* Larger touch target for mobile */
+    margin: -8px; /* Offset to maintain layout */
+}
+
+@media (max-width: 768px) {
+    .desc-tooltip-icon {
+        padding: 12px; /* Even larger touch target on mobile */
+        margin: -12px;
+    }
 }
 
 .desc-tooltip-text {
@@ -5024,6 +5036,7 @@ td.amount {
     position: relative;
     min-height: 100px;
     overflow: hidden;
+    touch-action: none; /* Allow custom touch handling for swipe */
 }
 .dash-alert-card {
     position: absolute;

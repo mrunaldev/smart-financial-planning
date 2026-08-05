@@ -1259,6 +1259,37 @@ function initCarouselTouchSupport() {
     }
 }
 
+// Initialize description tooltip touch support for mobile
+function initDescTooltipTouchSupport() {
+    const tooltipWrappers = document.querySelectorAll('.desc-tooltip-wrapper');
+    
+    tooltipWrappers.forEach(wrapper => {
+        const tooltip = wrapper.querySelector('.desc-tooltip-text');
+        if (!tooltip) return;
+        
+        // Mobile: Toggle on tap
+        wrapper.addEventListener('click', (e) => {
+            if (window.matchMedia('(max-width: 768px)').matches) {
+                e.stopPropagation();
+                tooltip.style.visibility = tooltip.style.visibility === 'visible' ? 'hidden' : 'visible';
+                tooltip.style.opacity = tooltip.style.opacity === '1' ? '0' : '1';
+            }
+        });
+    });
+    
+    // Hide tooltips when clicking outside on mobile
+    document.addEventListener('click', (e) => {
+        if (window.matchMedia('(max-width: 768px)').matches) {
+            if (!e.target.closest('.desc-tooltip-wrapper')) {
+                document.querySelectorAll('.desc-tooltip-text').forEach(t => {
+                    t.style.visibility = 'hidden';
+                    t.style.opacity = '0';
+                });
+            }
+        }
+    });
+}
+
 // Keyboard navigation support (arrow keys)
 function initCarouselKeyboardSupport() {
     document.addEventListener('keydown', (e) => {
@@ -1283,6 +1314,7 @@ function initCarouselKeyboardSupport() {
 setTimeout(() => {
     initCarouselTouchSupport();
     initCarouselKeyboardSupport();
-}, 200);
+    initDescTooltipTouchSupport();
+}, 500);
 
 

@@ -1,6 +1,43 @@
-# SmartFin – Smart Financial Planning (v2.3.21)
+# SmartFin – Smart Financial Planning
+
+![Version](https://img.shields.io/badge/version-2.4.0-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Firebase](https://img.shields.io/badge/firebase-enabled-orange.svg)
+![Platform](https://img.shields.io/badge/platform-web%20%7C%20mobile-lightgrey.svg)
+![Status](https://img.shields.io/badge/status-active-success.svg)
 
 A comprehensive dark-themed personal finance app with login/register, cross-device sync via Firebase, and tabbed sections for complete financial management.
+
+## What's New in v2.4.0 - Major Feature Release 🚀
+
+### **New Features**
+- **✨ Expense Tracking Tab**: Complete expense tracking system with category-wise breakdown
+  - Month-by-month expense tracking with calendar navigation
+  - 11 predefined expense categories (Food & Dining, Transportation, Shopping, etc.)
+  - Visual pie chart showing category-wise spending distribution
+  - Automatic comparison with Budget's Variable Expenditure
+  - "Unidentified" category for budget vs actual differences
+  - Syncs with Budget tab lifecycle (auto-advances when month is closed)
+  - Optional tracking - leave blank for months you don't want to track
+  - Edit/Done toggle pattern consistent with other tabs
+  - List view showing expenses grouped by category
+  - Full CRUD operations (Create, Read, Update, Delete) for expenses
+
+### **Dashboard Improvements**
+- **🏠 Clickable Logo**: App logo and name now navigate to Dashboard tab
+- **📱 Mobile-Friendly Tooltips**: Financial Health Score tooltips now work on mobile (tap to show/hide)
+- **📐 Responsive Design**: All dashboard elements optimized for mobile, tablet, and desktop views
+- **🎯 Better Layout**: Moved Alerts & Notifications and Financial Health Score below Insights & Recommendations for improved information hierarchy
+- **💚 Optimized Health Score Card**: Better width handling across all screen sizes
+
+### **Technical Improvements**
+- Enhanced responsive CSS with proper breakpoints for all devices
+- Touch-friendly tooltip system with both hover (desktop) and tap (mobile) support
+- Keyboard navigation support for logo click (Enter/Space keys)
+- Data structure updates to support expense tracking across months
+- Improved mobile experience with larger touch targets and better spacing
+
+## Previous Updates
 
 ## What's New in v2.3.21 - Tax Data Load Bug Fix 🔧
 

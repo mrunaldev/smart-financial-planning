@@ -1,4 +1,4 @@
-# SmartFin – Application Specification (v2.3.15)
+# SmartFin – Application Specification (v2.4.0)
 
 > **Purpose**: Single source of truth for the app's architecture, data models, business logic, and UI structure.
 > Use this file as context when making future modifications. Update it after every significant change.
@@ -151,6 +151,7 @@ element.addEventListener('mousedown', handleStart);
 | `outflow` | Outflow | Yes | Yes – `outflowUI` |
 | `insurance` | Insurance | Yes | Yes – `insuranceUI` |
 | `monthlyBudget` | Budget | Yes | Yes – `monthlyBudgetUI` |
+| `expenseTracking` | Expense Tracking | Yes | Yes – `expenseTrackingUI` |
 | `financialGoal` | Goals | Yes | Yes – `financialGoalUI` |
 | `netWorth` | Net Worth | No | Yes – `netWorthUI` |
 | `taxPlan` | Tax Plan | No | Yes – `taxPlanUI` |
@@ -213,6 +214,20 @@ users/{uid} → single document
       "_monthClosed": false,
       "autoLinkedFields": { "outflow.loanEMI": true, "outflow.variableExpenditure": true, ... },
       "autoLinkedBreakdown": { "outflow.loanEMI": [{name, amount, source}] }
+    }
+  },
+  "expenseTrackingData": {
+    "2026-06": {
+      "expenses": [
+        {
+          "id": "timestamp",
+          "category": "Food & Dining",
+          "amount": 1500,
+          "date": "2026-06-15",
+          "description": "Dinner at restaurant",
+          "createdAt": "2026-06-15T18:30:00.000Z"
+        }
+      ]
     }
   },
   "customTabs": [ { "id": "string", "label": "string", "color": "#hex", "text": "#hex" } ]
@@ -470,6 +485,109 @@ Actions:
 - Transfer section hidden
 - Close section hidden
 - Next month auto-gets CC outstanding via applyMonthlyAutoValues
+
+---
+
+## 5.5. Expense Tracking System
+
+### Overview
+
+Expense Tracking provides detailed, month-by-month expense categorization and analysis. It's designed as a complementary feature to the Budget tab - Budget handles planning and auto-calculations, while Expense Tracking provides granular actual spending analysis.
+
+### Features
+
+**Month Navigation**
+- Calendar-style navigation (Previous/Next month buttons)
+- Month display shows current being viewed
+- Syncs with Budget tab - when Budget month is closed, Expense Tracking also advances to next month
+- Optional tracking - months can be left blank if you don't want to track expenses
+
+**Expense Categories (Predefined)**
+- Food & Dining
+- Transportation
+- Shopping
+- Entertainment
+- Healthcare
+- Education
+- Personal Care
+- Home & Utilities
+- Travel
+- Gifts & Donations
+- Others
+
+**Preview Mode**
+- Summary cards showing:
+  - Total Expenses (sum of all expenses for the month)
+  - Budget Variable Expenditure (from Budget tab for comparison)
+  - Difference (Over/Under budget with color coding)
+- Pie chart showing category-wise breakdown
+- "Unidentified" category appears in chart if total expenses < Budget Variable Expenditure
+- Expense list grouped by category with amounts
+
+**Edit Mode**
+- Form to add expenses:
+  - Category (dropdown)
+  - Amount (₹)
+  - Date
+  - Description (optional)
+- Expense table showing all expenses with:
+  - Date, Category, Description, Amount
+  - Edit and Delete buttons
+- Full CRUD operations (Create, Read, Update, Delete)
+
+### Data Structure
+
+```
+expenseTrackingData: {
+  "2026-06": {
+    "expenses": [
+      {
+        "id": "1234567890",
+        "category": "Food & Dining",
+        "amount": 1500,
+        "date": "2026-06-15",
+        "description": "Dinner at restaurant",
+        "createdAt": "2026-06-15T18:30:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+### Lifecycle Sync with Budget
+
+When a Budget month is closed:
+1. Expense tracking month automatically advances to next month
+2. Previous month's expenses remain accessible via navigation
+3. New month starts with blank expense list
+4. Comparison with new month's Budget Variable Expenditure begins
+
+### Integration Points
+
+**Budget Tab Integration**
+- Reads `monthlyBudgetData[monthKey].outflow.variableExpenditure` for comparison
+- Shows difference between actual expenses vs budgeted variable expenditure
+- "Unidentified" category represents the gap
+
+**Dashboard Integration**
+- Could be extended to show expense summaries on Dashboard
+- Expense data available for future dashboard enhancements
+
+### UI Components
+
+- `expenseTrackingUI` - Main container
+- Month navigation buttons (`prevExpenseMonth`, `nextExpenseMonth`)
+- Toggle edit button (`toggleExpenseEdit`)
+- Summary cards (Total Expenses, Budget Variable Expenditure, Difference)
+- Pie chart (`expensePieChart`)
+- Expense list (preview mode)
+- Expense form and table (edit mode)
+
+### State Variables
+
+- `currentExpenseMonth` - Currently viewed month (Date object)
+- `isExpenseEditMode` - Edit mode toggle (boolean)
+- `expensePieChart` - Chart.js instance for pie chart
 
 ---
 

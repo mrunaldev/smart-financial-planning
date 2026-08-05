@@ -5,6 +5,55 @@ All notable changes to SmartFin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-08-05 - Major Feature Release
+
+### Added
+
+#### **Expense Tracking Tab**
+- Complete expense tracking system with month-by-month categorization
+- 11 predefined expense categories (Food & Dining, Transportation, Shopping, Entertainment, Healthcare, Education, Personal Care, Home & Utilities, Travel, Gifts & Donations, Others)
+- Calendar-style month navigation (Previous/Next buttons)
+- Preview/Edit toggle pattern consistent with other tabs
+- Summary cards showing Total Expenses, Budget Variable Expenditure, and Difference
+- Visual pie chart showing category-wise spending breakdown
+- "Unidentified" category for budget vs actual differences
+- Automatic comparison with Budget tab's Variable Expenditure
+- Full CRUD operations (Create, Read, Update, Delete) for expenses
+- Expense list grouped by category with amounts in preview mode
+- Expense table with edit/delete actions in edit mode
+- Optional tracking - months can be left blank if you don't want to track expenses
+- Syncs with Budget tab lifecycle - auto-advances when budget month is closed
+
+#### **Dashboard Improvements**
+- Clickable app logo and name - now navigates to Dashboard tab
+- Mobile-friendly tooltips for Financial Health Score (tap to show/hide)
+- Responsive design improvements for all dashboard elements
+- Reorganized dashboard layout - moved Alerts & Notifications and Financial Health Score below Insights & Recommendations
+- Optimized Financial Health Score card width for better mobile experience
+- Keyboard navigation support for logo click (Enter/Space keys)
+
+### Changed
+
+#### **Data Structure Updates**
+- Added `expenseTrackingData` to appData structure
+- Updated Firestore data loading to include expenseTrackingData
+- Updated import/export functionality to include expenseTrackingData
+- Added expenseTrackingData initialization in normalizeAppDataModel()
+
+#### **Responsive Design**
+- Enhanced CSS breakpoints for mobile (<768px), tablet (768-1024px), and desktop (>1024px)
+- Improved touch target sizes for mobile usability (minimum 44x44px)
+- Better spacing and sizing across all screen sizes
+- Optimized card layouts for both mobile and desktop views
+
+### Technical
+
+- Custom tooltip system supporting both hover (desktop) and tap (mobile) interactions
+- Month lifecycle synchronization between Budget and Expense Tracking tabs
+- Chart.js integration for expense category pie chart
+- Enhanced CSS with proper responsive breakpoints
+- Improved mobile performance with passive event listeners
+
 ## [2.3.21] - 2026-08-05 - Tax Data Load Bug Fix
 
 ### Fixed

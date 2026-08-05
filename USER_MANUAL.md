@@ -1,6 +1,18 @@
-# SmartFin – User Manual (v2.0.4)
+# SmartFin – User Manual (v2.4.0)
 
 A comprehensive guide to using SmartFin for personal financial planning.
+
+## What's New in v2.4.0
+
+- **Expense Tracking Tab**: Complete expense tracking system with category-wise breakdown and month-by-month analysis
+- **Budget Comparison**: Automatic comparison of actual expenses vs Budget's Variable Expenditure
+- **Visual Pie Charts**: Category-wise expense breakdown with "Unidentified" category for budget gaps
+- **Mobile-Friendly Tooltips**: Financial Health Score tooltips now work on mobile devices
+- **Responsive Design**: All dashboard elements optimized for mobile, tablet, and desktop
+- **Improved Dashboard Layout**: Better information hierarchy with reorganized cards
+- **Clickable Logo**: App logo and name now navigate to Dashboard tab
+
+## Previous Updates
 
 ## What's New in v2.0.4
 

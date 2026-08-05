@@ -795,8 +795,8 @@ export function renderDashboard(appData, netWorthSummary = {}) {
         monthlyInvestment, usableIncome, monthlyCommitments
     });
 
-    grid.innerHTML = `
-        ${alerts.length > 0 ? `
+    // Prepare Alerts HTML (to be placed after Insights)
+    const alertsHTML = alerts.length > 0 ? `
         <article class="dash-card dash-alerts-carousel" style="grid-column: 1 / -1;">
             <div class="dash-card-header">
                 <span class="dash-card-title">⚡ Alerts & Notifications</span>
@@ -823,8 +823,10 @@ export function renderDashboard(appData, netWorthSummary = {}) {
                 `).join('')}
             </div>
         </article>
-        ` : ''}
-        
+    ` : '';
+    
+    // Prepare Health Score HTML (to be placed after Insights)
+    const healthScoreHTML = `
         <article class="dash-card dash-health-score" style="grid-column: 1 / -1;">
             <div class="dash-card-header">
                 <span class="dash-card-title" title="Overall financial health based on 6 key metrics. Hover over each component below for details." style="cursor: help;">💚 Financial Health Score ℹ️</span>
@@ -843,10 +845,10 @@ export function renderDashboard(appData, netWorthSummary = {}) {
                     <div class="dash-health-score-number">${healthScore.score}</div>
                 </div>
                 <div class="dash-health-breakdown">
-                    ${healthScore.breakdown.map(item => `
-                        <div class="dash-health-item" title="${item.tooltip || ''}" style="cursor: help;">
+                    ${healthScore.breakdown.map((item, index) => `
+                        <div class="dash-health-item" style="cursor: help;">
                             <div class="dash-health-item-header">
-                                <span class="dash-health-item-label">${item.label} ℹ️</span>
+                                <span class="dash-health-item-label" title="${item.tooltip || ''}">${item.label} ℹ️</span>
                                 <span class="dash-health-item-score">${item.score}/${item.max}</span>
                             </div>
                             <div class="dash-health-item-bar">
@@ -857,7 +859,9 @@ export function renderDashboard(appData, netWorthSummary = {}) {
                 </div>
             </div>
         </article>
-        
+    `;
+
+    grid.innerHTML = `
         <article class="dash-card dash-card-primary">
             <div class="dash-card-header">
                 <span class="dash-card-title">📅 This month</span>
@@ -996,6 +1000,10 @@ export function renderDashboard(appData, netWorthSummary = {}) {
             </div>
         </article>
         ` : ''}
+        
+        ${alertsHTML}
+        
+        ${healthScoreHTML}
         
         <article class="dash-card" style="grid-column: 1 / -1;">
             <div class="dash-card-header"><span class="dash-card-title">📊 6-Month Trend</span></div>
@@ -1276,3 +1284,5 @@ setTimeout(() => {
     initCarouselTouchSupport();
     initCarouselKeyboardSupport();
 }, 200);
+
+

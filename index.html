@@ -102,7 +102,7 @@
 <main class="app-shell">
 
     <header class="app-header">
-        <div class="app-brand">
+        <div class="app-brand" id="appBrandLogo" role="button" tabindex="0" aria-label="Go to Dashboard" title="Go to Dashboard" style="cursor: pointer;">
             <img class="logo-img logo-img-sm app-logo" src="assets/logo_dark.png" alt="SmartFin">
             <div class="brand-text">
                 <h1>SmartFin</h1>
@@ -150,12 +150,15 @@
 
         <!-- Monthly Budget Specific UI -->
         <div id="monthlyBudgetUI" class="monthly-budget-ui" hidden>
-            <div class="month-nav">
-                <button type="button" id="prevMonth" class="btn-nav">← Previous</button>
-                <span id="currentMonthDisplay" class="month-display"></span>
-                <button type="button" id="nextMonth" class="btn-nav">Next →</button>
+            <div class="budget-header">
+                <h2>Monthly Budget</h2>
+                <div class="month-nav">
+                    <button type="button" id="prevMonth" class="btn-nav">← Previous</button>
+                    <span id="currentMonthDisplay" class="month-display"></span>
+                    <button type="button" id="nextMonth" class="btn-nav">Next →</button>
+                </div>
                 <button type="button" id="toggleBudgetView" class="btn-nav">📊 Annual</button>
-                <button type="button" id="toggleBudgetEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="toggleBudgetEdit" class="btn-nav btn-icon"><span class="edit-icon">✎</span> Edit</button>
             </div>
 
             <!-- Annual Summary Section (hidden by default) -->
@@ -423,11 +426,108 @@
             </div><!-- end monthlyViewSection -->
         </div><!-- end monthlyBudgetUI -->
 
+        <!-- Expense Tracking Specific UI -->
+        <div id="expenseTrackingUI" class="expense-tracking-ui" hidden>
+            <div class="expense-header">
+                <h2>Expense Tracking</h2>
+                <div class="month-nav">
+                    <button type="button" id="prevExpenseMonth" class="btn-nav">← Previous</button>
+                    <span id="currentExpenseMonthDisplay" class="month-display"></span>
+                    <button type="button" id="nextExpenseMonth" class="btn-nav">Next →</button>
+                </div>
+                <button type="button" id="toggleExpenseEdit" class="btn-nav btn-icon"><span class="edit-icon">✎</span> Edit</button>
+            </div>
+
+            <!-- Expense Summary Cards -->
+            <div class="expense-summary">
+                <div class="summary-card">
+                    <span class="summary-label">Total Expenses</span>
+                    <strong id="totalExpenses" class="summary-value">₹0</strong>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-label">Budget Variable Expenditure</span>
+                    <strong id="budgetVariableExp" class="summary-value">₹0</strong>
+                </div>
+                <div class="summary-card" id="expenseDifferenceCard">
+                    <span class="summary-label">Difference</span>
+                    <strong id="expenseDifference" class="summary-value">₹0</strong>
+                </div>
+            </div>
+
+            <!-- Expense List (Preview Mode) -->
+            <div id="expensePreview" class="expense-preview">
+                <div id="expenseSortFilter"></div>
+                <h3>Expenses This Month</h3>
+                <div id="expenseList" class="expense-list"></div>
+            </div>
+
+            <!-- Expense Chart -->
+            <div class="chart-container">
+                <h3>Category Breakdown</h3>
+                <canvas id="expensePieChart"></canvas>
+            </div>
+
+            <!-- Expense Edit Mode -->
+            <div id="expenseEdit" class="expense-edit" hidden>
+                <h3>Add/Edit Expenses</h3>
+                <form id="expenseForm" class="expense-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="expenseCategory">Category *</label>
+                            <select id="expenseCategory" required>
+                                <option value="">Select category...</option>
+                                <option value="Food & Dining">🍽️ Food & Dining</option>
+                                <option value="Transportation">🚗 Transportation</option>
+                                <option value="Shopping">🛍️ Shopping</option>
+                                <option value="Entertainment">🎬 Entertainment</option>
+                                <option value="Healthcare">🏥 Healthcare</option>
+                                <option value="Education">📚 Education</option>
+                                <option value="Personal Care">💇 Personal Care</option>
+                                <option value="Home & Utilities">🏠 Home & Utilities</option>
+                                <option value="Travel">✈️ Travel</option>
+                                <option value="Gifts & Donations">🎁 Gifts & Donations</option>
+                                <option value="Others">📦 Others</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="expenseAmount">Amount (₹) *</label>
+                            <input type="number" id="expenseAmount" min="0" step="0.01" required placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="expenseDate">Date *</label>
+                            <input type="date" id="expenseDate" required>
+                            <small class="field-hint">Limited to current month</small>
+                        </div>
+                    </div>
+                    <div class="field field-btn">
+                        <button type="submit" class="btn-add">Add Expense</button>
+                    </div>
+                </form>
+
+                <!-- Expense Table -->
+                <div class="expense-table-container">
+                    <table class="expense-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expenseTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div><!-- end expenseTrackingUI -->
+
         <!-- Financial Goal Specific UI -->
         <div id="financialGoalUI" class="financial-goal-ui" hidden>
             <div class="goal-header">
                 <h2>Financial Goals</h2>
-                <button type="button" id="toggleGoalEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="toggleGoalEdit" class="btn-nav btn-icon"><span class="edit-icon">✎</span> Edit</button>
             </div>
 
             <!-- Goal Summary -->
@@ -474,7 +574,7 @@
         <div id="inflowUI" class="investments-ui" hidden>
             <div class="goal-header">
                 <h2>Investments</h2>
-                <button type="button" id="toggleInflowEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="toggleInflowEdit" class="btn-nav btn-icon"><span class="edit-icon">✎</span> Edit</button>
             </div>
 
             <!-- Investment Summary -->
@@ -505,14 +605,6 @@
                 </div>
             </div>
 
-            <!-- Sub-section toggle -->
-            <div class="investment-subsection-tabs" id="investmentSubTabs">
-                <button type="button" class="inv-sub-tab active" data-inv-view="all">All</button>
-                <button type="button" class="inv-sub-tab" data-inv-view="existing">One-time</button>
-                <button type="button" class="inv-sub-tab" data-inv-view="monthly">Recurring</button>
-                <button type="button" class="inv-sub-tab" data-inv-view="portfolio">Portfolio Summary</button>
-            </div>
-
             <!-- Preview Mode -->
             <div id="inflowTabPreview" class="investment-preview">
                 <div class="chart-section">
@@ -521,7 +613,15 @@
                         <canvas id="inflowBarChart"></canvas>
                     </div>
                 </div>
-                <div id="inflowSortFilter"></div>
+                <div class="investment-controls">
+                    <div id="inflowSortFilter"></div>
+                    <div class="investment-subsection-tabs" id="investmentSubTabs">
+                        <button type="button" class="inv-sub-tab active" data-inv-view="all">All</button>
+                        <button type="button" class="inv-sub-tab" data-inv-view="existing">One-time</button>
+                        <button type="button" class="inv-sub-tab" data-inv-view="monthly">Recurring</button>
+                        <button type="button" class="inv-sub-tab" data-inv-view="portfolio">Portfolio Summary</button>
+                    </div>
+                </div>
                 <div id="inflowList" class="investments-list"></div>
                 <!-- Portfolio Summary (shown when Portfolio tab selected) -->
                 <div id="portfolioSummary" class="portfolio-summary" hidden>
@@ -569,7 +669,7 @@
         <div id="outflowUI" class="monthly-fixed-expense-ui" hidden>
             <div class="goal-header">
                 <h2>Outflow</h2>
-                <button type="button" id="toggleOutflowEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="toggleOutflowEdit" class="btn-nav btn-icon"><span class="edit-icon">✎</span> Edit</button>
             </div>
 
             <!-- Outflow Summary -->
@@ -641,7 +741,7 @@
         <div id="insuranceUI" class="insurance-ui" hidden>
             <div class="goal-header">
                 <h2>Insurance</h2>
-                <button type="button" id="toggleInsuranceEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="toggleInsuranceEdit" class="btn-nav btn-icon"><span class="edit-icon">✎</span> Edit</button>
             </div>
 
             <!-- Insurance Summary -->
@@ -694,7 +794,7 @@
         <div id="cardsUI" class="cards-ui" hidden>
             <div class="goal-header">
                 <h2>Accounts</h2>
-                <button type="button" id="toggleCardEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="toggleCardEdit" class="btn-nav btn-icon"><span class="edit-icon">✎</span> Edit</button>
             </div>
 
             <!-- Card Summary -->
@@ -744,63 +844,36 @@
             </div>
         </div>
 
-        <!-- Expense Tracking Specific UI -->
-        <div id="expenseUI" class="expense-ui" hidden>
-            <div class="goal-header">
-                <h2>Expense Tracking</h2>
-                <button type="button" id="toggleExpenseEdit" class="btn-nav btn-icon">✎ Edit</button>
-            </div>
-
-            <!-- Preview Mode - Summary -->
-            <div id="expensePreview" class="expense-preview">
-                <div id="expenseSummary"></div>
-            </div>
-
-            <!-- Edit Mode -->
-            <div id="expenseEdit" class="expense-edit" hidden>
-                <form class="entry-form" id="expenseForm" autocomplete="off">
-                    <div id="expenseDynamicFields"></div>
-                    <div class="field field-btn">
-                        <button type="submit" class="btn-add">Add Expense</button>
-                    </div>
-                </form>
-                <div class="table-wrap">
-                    <table>
-                        <thead id="expenseTableHead"></thead>
-                        <tbody id="expenseTableBody"></tbody>
-                    </table>
-                    <p class="empty-state" id="expenseEmptyState">No expenses tracked yet. Add one above.</p>
-                </div>
-            </div>
-        </div>
-
         <!-- Net Worth Specific UI -->
         <div id="netWorthUI" class="net-worth-ui" hidden>
             <div class="goal-header">
                 <h2>Net Worth</h2>
-                <button type="button" id="toggleNetWorthEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="toggleNetWorthEdit" class="btn-nav btn-icon"><span class="edit-icon">✎</span> Edit</button>
             </div>
 
             <!-- Current Age Display (view mode) -->
-            <div class="age-display-section" id="ageDisplaySection">
-                <span class="age-display-label">Current Age</span>
-                <strong id="currentAgeDisplay">—</strong>
-                <span class="age-display-hint">(auto-calculated from Date of Birth)</span>
-            </div>
+            <!-- Age Display & Net Worth Summary -->
+            <div id="netWorthSummaryCards" style="margin-bottom: var(--space-lg);">
+                <div class="age-display-section" id="ageDisplaySection" style="margin-bottom: var(--space-lg);">
+                    <span class="age-display-label">Current Age</span>
+                    <strong id="currentAgeDisplay">—</strong>
+                    <span class="age-display-hint">(auto-calculated from Date of Birth)</span>
+                </div>
 
-            <!-- Net Worth Summary -->
-            <div class="net-worth-summary">
-                <div class="net-worth-summary-item">
-                    <span class="net-worth-summary-label">Total Assets</span>
-                    <strong id="totalAssets">₹0</strong>
-                </div>
-                <div class="net-worth-summary-item">
-                    <span class="net-worth-summary-label">Total Liabilities</span>
-                    <strong id="totalLiabilities">₹0</strong>
-                </div>
-                <div class="net-worth-summary-item">
-                    <span class="net-worth-summary-label">Net Worth Today</span>
-                    <strong id="netWorthToday">₹0</strong>
+                <!-- Net Worth Summary -->
+                <div id="netWorthSummary" class="net-worth-summary">
+                    <div class="net-worth-summary-item">
+                        <span class="net-worth-summary-label">Total Assets</span>
+                        <strong id="totalAssets">₹0</strong>
+                    </div>
+                    <div class="net-worth-summary-item">
+                        <span class="net-worth-summary-label">Total Liabilities</span>
+                        <strong id="totalLiabilities">₹0</strong>
+                    </div>
+                    <div class="net-worth-summary-item">
+                        <span class="net-worth-summary-label">Net Worth Today</span>
+                        <strong id="netWorthToday">₹0</strong>
+                    </div>
                 </div>
             </div>
 
@@ -854,7 +927,7 @@
         <div id="taxPlanUI" class="tax-plan-ui" hidden>
             <div class="goal-header">
                 <h2>Tax Plan</h2>
-                <button type="button" id="toggleTaxPlanEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="toggleTaxPlanEdit" class="btn-nav btn-icon"><span class="edit-icon">✎</span> Edit</button>
             </div>
 
             <!-- Tax Regime Selection -->
@@ -876,7 +949,7 @@
             </div>
 
             <!-- Tax Summary -->
-            <div class="tax-summary">
+            <div id="taxSummary" class="tax-summary">
                 <div class="tax-summary-item">
                     <span class="tax-summary-label">Annual Income (from Budget)</span>
                     <strong id="annualIncome">₹0</strong>
@@ -1008,7 +1081,7 @@
         <div id="giftsUI" class="gifts-ui" hidden>
             <div class="goal-header">
                 <h2>Gifts</h2>
-                <button type="button" id="toggleGiftsEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="toggleGiftsEdit" class="btn-nav btn-icon"><span class="edit-icon">✎</span> Edit</button>
             </div>
 
             <!-- Gifts Summary -->
@@ -1036,7 +1109,7 @@
             </div>
 
             <!-- Monthly Spending Chart -->
-            <div style="margin: 24px 0; padding: 20px; background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">
+            <div id="giftsMonthlyChartContainer" style="margin: 24px 0; padding: 20px; background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;">
                 <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">Monthly Gift Spending (Current Financial Year)</h3>
                 <canvas id="giftsMonthlyChart" style="max-height: 250px;"></canvas>
             </div>
@@ -1069,7 +1142,7 @@
         <div id="emergencyFundUI" class="emergency-fund-ui" hidden>
             <div class="goal-header">
                 <h2>Emergency Fund</h2>
-                <button type="button" id="toggleEmergencyFundEdit" class="btn-nav btn-icon">✎ Edit</button>
+                <button type="button" id="toggleEmergencyFundEdit" class="btn-nav btn-icon"><span class="edit-icon">✎</span> Edit</button>
             </div>
 
             <!-- Preview Mode -->

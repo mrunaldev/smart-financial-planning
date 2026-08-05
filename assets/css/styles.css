@@ -22,6 +22,21 @@
     --others: #eab308;
     --radius:  10px;
     --shadow:  0 8px 40px rgba(0,0,0,.7);
+    /* Spacing Scale (4px base) */
+    --space-xs: 4px;   /* Very tight */
+    --space-sm: 8px;   /* Tight */
+    --space-md: 12px;  /* Normal */
+    --space-lg: 16px;  /* Comfortable */
+    --space-xl: 20px;  /* Spacious */
+    --space-2xl: 24px; /* Very spacious */
+    /* Font Scale */
+    --font-xs: 0.75rem;   /* 12px */
+    --font-sm: 0.875rem;  /* 14px */
+    --font-base: 1rem;    /* 16px */
+    --font-lg: 1.125rem;  /* 18px */
+    --font-xl: 1.25rem;   /* 20px */
+    --font-2xl: 1.5rem;   /* 24px */
+    --font-3xl: 1.875rem; /* 30px */
     /* Safe area insets for notched/Dynamic-Island phones */
     --safe-top:    env(safe-area-inset-top, 0px);
     --safe-left:   env(safe-area-inset-left, 0px);
@@ -69,7 +84,7 @@ body {
     border-radius: 8px;
 }
 .logo-img-sm { width: 66px; height: 66px; }
-.logo-img-lg { width: 76px; height: 76px; margin-bottom: 8px; }
+.logo-img-lg { width: 76px; height: 76px; margin-bottom: var(--space-sm); }
 
 /* In-app header logo: serve the correct asset per theme.
    content:url() replaces the rendered <img> src in WebKit/Chromium (all mobile targets). */
@@ -102,11 +117,11 @@ body {
 
 .auth-brand {
     text-align: center;
-    margin-bottom: 36px;
+    margin-bottom: var(--space-2xl);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-md);
 }
 
 .auth-brand h1 {
@@ -126,7 +141,7 @@ body {
     border-radius: 8px;
     padding: 11px 14px;
     font-size: 0.82rem;
-    margin-bottom: 18px;
+    margin-bottom: var(--space-lg);
     line-height: 1.4;
 }
 
@@ -134,7 +149,7 @@ body {
 .field {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-sm);
     min-width: 0;
 }
 
@@ -278,7 +293,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: var(--space-sm);
 }
 
 /* ── App Screen ───────────────────────────────────────── */
@@ -290,7 +305,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
+    gap: var(--space-xl);
     /* top padding absorbs the iOS status bar (time/battery/wifi) */
     padding: calc(16px + var(--safe-top)) calc(24px + var(--safe-right)) 16px calc(24px + var(--safe-left));
     border-bottom: 1px solid var(--border);
@@ -308,12 +323,21 @@ body {
 .app-brand {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: var(--space-lg);
     min-width: 0;
+    transition: opacity 0.2s ease;
+}
+
+.app-brand:hover {
+    opacity: 0.8;
+}
+
+.app-brand:active {
+    opacity: 0.6;
 }
 
 .brand-text h1 {
-    font-size: 1.73rem;
+    font-size: 2.7rem;
     font-weight: 700;
     letter-spacing: -0.3px;
     color: var(--white);
@@ -324,7 +348,7 @@ body {
 }
 
 .brand-text p {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     color: var(--muted);
     white-space: nowrap;
     overflow: hidden;
@@ -336,7 +360,7 @@ body {
 .user-bar {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-md);
     flex-shrink: 0;
 }
 
@@ -380,7 +404,7 @@ body {
     position: sticky;
     top: calc(64px + var(--safe-top));
     z-index: 90;
-    margin-bottom: 12px;
+    margin-bottom: var(--space-md);
 }
 
 /* Desktop: scrollable row */
@@ -389,7 +413,7 @@ body {
 .tab-list {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-sm);
     padding: 10px 24px;
     overflow-x: auto;
     scrollbar-width: none;
@@ -430,7 +454,7 @@ body {
         align-items: center;
         justify-content: space-between;
         padding: 10px 16px;
-        gap: 10px;
+        gap: var(--space-md);
         border-bottom: 1px solid var(--border);
     }
     .mobile-active-tab-name {
@@ -460,7 +484,7 @@ body {
         flex-direction: column;
         align-items: stretch;
         padding: 8px 16px 12px;
-        gap: 4px;
+        gap: var(--space-xs);
         overflow-x: visible;
     }
     .tab-list.open {
@@ -482,7 +506,7 @@ body {
     margin: 0 24px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-lg);
 }
 
 /* ── Entry Form ───────────────────────────────────────── */
@@ -493,7 +517,7 @@ body {
     padding: 20px 24px;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
+    gap: var(--space-lg);
     align-items: end;
 }
 
@@ -501,7 +525,7 @@ body {
     grid-column: 1 / -1;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
+    gap: var(--space-lg);
 }
 
 .field-btn {
@@ -511,7 +535,7 @@ body {
 /* ── Toolbar ──────────────────────────────────────────── */
 .toolbar {
     display: flex;
-    gap: 12px;
+    gap: var(--space-md);
     align-items: center;
 }
 
@@ -588,25 +612,74 @@ td.amount {
 .monthly-budget-ui {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 /* monthlyViewSection is a plain div — give it flex column layout */
 #monthlyViewSection {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-lg);
 }
 
-.month-nav {
+.budget-header {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    gap: 20px;
+    justify-content: space-between;
+    gap: var(--space-lg);
     padding: 16px 24px;
     background: var(--surf1);
     border: 1px solid var(--border2);
     border-radius: 12px;
+    margin-bottom: var(--space-lg);
+}
+
+.budget-header h2 {
+    flex-shrink: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--white);
+    margin: 0;
+}
+
+.budget-header .month-nav {
+    flex: 1;
+    justify-content: center;
+    gap: var(--space-md);
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    margin: 0;
+    min-width: 0;
+}
+
+.budget-header .month-nav .btn-nav {
+    flex-shrink: 0;
+}
+
+.budget-header .month-nav .month-display {
+    flex-shrink: 0;
+}
+
+/* Month Navigation (default styling for other uses) */
+.month-nav {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-lg);
+    padding: 12px 20px;
+    background: var(--surf1);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+}
+
+.expense-tracking-ui .month-nav {
+    justify-content: center;
+}
+
+.expense-tracking-ui .month-nav {
+    justify-content: center;
 }
 
 .btn-nav {
@@ -622,6 +695,8 @@ td.amount {
     transition: opacity .15s;
 }
 .btn-nav:hover { opacity: .88; }
+.btn-nav:disabled { opacity: .5; cursor: not-allowed; }
+.btn-nav:disabled:hover { opacity: .5; }
 
 .btn-icon {
     margin-left: auto !important;
@@ -746,7 +821,7 @@ td.amount {
     align-items: center;
     padding: 5px 0;
     border-bottom: 1px solid var(--border1);
-    gap: 8px;
+    gap: var(--space-sm);
 }
 .auto-calc-popup-name { flex: 1; color: var(--text); }
 .auto-calc-popup-amount { font-weight: 600; color: var(--white); white-space: nowrap; }
@@ -755,7 +830,7 @@ td.amount {
 .auto-calc-popup-formula {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-xs);
     padding: 8px 0;
     background: rgba(59, 130, 246, 0.08);
     border-radius: 6px;
@@ -790,7 +865,7 @@ td.amount {
 .transfer-action-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-md);
     margin-top: 10px;
     flex-wrap: wrap;
 }
@@ -813,9 +888,9 @@ td.amount {
 .reconciliation-input-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-md);
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin-bottom: var(--space-md);
 }
 .reconciliation-input-row label {
     font-size: 0.85rem;
@@ -879,7 +954,7 @@ td.amount {
 }
 .mid-month-row {
     display: flex;
-    gap: 16px;
+    gap: var(--space-lg);
     flex-wrap: wrap;
 }
 .mid-month-field {
@@ -887,7 +962,7 @@ td.amount {
     min-width: 200px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-sm);
 }
 .mid-month-field label {
     font-size: 0.82rem;
@@ -949,7 +1024,7 @@ td.amount {
 }
 
 .month-display {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--white);
 }
@@ -981,7 +1056,7 @@ td.amount {
 .summary-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: 12px;
+    gap: var(--space-md);
 }
 
 .summary-item {
@@ -991,7 +1066,7 @@ td.amount {
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .summary-label {
@@ -1011,7 +1086,7 @@ td.amount {
 .categories-container {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .category-section {
@@ -1022,14 +1097,14 @@ td.amount {
 }
 
 .category-section h3 {
-    font-size: 1rem;
+    font-size: var(--font-base);
     font-weight: 600;
     color: var(--white);
-    margin: 0 0 16px 0;
+    margin: 0 0 var(--space-lg) 0;
 }
 
 .category-section .field {
-    margin-bottom: 14px;
+    margin-bottom: var(--space-lg);
 }
 
 .category-total {
@@ -1052,10 +1127,10 @@ td.amount {
 }
 
 .untracked-section h3 {
-    font-size: 1rem;
+    font-size: var(--font-base);
     font-weight: 600;
     color: var(--white);
-    margin: 0 0 16px 0;
+    margin: 0 0 var(--space-lg) 0;
 }
 
 .expense-transfer-section {
@@ -1066,22 +1141,22 @@ td.amount {
 }
 
 .expense-transfer-section h3 {
-    font-size: 1rem;
+    font-size: var(--font-base);
     font-weight: 600;
     color: var(--white);
-    margin: 0 0 16px 0;
+    margin: 0 0 var(--space-lg) 0;
 }
 
 .expense-transfer-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    gap: var(--space-md);
 }
 
 .expense-transfer-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-xs);
     background: var(--surf2);
     border: 1px solid var(--border2);
     border-radius: 10px;
@@ -1116,12 +1191,12 @@ td.amount {
         padding: 14px 12px;
     }
     .expense-transfer-section h3 {
-        font-size: 0.9rem;
-        margin-bottom: 10px;
+        font-size: var(--font-sm);
+        margin-bottom: var(--space-md);
     }
     .expense-transfer-grid {
         grid-template-columns: 1fr;
-        gap: 8px;
+        gap: var(--space-sm);
     }
     .expense-transfer-item {
         padding: 8px 10px;
@@ -1172,10 +1247,10 @@ td.amount {
 }
 
 .chart-container h3 {
-    font-size: 1rem;
+    font-size: var(--font-base);
     font-weight: 600;
     color: var(--white);
-    margin: 0 0 16px 0;
+    margin: 0 0 var(--space-lg) 0;
 }
 
 .chart-container canvas {
@@ -1187,13 +1262,13 @@ td.amount {
 .budget-preview {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .categories-preview {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .category-preview-section {
@@ -1204,16 +1279,16 @@ td.amount {
 }
 
 .category-preview-section h3 {
-    font-size: 1rem;
+    font-size: var(--font-base);
     font-weight: 600;
     color: var(--white);
-    margin: 0 0 16px 0;
+    margin: 0 0 var(--space-lg) 0;
 }
 
 .category-preview-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-md);
 }
 
 .category-preview-item {
@@ -1236,18 +1311,646 @@ td.amount {
     color: var(--white);
 }
 
+/* ── Expense Tracking UI ───────────────────────────────────── */
+.expense-tracking-ui {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+}
+
+.expense-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-sm);
+    padding: 16px 24px;
+    background: var(--surf1);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+}
+
+.expense-tracking-ui .expense-header {
+    justify-content: space-between;
+    gap: var(--space-lg);
+}
+
+.expense-tracking-ui .expense-header h2 {
+    font-size: var(--font-xl);
+    font-weight: 700;
+    color: var(--white);
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.budget-header h2 {
+    font-size: var(--font-xl);
+    font-weight: 700;
+    color: var(--white);
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.expense-tracking-ui .month-nav {
+    flex: 1;
+    justify-content: center;
+    gap: var(--space-md);
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    margin: 0;
+    min-width: 0;
+}
+
+.expense-tracking-ui .month-nav .btn-nav {
+    flex-shrink: 0;
+}
+
+.expense-tracking-ui .month-nav .month-display {
+    flex-shrink: 0;
+}
+
+/* Compact layout: cards in row */
+.expense-tracking-ui .expense-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: var(--space-md);
+}
+
+.expense-tracking-ui .summary-card {
+    background: var(--surf1);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    min-width: 0;
+}
+
+.expense-tracking-ui .summary-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--muted);
+}
+
+.expense-tracking-ui .summary-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--white);
+}
+
+.expense-preview {
+    background: var(--surf1);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: var(--space-lg);
+}
+
+.expense-preview h3 {
+    font-size: var(--font-base);
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: var(--space-md);
+}
+
+.expense-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.expense-category-group {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.expense-category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--surf2);
+    border-bottom: 1px solid var(--border);
+}
+
+.expense-category-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--white);
+}
+
+.expense-category-total {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--investment);
+}
+
+.expense-category-items {
+    padding: 0;
+}
+
+.expense-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.expense-item:last-child {
+    border-bottom: none;
+}
+
+.expense-item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.expense-item-date {
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.expense-item-amount {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--white);
+}
+
+.expense-edit {
+    background: var(--surf1);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: var(--space-lg);
+}
+
+.expense-edit h3 {
+    font-size: var(--font-base);
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: var(--space-md);
+}
+
+.expense-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.expense-form .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+.expense-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.expense-form label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.expense-form input,
+.expense-form select {
+    padding: 8px 10px;
+    background: var(--surf2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--white);
+    font-size: 0.85rem;
+    font-family: inherit;
+}
+
+.expense-form input:focus,
+.expense-form select:focus {
+    outline: none;
+    border-color: var(--investment);
+}
+
+.expense-form .field-btn {
+    margin-top: 16px;
+}
+
+/* Override expense form button to use investment color */
+.expense-form .btn-add {
+    background: var(--investment);
+    color: var(--white);
+}
+
+.expense-form .btn-add:hover {
+    background: #2563eb;
+    opacity: 1;
+}
+
+.expense-table-container {
+    overflow-x: auto;
+    margin-top: 16px;
+}
+
+.expense-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surf2);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.expense-table thead {
+    background: var(--surf3);
+}
+
+.expense-table th {
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+}
+
+.expense-table td {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+}
+
+.expense-table tr:last-child td {
+    border-bottom: none;
+}
+
+.expense-table tr:hover {
+    background: var(--surf3);
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 1rem;
+    transition: color 0.2s;
+    border-radius: 4px;
+}
+
+.edit-icon {
+    display: inline-block;
+    transform: scaleX(-1);
+}
+
+.edit-icon {
+    display: inline-block;
+}
+
+.btn-icon:hover {
+    color: var(--investment);
+    background: var(--surf2);
+}
+
+.btn-icon.btn-danger:hover {
+    color: var(--liability);
+    background: var(--surf2);
+}
+
+/* Edit/Delete buttons in tables */
+.btn-edit {
+    background: var(--surf2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 4px;
+}
+
+.btn-edit:hover {
+    background: var(--surf3);
+    color: var(--investment);
+    border-color: var(--investment);
+}
+
+.btn-delete {
+    background: var(--surf2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-delete:hover {
+    background: var(--surf3);
+    color: var(--liability);
+    border-color: var(--liability);
+}
+
+/* Row actions buttons (used in standard tabs) */
+.row-actions {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.edit-row {
+    background: var(--surf2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.edit-row:hover {
+    background: var(--surf3);
+    color: var(--investment);
+    border-color: var(--investment);
+}
+
+.delete-row {
+    background: var(--surf2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.delete-row:hover {
+    background: var(--surf3);
+    color: var(--liability);
+    border-color: var(--liability);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .expense-tracking-ui .expense-summary {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-sm);
+        margin-bottom: var(--space-sm);
+    }
+    
+    .expense-tracking-ui .summary-card {
+        padding: 8px 10px;
+    }
+    
+    .expense-tracking-ui .summary-label {
+        font-size: 0.6rem;
+    }
+    
+    .expense-tracking-ui .summary-value {
+        font-size: 0.9rem;
+    }
+    
+    /* Make expense list even more compact on mobile */
+    .expense-category-header {
+        padding: 6px 8px;
+    }
+    
+    .expense-category-name {
+        font-size: 0.75rem;
+    }
+    
+    .expense-category-total {
+        font-size: 0.75rem;
+    }
+    
+    .expense-item {
+        padding: 4px 8px;
+    }
+    
+    .expense-item-date {
+        font-size: 0.65rem;
+    }
+    
+    .expense-item-amount {
+        font-size: 0.75rem;
+    }
+    
+    .expense-tracking-ui .expense-header {
+        gap: var(--space-md);
+        padding: var(--space-md);
+    }
+    
+    .expense-tracking-ui .expense-header h2 {
+        font-size: 1rem;
+    }
+    
+    .expense-tracking-ui .month-nav {
+        gap: var(--space-sm);
+    }
+    
+    .expense-tracking-ui .month-display {
+        font-size: 0.9rem;
+    }
+    
+    .expense-preview {
+        padding: var(--space-md);
+    }
+    
+    .expense-preview h3 {
+        font-size: var(--font-sm);
+        margin-bottom: var(--space-md);
+    }
+    
+    .expense-edit {
+        padding: var(--space-md);
+    }
+    
+    .expense-edit h3 {
+        font-size: var(--font-sm);
+        margin-bottom: var(--space-md);
+    }
+    
+    .expense-form {
+        gap: var(--space-md);
+    }
+    
+    .expense-form .form-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-md);
+    }
+    
+    .expense-form label {
+        font-size: 0.75rem;
+    }
+    
+    .expense-form input,
+    .expense-form select {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+    }
+    
+    .expense-form .field-btn {
+        margin-top: 12px;
+    }
+    
+    .expense-form .btn-add {
+        padding: 12px 16px;
+        font-size: 0.85rem;
+    }
+    
+    .expense-table-container {
+        overflow-x: scroll;
+        margin-top: 12px;
+    }
+    
+    .expense-table {
+        font-size: 0.75rem;
+    }
+    
+    .expense-table th,
+    .expense-table td {
+        padding: 6px 8px;
+    }
+    
+    .btn-edit,
+    .btn-delete,
+    .edit-row,
+    .delete-row {
+        padding: 6px 8px;
+        font-size: 0.7rem;
+        min-height: 32px;
+    }
+    
+    .row-actions {
+        flex-direction: column;
+        gap: var(--space-xs);
+    }
+    
+    .btn-edit,
+    .edit-row {
+        min-width: 44px;
+    }
+    
+    .btn-delete,
+    .delete-row {
+        min-width: 44px;
+    }
+}
+
+/* Very small screens for expense tracking */
+@media (max-width: 400px) {
+    .expense-tracking-ui .expense-header {
+        gap: var(--space-sm);
+        padding: 10px;
+    }
+    
+    .expense-tracking-ui .expense-header h2 {
+        font-size: 0.9rem;
+    }
+    
+    .expense-tracking-ui .month-nav {
+        gap: var(--space-sm);
+    }
+    
+    .expense-tracking-ui .month-display {
+        font-size: 0.8rem;
+    }
+    
+    .expense-tracking-ui .month-nav .btn-nav {
+        font-size: 0.75rem;
+        padding: 6px 10px;
+    }
+    
+    .budget-header {
+        gap: var(--space-sm);
+        padding: 10px;
+    }
+    
+    .budget-header h2 {
+        font-size: 0.9rem;
+    }
+    
+    .budget-header .month-nav {
+        gap: var(--space-sm);
+    }
+    
+    .budget-header .month-display {
+        font-size: 0.8rem;
+    }
+    
+    .budget-header .month-nav .btn-nav {
+        font-size: 0.75rem;
+        padding: 6px 10px;
+    }
+    
+    .budget-header .btn-nav {
+        font-size: 0.75rem;
+        padding: 6px 10px;
+    }
+    
+    .expense-tracking-ui .expense-summary {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-sm);
+    }
+    
+    .expense-tracking-ui .summary-card {
+        padding: 6px 8px;
+    }
+    
+    .expense-tracking-ui .summary-label {
+        font-size: 0.55rem;
+    }
+    
+    .expense-tracking-ui .summary-value {
+        font-size: 0.8rem;
+    }
+}
+
+/* Tablet responsive */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .expense-tracking-ui .expense-summary {
+        gap: var(--space-md);
+        margin-bottom: var(--space-md);
+    }
+    
+    .expense-tracking-ui .summary-card {
+        padding: 10px 12px;
+    }
+    
+    .expense-tracking-ui .summary-value {
+        font-size: 0.95rem;
+    }
+}
+
 /* ── Financial Goal UI ─────────────────────────────────── */
 .financial-goal-ui {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .goal-header {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 8px;
+    gap: var(--space-sm);
     padding: 16px 24px;
     background: var(--surf1);
     border: 1px solid var(--border2);
@@ -1255,7 +1958,7 @@ td.amount {
 }
 
 .goal-header h2 {
-    font-size: 1.2rem;
+    font-size: var(--font-xl);
     font-weight: 700;
     color: var(--white);
     margin: 0;
@@ -1264,7 +1967,7 @@ td.amount {
 .goal-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
+    gap: var(--space-md);
 }
 
 .goal-summary-item {
@@ -1274,7 +1977,7 @@ td.amount {
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .goal-summary-label {
@@ -1294,13 +1997,13 @@ td.amount {
 .goal-preview {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-lg);
 }
 
 .goals-list {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-lg);
 }
 
 .goal-card {
@@ -1314,7 +2017,7 @@ td.amount {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 12px;
+    margin-bottom: var(--space-md);
 }
 
 .goal-card-title {
@@ -1360,7 +2063,7 @@ td.amount {
 .goal-card-details {
     font-size: 0.85rem;
     color: var(--muted);
-    margin-bottom: 14px;
+    margin-bottom: var(--space-lg);
     line-height: 1.5;
 }
 
@@ -1373,7 +2076,7 @@ td.amount {
     background: var(--surf2);
     border-radius: 4px;
     overflow: hidden;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
 }
 
 .goal-progress-fill {
@@ -1397,20 +2100,20 @@ td.amount {
 .goal-edit {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 /* ── Monthly Fixed Expense UI ───────────────────────────── */
 .monthly-fixed-expense-ui {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .expense-summary {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: var(--space-md);
 }
 .expense-summary-grid {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1423,7 +2126,7 @@ td.amount {
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .expense-summary-label {
@@ -1443,7 +2146,7 @@ td.amount {
 .income-field-row {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: var(--space-lg);
     background: var(--surf1);
     border: 1px solid var(--border2);
     border-radius: 12px;
@@ -1484,27 +2187,31 @@ td.amount {
 .expense-preview {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .charts-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .chart-section {
     background: var(--surf1);
     border: 1px solid var(--border2);
     border-radius: 12px;
-    padding: 20px 24px;
+    padding: var(--space-xl) var(--space-2xl);
+}
+
+.investment-preview .chart-section {
+    margin-bottom: var(--space-md);
 }
 
 .chart-section h3 {
-    font-size: 1rem;
+    font-size: var(--font-base);
     font-weight: 600;
     color: var(--white);
-    margin: 0 0 16px 0;
+    margin: 0 0 var(--space-lg) 0;
 }
 
 .chart-wrapper {
@@ -1521,17 +2228,17 @@ td.amount {
 .expenses-list {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-lg);
 }
 
 /* ── Outflow Grouping ────────────────────────────────── */
 .outflow-group {
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
 }
 .outflow-group-header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-md);
     padding: 8px 14px;
     background: var(--surf2);
     border: 1px solid var(--border2);
@@ -1571,7 +2278,7 @@ td.amount {
     font-size: 1.1rem;
     font-weight: 600;
     color: var(--white);
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
 }
 
 .expense-card-details {
@@ -1608,20 +2315,20 @@ td.amount {
 .expense-edit {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 /* ── Investments UI ─────────────────────────────────────── */
 .investments-ui {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .investment-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
+    gap: var(--space-md);
 }
 
 .investment-summary-item {
@@ -1631,7 +2338,7 @@ td.amount {
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .investment-summary-label {
@@ -1651,13 +2358,13 @@ td.amount {
 .investment-preview {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .investments-list {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-lg);
 }
 
 .investment-card {
@@ -1668,7 +2375,7 @@ td.amount {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 16px;
+    gap: var(--space-lg);
 }
 
 .investment-card-info {
@@ -1680,13 +2387,18 @@ td.amount {
     font-size: 1.1rem;
     font-weight: 600;
     color: var(--white);
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
 }
 
 .investment-card-details {
-    font-size: 0.85rem;
+    font-size: var(--font-sm);
     color: var(--muted);
     line-height: 1.8;
+}
+
+.investment-detail-value {
+    font-weight: 600;
+    color: var(--white);
 }
 
 .investment-card-frequency {
@@ -1715,20 +2427,20 @@ td.amount {
 .investment-edit {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 /* ── Insurances UI ──────────────────────────────────────── */
 .insurances-ui {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .insurance-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 14px;
+    gap: var(--space-lg);
 }
 
 .insurance-summary-item {
@@ -1738,7 +2450,7 @@ td.amount {
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .insurance-summary-label {
@@ -1758,13 +2470,13 @@ td.amount {
 .insurance-preview {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-lg);
 }
 
 .insurances-list {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-lg);
 }
 
 .insurance-card {
@@ -1785,7 +2497,7 @@ td.amount {
     font-size: 1.1rem;
     font-weight: 600;
     color: var(--white);
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
 }
 
 .insurance-card-details {
@@ -1819,7 +2531,7 @@ td.amount {
     min-width: 130px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-md);
     text-align: right;
     margin-left: 20px;
     flex-shrink: 0;
@@ -1850,7 +2562,7 @@ td.amount {
     border-radius: 999px;
     background: var(--surf2);
     overflow: hidden;
-    margin-bottom: 4px;
+    margin-bottom: var(--space-xs);
 }
 
 .maturity-progress-bar span {
@@ -1862,14 +2574,14 @@ td.amount {
 .insurance-edit {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 /* ── Cards UI ───────────────────────────────────────────── */
 .cards-ui {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
     width: 100%;
     box-sizing: border-box;
 }
@@ -1877,7 +2589,7 @@ td.amount {
 .card-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
+    gap: var(--space-md);
     width: 100%;
     box-sizing: border-box;
 }
@@ -1889,7 +2601,7 @@ td.amount {
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
     min-width: 0;
 }
 
@@ -1910,7 +2622,7 @@ td.amount {
 .card-preview {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-lg);
     width: 100%;
     box-sizing: border-box;
 }
@@ -1918,7 +2630,7 @@ td.amount {
 .cards-list {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-lg);
     width: 100%;
     box-sizing: border-box;
 }
@@ -1943,9 +2655,9 @@ td.amount {
 .card-item-title-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-md);
     flex-wrap: wrap;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
 }
 
 .card-item-title {
@@ -1957,7 +2669,7 @@ td.amount {
 .card-item-title-badges {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-sm);
     flex-wrap: wrap;
 }
 
@@ -1993,7 +2705,7 @@ td.amount {
 .card-edit {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
     width: 100%;
     box-sizing: border-box;
 }
@@ -2002,7 +2714,7 @@ td.amount {
 .net-worth-ui {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .age-input-section {
@@ -2015,7 +2727,7 @@ td.amount {
 .age-display-section {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-md);
     background: var(--surf1);
     border: 1px solid var(--border2);
     border-radius: 10px;
@@ -2046,7 +2758,7 @@ td.amount {
 .net-worth-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
+    gap: var(--space-md);
 }
 
 .net-worth-summary-item {
@@ -2056,7 +2768,7 @@ td.amount {
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .net-worth-summary-label {
@@ -2076,7 +2788,7 @@ td.amount {
 .net-worth-preview {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .assets-liabilities-section {
@@ -2087,16 +2799,16 @@ td.amount {
 }
 
 .assets-liabilities-section h3 {
-    font-size: 1rem;
+    font-size: var(--font-base);
     font-weight: 600;
     color: var(--white);
-    margin: 0 0 16px 0;
+    margin: 0 0 var(--space-lg) 0;
 }
 
 .assets-liabilities-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-md);
 }
 
 .asset-liability-item {
@@ -2136,7 +2848,7 @@ td.amount {
 }
 .nw-values {
     display: flex;
-    gap: 16px;
+    gap: var(--space-lg);
     align-items: center;
     flex-wrap: wrap;
 }
@@ -2157,7 +2869,7 @@ td.amount {
 .asset-label-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-sm);
     flex-wrap: wrap;
 }
 
@@ -2195,7 +2907,7 @@ td.amount {
 .projection-details {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
+    gap: var(--space-md);
 }
 
 .projection-detail-item {
@@ -2205,7 +2917,7 @@ td.amount {
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .projection-detail-label {
@@ -2225,20 +2937,20 @@ td.amount {
 .net-worth-edit {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 /* ── Tax Plan UI ──────────────────────────────────────── */
 .tax-plan-ui {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .tax-regime-section {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+    gap: var(--space-lg);
     background: var(--surf1);
     border: 1px solid var(--border2);
     border-radius: 12px;
@@ -2248,7 +2960,7 @@ td.amount {
 .tax-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
+    gap: var(--space-md);
 }
 
 .tax-summary-item {
@@ -2258,7 +2970,7 @@ td.amount {
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .tax-summary-label {
@@ -2278,7 +2990,7 @@ td.amount {
 .tax-plan-preview {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .tax-saving-banner {
@@ -2296,7 +3008,7 @@ td.amount {
     margin: 0 0 12px 0;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .tax-saving-banner p {
@@ -2325,16 +3037,16 @@ td.amount {
 
 .tax-deductions-section h3,
 .tax-breakdown-section h3 {
-    font-size: 1rem;
+    font-size: var(--font-base);
     font-weight: 600;
     color: var(--white);
-    margin: 0 0 16px 0;
+    margin: 0 0 var(--space-lg) 0;
 }
 
 .tax-deductions-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-md);
 }
 
 .tax-deduction-item {
@@ -2363,7 +3075,7 @@ td.amount {
 .tax-breakdown {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-md);
 }
 
 .tax-breakdown-item {
@@ -2410,20 +3122,20 @@ td.amount {
 .tax-plan-edit {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 /* ── Gifts UI ──────────────────────────────────────────── */
 .gifts-ui {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .gifts-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
+    gap: var(--space-md);
 }
 
 .gifts-summary-item {
@@ -2433,7 +3145,7 @@ td.amount {
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .gifts-summary-label {
@@ -2453,13 +3165,13 @@ td.amount {
 .gifts-preview {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-lg);
 }
 
 .gifts-list {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-lg);
 }
 
 .gift-item {
@@ -2480,7 +3192,7 @@ td.amount {
     font-size: 1.1rem;
     font-weight: 600;
     color: var(--white);
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
 }
 
 .gift-item-details {
@@ -2513,25 +3225,25 @@ td.amount {
 .gifts-edit {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 /* ── Emergency Fund UI ───────────────────────────────────── */
 .emergency-fund-ui {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-lg);
 }
 #emergencyFundPreview {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-lg);
 }
 
 .emergency-fund-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 14px;
+    gap: var(--space-lg);
 }
 @media (max-width: 600px) {
     .emergency-fund-summary { grid-template-columns: repeat(2, 1fr); }
@@ -2544,7 +3256,7 @@ td.amount {
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .emergency-fund-summary-label {
@@ -2572,10 +3284,10 @@ td.amount {
     background: var(--surf1);
     border: 1px solid var(--border2);
     border-radius: 12px;
-    padding: 24px;
+    padding: var(--space-2xl);
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .status-badge {
@@ -2605,7 +3317,7 @@ td.amount {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-md);
 }
 
 .status-detail {
@@ -2660,20 +3372,20 @@ td.amount {
 .emergency-fund-edit {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 /* ── Annual Summary ───────────────────────────────────── */
 .annual-summary-section {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
 }
 
 .annual-summary {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 14px;
+    gap: var(--space-lg);
 }
 
 .auto-linked-field input {
@@ -2689,7 +3401,7 @@ td.amount {
 
 .row-actions {
     display: inline-flex;
-    gap: 6px;
+    gap: var(--space-sm);
     align-items: center;
     flex-wrap: nowrap;
 }
@@ -2729,7 +3441,7 @@ td.amount {
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .annual-summary-label {
@@ -2749,7 +3461,7 @@ td.amount {
 .annual-bottom-row {
     display: grid;
     grid-template-columns: 1fr 340px;
-    gap: 20px;
+    gap: var(--space-xl);
     align-items: start;
 }
 
@@ -2772,13 +3484,13 @@ td.amount {
     font-size: 1.1rem;
     font-weight: 600;
     color: var(--white);
-    margin-bottom: 16px;
+    margin-bottom: var(--space-lg);
 }
 
 .annual-months-list-content {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-md);
 }
 
 .annual-month-item {
@@ -2789,7 +3501,7 @@ td.amount {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-md);
 }
 
 .annual-month-name {
@@ -2826,7 +3538,7 @@ td.amount {
     .categories-preview { 
         display: grid; 
         grid-template-columns: repeat(3, 1fr); 
-        gap: 20px;
+        gap: var(--space-xl);
     }
 
     .categories-container {
@@ -2858,10 +3570,13 @@ td.amount {
     .annual-month-item           { flex-direction: column; align-items: flex-start; gap: 8px; }
     .annual-month-details        { flex-wrap: wrap; gap: 10px; }
 
-    .expense-summary,
     .insurance-summary,
     .card-summary,
     .investment-summary          { grid-template-columns: repeat(2, 1fr); }
+    
+    .expense-tracking-ui .expense-summary {
+        grid-template-columns: repeat(3, 1fr);
+    }
 
     .tax-regime-section          { grid-template-columns: 1fr; }
 
@@ -2880,8 +3595,8 @@ td.amount {
     /* Header – preserve safe-area inset for notched phones */
     .app-header { padding: calc(10px + var(--safe-top)) calc(14px + var(--safe-right)) 10px calc(14px + var(--safe-left)); gap: 10px; }
     .logo-mark.logo-sm { width: 30px; height: 30px; }
-    .brand-text h1 { font-size: 1rem; }
-    .brand-text p { display: none; }
+    .brand-text h1 { font-size: 2rem; }
+    .brand-text p { font-size: 1.2rem; }
     .btn-ghost { padding: 8px 12px; font-size: 0.76rem; }
 
     /* Tab bar */
@@ -2899,7 +3614,7 @@ td.amount {
     /* Toolbar: search full-width on its own row, buttons wrap below */
     .toolbar {
         flex-wrap: wrap;
-        gap: 8px;
+        gap: var(--space-sm);
     }
     .search-box                  { width: 100%; flex: none; order: -1; }
     .btn-export,
@@ -2914,9 +3629,26 @@ td.amount {
     /* Monthly Budget */
     .month-nav {
         flex-wrap: wrap;
-        gap: 10px;
+        gap: var(--space-md);
         padding: 14px 16px;
         justify-content: flex-start;
+    }
+    
+    .budget-header {
+        gap: var(--space-md);
+        padding: var(--space-md);
+    }
+    
+    .budget-header h2 {
+        font-size: 1rem;
+    }
+    
+    .budget-header .month-nav {
+        gap: var(--space-sm);
+    }
+    
+    .budget-header .month-display {
+        font-size: 0.9rem;
     }
     .month-display               { order: -1; width: 100%; text-align: center; }
     .btn-icon                    { margin-left: 0 !important; }
@@ -2925,10 +3657,13 @@ td.amount {
     .summary-grid                { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
     .goal-summary                { grid-template-columns: 1fr; gap: 10px; }
     .annual-summary              { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .expense-summary,
     .insurance-summary,
     .card-summary,
     .investment-summary          { grid-template-columns: 1fr; gap: 10px; }
+    
+    .expense-tracking-ui .expense-summary {
+        grid-template-columns: repeat(3, 1fr);
+    }
     .summary-item,
     .goal-summary-item,
     .annual-summary-item         { padding: 12px 10px; }
@@ -2942,15 +3677,15 @@ td.amount {
     .annual-month-detail         { font-size: 0.82rem; }
 
     /* Section headers */
-    .goal-header, .month-nav     { padding: 12px 16px; }
-    .goal-header h2              { font-size: 1rem; }
+    .goal-header, .month-nav     { padding: var(--space-md) var(--space-lg); }
+    .goal-header h2              { font-size: var(--font-base); }
 
     /* Category sections */
     .category-section,
     .category-preview-section,
     .untracked-section           { padding: 14px 16px; }
     .category-section h3,
-    .category-preview-section h3 { font-size: 0.9rem; }
+    .category-preview-section h3 { font-size: var(--font-sm); }
 
     /* Cards, charts */
     .chart-container             { padding: 14px 16px; }
@@ -3022,7 +3757,7 @@ td.amount {
     .income-field-row {
         flex-direction: column;
         align-items: stretch;
-        gap: 10px;
+        gap: var(--space-md);
     }
     .income-field-input {
         width: 100%;
@@ -3030,6 +3765,7 @@ td.amount {
 
     /* Buttons touch targets (min 44px) */
     .btn-add                     { padding: 13px 16px; font-size: 0.85rem; }
+    .expense-form .btn-add       { padding: 14px 16px; font-size: 0.9rem; }
     .btn-nav                     { padding: 10px 14px; min-height: 40px; }
     .btn-primary                 { padding: 14px; font-size: 0.9rem; }
 }
@@ -3088,7 +3824,7 @@ td.amount {
     border-bottom: 1px solid var(--border2);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-lg);
 }
 
 .settings-section-title {
@@ -3107,14 +3843,14 @@ td.amount {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: var(--space-lg);
 }
 
 .settings-row-label {
     font-size: 0.88rem;
     font-weight: 600;
     color: var(--white);
-    margin-bottom: 2px;
+    margin-bottom: var(--space-xs);
 }
 .settings-row-sub {
     font-size: 0.75rem;
@@ -3124,7 +3860,7 @@ td.amount {
 .theme-switch-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-sm);
     background: var(--surf2);
     border: 1px solid var(--border2);
     border-radius: 8px;
@@ -3295,7 +4031,7 @@ td.amount {
     display: block;
     color: var(--white);
     font-size: 0.82rem;
-    margin-bottom: 4px;
+    margin-bottom: var(--space-xs);
 }
 .help-faq p {
     margin: 0;
@@ -3307,12 +4043,12 @@ td.amount {
 .dependency-notice {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-md);
     padding: 12px 16px;
     background: rgba(234,179,8,0.1);
     border: 1px solid rgba(234,179,8,0.35);
     border-radius: 10px;
-    margin-bottom: 16px;
+    margin-bottom: var(--space-lg);
     flex-wrap: wrap;
 }
 .dependency-notice-icon {
@@ -3396,12 +4132,12 @@ td.amount {
     background: var(--surf1);
     border: 1px solid var(--border2);
     border-radius: 10px;
-    margin-bottom: 14px;
+    margin-bottom: var(--space-lg);
 }
 .list-toolbar-sort {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-sm);
     flex-wrap: wrap;
 }
 .list-toolbar-sort > label {
@@ -3415,7 +4151,7 @@ td.amount {
 .list-toolbar-filters {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: var(--space-md);
     align-items: flex-end;
 }
 .toolbar-filter-item {
@@ -3469,7 +4205,7 @@ td.amount {
 /* ── Summary Hints & Field Hints ─────────────────────── */
 .summary-hint, .field-hint {
     display: block;
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     color: var(--muted);
     font-weight: 400;
     margin-top: 2px;
@@ -3479,24 +4215,60 @@ td.amount {
 .section-description {
     font-size: 0.82rem;
     color: var(--muted);
-    margin-bottom: 12px;
+    margin-bottom: var(--space-md);
     line-height: 1.4;
 }
 
 /* ── Investment Sub-section Tabs ─────────────────────── */
+.investment-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px 20px;
+    margin-bottom: var(--space-lg);
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    background: var(--surf1);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+}
+
+.investment-controls .list-toolbar {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    gap: var(--space-md);
+}
+
 .investment-subsection-tabs {
     display: flex;
-    gap: 6px;
-    margin: 12px 0;
+    gap: var(--space-sm);
     flex-wrap: wrap;
+    margin-left: auto;
+}
+
+/* Mobile responsive for investment controls */
+@media (max-width: 768px) {
+    .investment-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-md);
+        padding: 10px 14px;
+    }
+    
+    .investment-subsection-tabs {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-start;
+    }
 }
 .inv-sub-tab {
-    padding: 6px 16px;
+    padding: var(--space-xs) var(--space-md);
     border-radius: 20px;
     border: 1px solid var(--border2);
     background: var(--surf1);
     color: var(--text);
-    font-size: 0.82rem;
+    font-size: var(--font-sm);
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -3511,24 +4283,24 @@ td.amount {
 .portfolio-summary {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--space-xl);
     margin-top: 12px;
 }
 .portfolio-group {
     background: var(--surf1);
     border: 1px solid var(--border2);
     border-radius: var(--radius);
-    padding: 16px;
+    padding: var(--space-lg);
 }
 .portfolio-group h4 {
     font-size: 0.9rem;
-    margin-bottom: 10px;
+    margin-bottom: var(--space-md);
     color: var(--muted);
 }
 .portfolio-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-sm);
 }
 .portfolio-item {
     display: flex;
@@ -3564,17 +4336,17 @@ td.amount {
 .insurance-ui {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-lg);
 }
 .insurance-preview {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-lg);
 }
 .insurance-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 12px;
+    gap: var(--space-md);
 }
 .insurance-summary-item {
     background: var(--surf1);
@@ -3587,7 +4359,7 @@ td.amount {
     font-size: 0.78rem;
     color: var(--muted);
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: var(--space-xs);
 }
 .insurance-summary-item strong {
     font-size: 1.1rem;
@@ -3652,12 +4424,12 @@ td.amount {
     border: 1px solid rgba(59, 130, 246, 0.3);
     border-radius: var(--radius);
     padding: 12px 16px;
-    margin-bottom: 12px;
+    margin-bottom: var(--space-md);
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 .month-end-banner span { font-size: 0.85rem; }
 .month-end-banner button {
@@ -3673,7 +4445,7 @@ td.amount {
 /* ── Footer ──────────────────────────────────────────── */
 .app-footer {
     width: 100%;
-    padding: 20px;
+    padding: var(--space-xl);
     margin-top: 40px;
     border-top: 1px solid var(--border);
     background: var(--surf1);
@@ -3794,17 +4566,17 @@ td.amount {
 .logs-controls {
     display: flex;
     flex-wrap: wrap;
-    gap: 16px;
-    padding: 16px;
+    gap: var(--space-lg);
+    padding: var(--space-lg);
     background: var(--surf2);
     border-radius: 8px;
-    margin-bottom: 16px;
+    margin-bottom: var(--space-lg);
 }
 
 .logs-filter-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .logs-filter-group label {
@@ -3830,11 +4602,11 @@ td.amount {
 
 .logs-stats {
     display: flex;
-    gap: 20px;
+    gap: var(--space-xl);
     padding: 12px 16px;
     background: var(--surf2);
     border-radius: 8px;
-    margin-bottom: 16px;
+    margin-bottom: var(--space-lg);
     font-size: 0.85rem;
 }
 
@@ -3870,7 +4642,7 @@ td.amount {
     border-bottom: 1px solid var(--border2);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .log-entry:last-child {
@@ -3895,7 +4667,7 @@ td.amount {
 .log-entry-header {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-md);
     flex-wrap: wrap;
 }
 
@@ -3971,7 +4743,7 @@ td.amount {
     
     .logs-stats {
         flex-wrap: wrap;
-        gap: 12px;
+        gap: var(--space-md);
     }
 }
 
@@ -3987,7 +4759,7 @@ td.amount {
     display: flex; align-items: center; justify-content: center;
     z-index: 10000;
     opacity: 0; transition: opacity .2s ease;
-    padding: 16px;
+    padding: var(--space-lg);
     pointer-events: none;
 }
 .sf-modal-overlay.sf-modal-open { opacity: 1; pointer-events: auto; }
@@ -4114,7 +4886,7 @@ td.amount {
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     z-index: 9999;
-    gap: 14px;
+    gap: var(--space-lg);
     transition: opacity .18s ease;
 }
 .sf-loading-overlay.sf-loading-fade { opacity: 0; pointer-events: none; }
@@ -4148,7 +4920,7 @@ td.amount {
 .auth-forgot {
     text-align: right;
     margin-top: 10px;
-    margin-bottom: 10px;
+    margin-bottom: var(--space-md);
 }
 .auth-forgot .btn-link {
     font-size: .82rem;
@@ -4162,8 +4934,8 @@ td.amount {
 .dash-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
-    margin-bottom: 16px;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-lg);
     /* Ensure cards are evenly distributed */
     align-items: stretch;
 }
@@ -4191,7 +4963,7 @@ td.amount {
 .dash-card-primary { border-color: color-mix(in srgb, #3b82f6 34%, var(--border)); }
 .dash-card-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 2px;
+    margin-bottom: var(--space-xs);
 }
 .dash-card-title {
     font-size: .9rem; font-weight: 600; color: var(--text);
@@ -4245,7 +5017,7 @@ td.amount {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-md);
 }
 .dash-alerts-carousel-track {
     flex: 1;
@@ -4259,7 +5031,7 @@ td.amount {
     left: 0;
     right: 0;
     display: flex;
-    gap: 14px;
+    gap: var(--space-lg);
     padding: 16px 18px;
     border-radius: 12px;
     background: var(--surf2);
@@ -4307,7 +5079,7 @@ td.amount {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 .dash-alert-card .dash-alert-message {
     font-size: .92rem;
@@ -4354,7 +5126,7 @@ td.amount {
 .dash-carousel-dots {
     display: flex;
     justify-content: center;
-    gap: 8px;
+    gap: var(--space-sm);
     margin-top: 12px;
 }
 .dash-carousel-dot {
@@ -4379,12 +5151,12 @@ td.amount {
 .dash-insights-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-md);
 }
 .dash-insight-item {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
+    gap: var(--space-md);
     padding: 12px 14px;
     border-radius: 8px;
     background: var(--surf2);
@@ -4419,6 +5191,7 @@ td.amount {
     display: flex;
     gap: 24px;
     align-items: center;
+    width: 100%;
 }
 .dash-health-score-circle {
     position: relative;
@@ -4443,12 +5216,13 @@ td.amount {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-md);
+    min-width: 0; /* Allow flex items to shrink below content size */
 }
 .dash-health-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-xs);
 }
 .dash-health-item-header {
     display: flex;
@@ -4481,13 +5255,13 @@ td.amount {
 .dash-quick-actions-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: 10px;
+    gap: var(--space-md);
 }
 .dash-quick-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-sm);
     padding: 14px 8px;
     background: var(--surf2);
     border: 1px solid var(--border);
@@ -4518,7 +5292,7 @@ input:invalid:not(:placeholder-shown) {
 @media (max-width: 900px) {
     .dash-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
+        gap: var(--space-md);
     }
 }
 
@@ -4526,17 +5300,29 @@ input:invalid:not(:placeholder-shown) {
 @media (min-width: 769px) and (max-width: 1024px) {
     .dash-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 14px;
+        gap: var(--space-lg);
     }
     .dash-card {
         padding: 14px 15px;
         min-height: 170px;
     }
     
+    /* Health Score - Tablet */
+    .dash-health-score-main {
+        gap: var(--space-xl);
+    }
+    .dash-health-score-circle {
+        width: 110px;
+        height: 110px;
+    }
+    .dash-health-score-number {
+        font-size: 1.8rem;
+    }
+    
     /* Quick Actions - Tablet */
     .dash-quick-actions-grid {
         grid-template-columns: repeat(6, 1fr);
-        gap: 10px;
+        gap: var(--space-md);
     }
 }
 
@@ -4566,8 +5352,8 @@ input:invalid:not(:placeholder-shown) {
     .dashboard-ui { padding: 0 4px; }
     .dash-grid {
         grid-template-columns: 1fr;
-        gap: 12px;
-        margin-bottom: 14px;
+        gap: var(--space-md);
+        margin-bottom: var(--space-lg);
         /* Ensure cards are evenly distributed on mobile */
         align-items: stretch;
     }
@@ -4575,7 +5361,7 @@ input:invalid:not(:placeholder-shown) {
     /* Quick Actions - Mobile */
     .dash-quick-actions-grid {
         grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
+        gap: var(--space-sm);
     }
     .dash-quick-btn {
         padding: 12px 6px;
@@ -4592,7 +5378,7 @@ input:invalid:not(:placeholder-shown) {
         padding: 12px !important;
     }
     .dash-alerts-carousel-container {
-        gap: 8px;
+        gap: var(--space-sm);
     }
     .dash-alert-card {
         padding: 14px 16px;
@@ -4613,7 +5399,7 @@ input:invalid:not(:placeholder-shown) {
     }
     .dash-carousel-dots {
         margin-top: 10px;
-        gap: 6px;
+        gap: var(--space-sm);
     }
     .dash-carousel-dot {
         width: 6px;
@@ -4626,26 +5412,31 @@ input:invalid:not(:placeholder-shown) {
     /* Health Score - Mobile */
     .dash-health-score-main {
         flex-direction: column;
-        gap: 16px;
+        gap: var(--space-lg);
+        align-items: center;
+        width: 100%;
     }
     .dash-health-score-circle {
-        width: 100px;
-        height: 100px;
+        width: 110px;
+        height: 110px;
     }
     .dash-health-score-number {
-        font-size: 1.6rem;
+        font-size: 1.8rem;
+    }
+    .dash-health-breakdown {
+        width: 100%;
     }
     .dash-health-item-label {
-        font-size: .78rem;
+        font-size: .82rem;
     }
     .dash-health-item-score {
-        font-size: .72rem;
+        font-size: .75rem;
     }
     
     /* Insights - Mobile */
     .dash-insight-item {
         padding: 10px 12px;
-        gap: 10px;
+        gap: var(--space-md);
     }
     .dash-insight-icon {
         font-size: 1.1rem;
@@ -4655,7 +5446,7 @@ input:invalid:not(:placeholder-shown) {
     }
     .dash-card { 
         padding: 12px 14px; 
-        gap: 8px;
+        gap: var(--space-sm);
         min-height: auto;
     }
     .dash-card-title { font-size: .85rem; }
@@ -4721,7 +5512,7 @@ input:invalid:not(:placeholder-shown) {
     background: var(--surf2);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 16px;
+    padding: var(--space-lg);
     text-align: center;
 }
 
@@ -4729,14 +5520,14 @@ input:invalid:not(:placeholder-shown) {
     display: block;
     font-size: 0.85rem;
     color: var(--muted);
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
 }
 
 .summary-value {
     display: block;
     font-size: 1.8rem;
     font-weight: 700;
-    margin-bottom: 4px;
+    margin-bottom: var(--space-xs);
 }
 
 .summary-note {
@@ -4748,14 +5539,14 @@ input:invalid:not(:placeholder-shown) {
 .category-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
 }
 
 .category-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
+    gap: var(--space-md);
+    padding: var(--space-md);
     background: var(--surf2);
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -4783,7 +5574,7 @@ input:invalid:not(:placeholder-shown) {
 /* -- Tax Plan Subsections ----------------------------------------------------- */
 .tax-subsection {
     margin-bottom: 32px;
-    padding: 20px;
+    padding: var(--space-xl);
     background: var(--surf2);
     border: 1px solid var(--border);
     border-radius: 8px;

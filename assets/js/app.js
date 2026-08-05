@@ -569,7 +569,7 @@ function semanticBadgeStyle(value, paid = false) {
 }
 
 // ── Version Info ──────────────────────────────────────────────────────────────
-const APP_VERSION = { major: 2, minor: 3, build: 24 };
+const APP_VERSION = { major: 2, minor: 4, build: 0 };
 function getAppVersion() {
     return `v${APP_VERSION.major}.${APP_VERSION.minor}.${APP_VERSION.build}`;
 }
@@ -620,12 +620,9 @@ const TAB_FIELDS = {
         { id: "note",      label: "Note",               type: "text",   placeholder: "Optional" }
     ],
     expenseTracking: [
-        { id: "date",      label: "Date",               type: "date",   placeholder: "", required: true },
-        { id: "category",  label: "Category",           type: "select", options: ["Groceries", "Vegetables & Fruits", "Dairy & Bakery", "Meat & Seafood", "Dining Out", "Food Delivery", "Snacks & Beverages", "Medical & Healthcare", "Medicines", "Doctor Consultation", "Lab Tests", "Travel & Transport", "Fuel/Petrol", "Public Transport", "Cab/Auto", "Vehicle Maintenance", "Shopping & Clothing", "Clothes & Footwear", "Accessories", "Personal Care", "Home & Living", "House Rent", "Electricity Bill", "Water Bill", "Gas/LPG", "Internet/Broadband", "Mobile Recharge", "DTH/Cable", "Home Maintenance", "Furniture & Appliances", "Entertainment", "Movies & Shows", "Events & Concerts", "Hobbies", "Subscriptions", "Education", "Books & Stationery", "Courses & Training", "School/College Fees", "Gifts & Donations", "Gifts", "Charity", "Religious", "Pet Care", "Pet Food", "Vet Visits", "Pet Supplies", "Beauty & Wellness", "Salon/Spa", "Gym/Fitness", "Sports", "Miscellaneous", "Others"], required: true },
+        { id: "category",  label: "Category",           type: "select", options: ["Food & Dining", "Transportation", "Shopping", "Entertainment", "Healthcare", "Education", "Personal Care", "Home & Utilities", "Travel", "Gifts & Donations", "Others"], required: true },
         { id: "amount",    label: "Amount (₹)",         type: "number", placeholder: "0", required: true },
-        { id: "paymentMode", label: "Payment Mode",     type: "select", options: ["Cash", "Debit Card", "Credit Card", "UPI", "Net Banking", "Wallet", "Others"] },
-        { id: "merchant",  label: "Merchant/Store",     type: "text",   placeholder: "e.g. Big Bazaar, Amazon" },
-        { id: "note",      label: "Note",               type: "text",   placeholder: "Optional details" }
+        { id: "date",      label: "Date",               type: "date",   placeholder: "", required: true }
     ],
     financialGoal: [
         { id: "name",      label: "Goal Name",           type: "text",   placeholder: "e.g. Emergency Fund", required: true },
@@ -857,6 +854,19 @@ const goalTableHead     = document.getElementById("goalTableHead");
 const goalTableBody     = document.getElementById("goalTableBody");
 const goalEmptyState    = document.getElementById("goalEmptyState");
 
+// Expense Tracking refs
+const expenseTrackingUI = document.getElementById("expenseTrackingUI");
+const prevExpenseMonthBtn = document.getElementById("prevExpenseMonth");
+const nextExpenseMonthBtn = document.getElementById("nextExpenseMonth");
+const currentExpenseMonthDisplay = document.getElementById("currentExpenseMonthDisplay");
+const toggleExpenseEdit = document.getElementById("toggleExpenseEdit");
+const expensePreview = document.getElementById("expensePreview");
+const expenseEdit = document.getElementById("expenseEdit");
+const expenseForm = document.getElementById("expenseForm");
+const expenseList = document.getElementById("expenseList");
+const expenseTableBody = document.getElementById("expenseTableBody");
+const expensePieChartCanvas = document.getElementById("expensePieChart");
+
 // Inflow refs
 const inflowUI             = document.getElementById("inflowUI");
 const toggleInflowEdit     = document.getElementById("toggleInflowEdit");
@@ -896,19 +906,6 @@ const cardDynamicFields = document.getElementById("cardDynamicFields");
 const cardTableHead     = document.getElementById("cardTableHead");
 const cardTableBody     = document.getElementById("cardTableBody");
 const cardEmptyState    = document.getElementById("cardEmptyState");
-
-// Expense Tracking refs
-const expenseUI           = document.getElementById("expenseUI");
-const toggleExpenseEdit   = document.getElementById("toggleExpenseEdit");
-const expensePreview      = document.getElementById("expensePreview");
-const expenseEdit         = document.getElementById("expenseEdit");
-const expenseList         = document.getElementById("expenseList");
-const expenseForm         = document.getElementById("expenseForm");
-const expenseDynamicFields = document.getElementById("expenseDynamicFields");
-const expenseTableHead    = document.getElementById("expenseTableHead");
-const expenseTableBody    = document.getElementById("expenseTableBody");
-const expenseEmptyState   = document.getElementById("expenseEmptyState");
-const expenseSummary      = document.getElementById("expenseSummary");
 
 // Net Worth refs
 const netWorthUI        = document.getElementById("netWorthUI");
@@ -1008,12 +1005,32 @@ const fieldInputs = {};
 let isRegisterMode = false;
 let currentUser    = null;
 let activeTabId    = "dashboard";
-let appData        = { tabData: {}, customTabs: [], userName: "", monthlyBudgetData: {}, taxData: {} };
+let appData        = { tabData: {}, customTabs: [], userName: "", monthlyBudgetData: {}, expenseTrackingData: {}, taxData: {} };
 let firestoreUnsub = null;
 let saveTimer      = null;
 let currentMonth    = new Date(); // For monthly budget navigation
+let currentExpenseMonth = new Date(); // For expense tracking navigation
+// Ensure expense tracking month is not in the future and not before onboarding date
+const today = new Date();
+const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+const expenseMonthKey = `${currentExpenseMonth.getFullYear()}-${String(currentExpenseMonth.getMonth() + 1).padStart(2, '0')}`;
+if (expenseMonthKey > currentMonthKey) {
+    currentExpenseMonth = new Date(); // Reset to current month if it's in the future
+}
+// Check onboarding date after appData is loaded
+const od = appData.onboardingDate;
+if (od) {
+    const onboardingDate = new Date(od);
+    const earliest = new Date(onboardingDate.getFullYear(), onboardingDate.getMonth(), 1);
+    const earliestKey = `${earliest.getFullYear()}-${String(earliest.getMonth() + 1).padStart(2, '0')}`;
+    if (expenseMonthKey < earliestKey) {
+        currentExpenseMonth = earliest; // Reset to onboarding date if it's before
+    }
+}
 let pieChart       = null; // Chart.js instance
 let annualPieChart = null;
+let expensePieChart = null; // Expense tracking pie chart
+let expensePieChartResizeHandler = null; // Store resize handler
 let isBudgetEditMode = false;
 let isAnnualBudgetView = false;
 let isGoalEditMode  = false;
@@ -1042,6 +1059,7 @@ const listSortFilter = {
     outflow:       { sortBy: "", sortDir: "asc", filters: {} },
     gifts:         { sortBy: "", sortDir: "asc", filters: {} },
     insurance:     { sortBy: "", sortDir: "asc", filters: {} },
+    expenseTracking: { sortBy: "amount", sortDir: "desc", filters: {} }
 };
 
 const editingEntryIds = {
@@ -1224,6 +1242,21 @@ logoutBtn.addEventListener("click", () => {
     logger.info('User initiated sign out');
     auth.signOut();
 });
+
+// ── App Brand Logo Click (Navigate to Dashboard) ───────────────────────────
+const appBrandLogo = document.getElementById("appBrandLogo");
+if (appBrandLogo) {
+    appBrandLogo.addEventListener("click", () => {
+        switchToTab("dashboard");
+    });
+    // Support keyboard navigation (Enter/Space)
+    appBrandLogo.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            switchToTab("dashboard");
+        }
+    });
+}
 
 // ── Theme Toggle ────────────────────────────────────────────────────────────
 function applyTheme(theme) {
@@ -1689,6 +1722,7 @@ importFileInput.addEventListener("change", async (e) => {
                 customTabs: imported.customTabs || [],
                 userName: imported.userName || appData.userName || "",
                 monthlyBudgetData: imported.monthlyBudgetData || {},
+                expenseTrackingData: imported.expenseTrackingData || {},
                 fixedMonthlyIncome: imported.fixedMonthlyIncome || 0,
                 dateOfBirth: imported.dateOfBirth || "",
                 currentAge: imported.currentAge || 0,
@@ -1852,6 +1886,7 @@ function startListening() {
                     customTabs: d.customTabs || [],
                     userName: d.userName || "",
                     monthlyBudgetData: d.monthlyBudgetData || {},
+                    expenseTrackingData: d.expenseTrackingData || {},
                     fixedMonthlyIncome: d.fixedMonthlyIncome || 0,
                     dateOfBirth: d.dateOfBirth || "",
                     currentAge: d.currentAge || 0,
@@ -1974,6 +2009,7 @@ function doSave() {
 function normalizeAppDataModel() {
     if (!appData.tabData) appData.tabData = {};
     if (!appData.taxData) appData.taxData = {};
+    if (!appData.expenseTrackingData) appData.expenseTrackingData = {};
     if (Array.isArray(appData.tabData.inflow)) {
         const before = JSON.stringify(appData.tabData.inflow);
         appData.tabData.inflow = normalizeInvestmentEntries(appData.tabData.inflow);
@@ -2175,10 +2211,10 @@ function switchToTab(tabId) {
 window.switchToTab = switchToTab;
 
 // ── Sort/Filter toolbar helpers ───────────────────────────────────────────────
-function buildSortFilterToolbar(tabId) {
+function buildSortFilterToolbar(tabId, hideFields = []) {
     const fields = TAB_FIELDS[tabId] || [];
     const state = listSortFilter[tabId];
-    const selectFields = fields.filter(f => f.type === "select");
+    const selectFields = fields.filter(f => f.type === "select" && !hideFields.includes(f.id));
 
     const sortOpts = `<option value="">None</option>` +
         fields.map(f => `<option value="${f.id}"${state.sortBy === f.id ? " selected" : ""}>${f.label}</option>`).join("");
@@ -2761,22 +2797,23 @@ function render() {
 
     // All UI panels
     const dashboardUI = document.getElementById("dashboardUI");
-    const allPanels = { dashboardUI, monthlyBudgetUI, standardUI, financialGoalUI, inflowUI, outflowUI, insuranceUI, cardsUI, netWorthUI, taxPlanUI, giftsUI, emergencyFundUI };
+    const allPanels = { dashboardUI, monthlyBudgetUI, expenseTrackingUI, standardUI, financialGoalUI, inflowUI, outflowUI, insuranceUI, cardsUI, netWorthUI, taxPlanUI, giftsUI, emergencyFundUI };
     // Hide all panels first
     Object.values(allPanels).forEach(p => { if (p) p.hidden = true; });
 
     const panelMap = {
-        dashboard:     { panel: dashboardUI,     render: () => renderDashboardTab() },
-        monthlyBudget: { panel: monthlyBudgetUI, render: renderMonthlyBudget },
-        financialGoal: { panel: financialGoalUI, render: renderFinancialGoal },
-        inflow:        { panel: inflowUI,        render: renderInflow },
-        outflow:       { panel: outflowUI,       render: renderOutflow },
-        cards:         { panel: cardsUI,          render: renderCards },
-        netWorth:      { panel: netWorthUI,       render: renderNetWorth },
-        taxPlan:       { panel: taxPlanUI,        render: renderTaxPlan },
-        gifts:         { panel: giftsUI,          render: renderGifts },
-        emergencyFund: { panel: emergencyFundUI,  render: renderEmergencyFund },
-        insurance:     { panel: insuranceUI,       render: renderInsurance },
+        dashboard:       { panel: dashboardUI,         render: () => renderDashboardTab() },
+        monthlyBudget:   { panel: monthlyBudgetUI,     render: renderMonthlyBudget },
+        expenseTracking: { panel: expenseTrackingUI,   render: renderExpenseTracking },
+        financialGoal:   { panel: financialGoalUI,     render: renderFinancialGoal },
+        inflow:          { panel: inflowUI,            render: renderInflow },
+        outflow:         { panel: outflowUI,           render: renderOutflow },
+        cards:           { panel: cardsUI,             render: renderCards },
+        netWorth:        { panel: netWorthUI,          render: renderNetWorth },
+        taxPlan:         { panel: taxPlanUI,           render: renderTaxPlan },
+        gifts:           { panel: giftsUI,             render: renderGifts },
+        emergencyFund:   { panel: emergencyFundUI,     render: renderEmergencyFund },
+        insurance:       { panel: insuranceUI,         render: renderInsurance },
     };
 
     const entry = panelMap[activeTabId];
@@ -3098,6 +3135,464 @@ function getMonthlyDistribution(monthData) {
     };
 }
 
+// ── Expense Tracking ──────────────────────────────────────────────────────────
+
+function getExpenseMonthKey(date = currentExpenseMonth) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+}
+
+function getExpenseMonthData(monthKey) {
+    if (!appData.expenseTrackingData) appData.expenseTrackingData = {};
+    if (!appData.expenseTrackingData[monthKey]) {
+        appData.expenseTrackingData[monthKey] = { expenses: [] };
+    }
+    return appData.expenseTrackingData[monthKey];
+}
+
+function renderExpenseTracking() {
+    const monthKey = getExpenseMonthKey();
+    const monthData = getExpenseMonthData(monthKey);
+    const expenses = monthData.expenses || [];
+    
+    // Update month display
+    const monthName = currentExpenseMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    currentExpenseMonthDisplay.textContent = monthName;
+    
+    // Update toggle button
+    toggleExpenseEdit.textContent = isExpenseEditMode ? "✓ Done" : "✎ Edit";
+    
+    // Disable/enable next month button based on whether we're at current month
+    const today = new Date();
+    const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    if (nextExpenseMonthBtn) {
+        const isAtCurrentMonth = (monthKey >= currentMonthKey);
+        nextExpenseMonthBtn.disabled = isAtCurrentMonth;
+        nextExpenseMonthBtn.style.opacity = isAtCurrentMonth ? '0.5' : '1';
+        nextExpenseMonthBtn.style.cursor = isAtCurrentMonth ? 'not-allowed' : 'pointer';
+        nextExpenseMonthBtn.title = isAtCurrentMonth ? 'Cannot track expenses for future months' : 'Go to next month';
+    }
+    
+    // Disable/enable previous month button based on whether we're at onboarding date
+    const od = appData.onboardingDate;
+    if (prevExpenseMonthBtn && od) {
+        const onboardingDate = new Date(od);
+        const earliest = new Date(onboardingDate.getFullYear(), onboardingDate.getMonth(), 1);
+        const earliestKey = `${earliest.getFullYear()}-${String(earliest.getMonth() + 1).padStart(2, '0')}`;
+        const isAtEarliest = (monthKey <= earliestKey);
+        prevExpenseMonthBtn.disabled = isAtEarliest;
+        prevExpenseMonthBtn.style.opacity = isAtEarliest ? '0.5' : '1';
+        prevExpenseMonthBtn.style.cursor = isAtEarliest ? 'not-allowed' : 'pointer';
+        prevExpenseMonthBtn.title = isAtEarliest ? 'Cannot view expenses before onboarding date' : 'Go to previous month';
+    }
+    
+    // Show/hide edit mode
+    expensePreview.hidden = isExpenseEditMode;
+    expenseEdit.hidden = !isExpenseEditMode;
+    
+    // Hide summary cards and chart in edit mode to make more space for the list
+    const expenseSummary = document.getElementById('expenseSummary');
+    const expenseChart = document.querySelector('.chart-container');
+    if (expenseSummary) expenseSummary.hidden = isExpenseEditMode;
+    if (expenseChart) expenseChart.hidden = isExpenseEditMode;
+    
+    // Set date constraints for the current month
+    const expenseDateInput = document.getElementById('expenseDate');
+    if (expenseDateInput) {
+        // Calculate first and last day of current month
+        const firstDay = new Date(currentExpenseMonth.getFullYear(), currentExpenseMonth.getMonth(), 1);
+        const lastDay = new Date(currentExpenseMonth.getFullYear(), currentExpenseMonth.getMonth() + 1, 0);
+        
+        // Set min and max attributes
+        expenseDateInput.min = firstDay.toISOString().split('T')[0];
+        expenseDateInput.max = lastDay.toISOString().split('T')[0];
+        
+        // If current value is outside range, reset to first day of month
+        const currentValue = expenseDateInput.value;
+        if (currentValue && (currentValue < expenseDateInput.min || currentValue > expenseDateInput.max)) {
+            expenseDateInput.value = expenseDateInput.min;
+        }
+    }
+    
+    // Calculate totals
+    const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+    
+    // Get budget variable expenditure for comparison
+    const budgetMonthKey = getMonthKey(currentExpenseMonth);
+    const budgetData = (appData.monthlyBudgetData || {})[budgetMonthKey];
+    const budgetVarExp = budgetData?.outflow?.variableExpenditure || 0;
+    const difference = totalExpenses - budgetVarExp;
+    
+    // Update summary cards
+    document.getElementById('totalExpenses').textContent = formatMoney(totalExpenses);
+    document.getElementById('budgetVariableExp').textContent = formatMoney(budgetVarExp);
+    document.getElementById('expenseDifference').textContent = formatMoney(Math.abs(difference));
+    document.getElementById('expenseDifference').style.color = difference > 0 ? COLOR_NEGATIVE : COLOR_POSITIVE;
+    
+    const diffCard = document.getElementById('expenseDifferenceCard');
+    if (diffCard) {
+        diffCard.querySelector('.summary-label').textContent = difference > 0 ? 'Over Budget' : difference < 0 ? 'Under Budget' : 'On Budget';
+    }
+    
+    // Render expense list (preview mode)
+    if (!isExpenseEditMode) {
+        renderExpenseList(expenses);
+    }
+    
+    // Render expense table (edit mode)
+    if (isExpenseEditMode) {
+        renderExpenseTable(expenses);
+    }
+    
+    // Render pie chart (preview mode only)
+    if (!isExpenseEditMode) {
+        renderExpensePieChart(expenses, totalExpenses, budgetVarExp);
+    }
+}
+
+function renderExpenseList(expenses) {
+    const toolbarEl = document.getElementById("expenseSortFilter");
+    if (toolbarEl) toolbarEl.innerHTML = buildSortFilterToolbar("expenseTracking");
+    
+    const displayEntries = applyListSortFilter("expenseTracking", expenses);
+    
+    if (displayEntries.length === 0) {
+        expenseList.innerHTML = '<p class="empty-state">No expenses tracked for this month. Click "Edit" to add expenses.</p>';
+        return;
+    }
+    
+    // Group by category
+    const byCategory = {};
+    displayEntries.forEach(exp => {
+        if (!byCategory[exp.category]) {
+            byCategory[exp.category] = [];
+        }
+        byCategory[exp.category].push(exp);
+    });
+    
+    let html = '';
+    Object.entries(byCategory).forEach(([category, items]) => {
+        // Sort items by amount descending within each category
+        items.sort((a, b) => Number(b.amount) - Number(a.amount));
+        const categoryTotal = items.reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+        html += `
+            <div class="expense-category-group">
+                <div class="expense-category-header">
+                    <span class="expense-category-name">${category}</span>
+                    <span class="expense-category-total">${formatMoney(categoryTotal)}</span>
+                </div>
+                <div class="expense-category-items">
+                    ${items.map(exp => `
+                        <div class="expense-item">
+                            <div class="expense-item-details">
+                                <span class="expense-item-date">${new Date(exp.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                            </div>
+                            <span class="expense-item-amount">${formatMoney(exp.amount)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    });
+    
+    expenseList.innerHTML = html;
+}
+
+function renderExpenseTable(expenses) {
+    if (expenses.length === 0) {
+        expenseTableBody.innerHTML = '<tr><td colspan="5" class="empty-state">No expenses yet. Add your first expense above.</td></tr>';
+        return;
+    }
+    
+    // Sort by date (newest first)
+    const sorted = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    expenseTableBody.innerHTML = sorted.map(exp => `
+        <tr>
+            <td>${new Date(exp.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+            <td>${exp.category}</td>
+            <td>${formatMoney(exp.amount)}</td>
+            <td>
+                <button onclick="editExpense('${exp.id}')" class="btn-edit" title="Edit">Edit</button>
+                <button onclick="deleteExpense('${exp.id}')" class="btn-delete" title="Delete">Delete</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function renderExpensePieChart(expenses, totalExpenses, budgetVarExp) {
+    if (!expensePieChartCanvas) return;
+    
+    // Lazy-load Chart.js if needed
+    if (typeof Chart === 'undefined') {
+        try {
+            await import('https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js');
+        } catch (err) {
+            console.error('Failed to load Chart.js:', err);
+            return;
+        }
+    }
+    
+    // Calculate category totals
+    const categoryTotals = {};
+    expenses.forEach(exp => {
+        if (!categoryTotals[exp.category]) {
+            categoryTotals[exp.category] = 0;
+        }
+        categoryTotals[exp.category] += Number(exp.amount || 0);
+    });
+    
+    // Add "Unidentified" category if there's a difference
+    const difference = budgetVarExp - totalExpenses;
+    if (difference > 0) {
+        categoryTotals['Unidentified'] = difference;
+    }
+    
+    // Prepare chart data
+    const labels = Object.keys(categoryTotals);
+    const data = Object.values(categoryTotals);
+    const colors = [
+        '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+        '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16', '#6366f1'
+    ];
+    
+    // Destroy existing chart and remove old resize listener
+    if (expensePieChart) {
+        expensePieChart.destroy();
+    }
+    if (expensePieChartResizeHandler) {
+        window.removeEventListener('resize', expensePieChartResizeHandler);
+    }
+    
+    // Create new chart
+    const ctx = expensePieChartCanvas.getContext('2d');
+    const isMobile = window.innerWidth < 640;
+    expensePieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels,
+            datasets: [{
+                data,
+                backgroundColor: colors.slice(0, labels.length),
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: isMobile ? "bottom" : "right",
+                    align: "center",
+                    labels: {
+                        color: getChartThemeColors().text,
+                        font: { size: 12 },
+                        padding: 14,
+                        boxWidth: 14,
+                        boxHeight: 14,
+                        generateLabels: (chart) => {
+                            const ds = chart.data.datasets[0];
+                            const total = ds.data.reduce((a, b) => a + b, 0);
+                            const textColor = getChartThemeColors().text;
+                            return chart.data.labels.map((label, i) => ({
+                                text: `${label}  ${total > 0 ? Math.round(ds.data[i] / total * 100) : 0}%`,
+                                fillStyle: ds.backgroundColor[i],
+                                strokeStyle: ds.backgroundColor[i],
+                                fontColor: textColor,
+                                color: textColor,
+                                hidden: false,
+                                index: i
+                            }));
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return `${label}: ${formatMoney(value)} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Add resize listener to update legend position
+    expensePieChartResizeHandler = () => {
+        if (expensePieChart) {
+            const newIsMobile = window.innerWidth < 640;
+            const currentPosition = expensePieChart.options.plugins.legend.position;
+            const newPosition = newIsMobile ? "bottom" : "right";
+            if (currentPosition !== newPosition) {
+                expensePieChart.options.plugins.legend.position = newPosition;
+                expensePieChart.update();
+            }
+        }
+    };
+    window.addEventListener('resize', expensePieChartResizeHandler);
+}
+
+// Expense form handlers
+if (expenseForm) {
+    expenseForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const category = document.getElementById('expenseCategory').value;
+        const amount = document.getElementById('expenseAmount').value;
+        const date = document.getElementById('expenseDate').value;
+        
+        if (!category || !amount || !date) {
+            showToast('Please fill in all required fields', { variant: 'error' });
+            return;
+        }
+        
+        const monthKey = getExpenseMonthKey();
+        const monthData = getExpenseMonthData(monthKey);
+        
+        const expense = {
+            id: Date.now().toString(),
+            category,
+            amount: Number(amount),
+            date,
+            createdAt: new Date().toISOString()
+        };
+        
+        monthData.expenses.push(expense);
+        scheduleSave();
+        
+        // Reset form
+        expenseForm.reset();
+        // Set date to first day of current month
+        const expenseDateInput = document.getElementById('expenseDate');
+        if (expenseDateInput) {
+            const firstDay = new Date(currentExpenseMonth.getFullYear(), currentExpenseMonth.getMonth(), 1);
+            expenseDateInput.value = firstDay.toISOString().split('T')[0];
+        }
+        
+        renderExpenseTracking();
+        showToast('Expense added successfully', { variant: 'success' });
+    });
+}
+
+// Month navigation
+if (prevExpenseMonthBtn) {
+    prevExpenseMonthBtn.addEventListener('click', () => {
+        // Restrict: Can't go before onboarding date
+        const proposed = new Date(currentExpenseMonth);
+        proposed.setMonth(proposed.getMonth() - 1);
+        const od = appData.onboardingDate;
+        if (od) {
+            const onboardingDate = new Date(od);
+            const earliest = new Date(onboardingDate.getFullYear(), onboardingDate.getMonth(), 1);
+            if (proposed < earliest) {
+                showToast('Cannot view expenses before onboarding date', { variant: 'error' });
+                return;
+            }
+        }
+        
+        currentExpenseMonth.setMonth(currentExpenseMonth.getMonth() - 1);
+        // Reset date input to first day of new month
+        const expenseDateInput = document.getElementById('expenseDate');
+        if (expenseDateInput) {
+            const firstDay = new Date(currentExpenseMonth.getFullYear(), currentExpenseMonth.getMonth(), 1);
+            expenseDateInput.value = firstDay.toISOString().split('T')[0];
+        }
+        renderExpenseTracking();
+    });
+}
+
+if (nextExpenseMonthBtn) {
+    nextExpenseMonthBtn.addEventListener('click', () => {
+        // Restrict: Can't go beyond current month (can't track future expenses)
+        const proposed = new Date(currentExpenseMonth);
+        proposed.setMonth(proposed.getMonth() + 1);
+        
+        const today = new Date();
+        const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+        const proposedMonthKey = `${proposed.getFullYear()}-${String(proposed.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Block navigation beyond current month
+        if (proposedMonthKey > currentMonthKey) {
+            showToast('Cannot track expenses for future months', { variant: 'error' });
+            return;
+        }
+        
+        currentExpenseMonth.setMonth(currentExpenseMonth.getMonth() + 1);
+        // Reset date input to first day of new month
+        const expenseDateInput = document.getElementById('expenseDate');
+        if (expenseDateInput) {
+            const firstDay = new Date(currentExpenseMonth.getFullYear(), currentExpenseMonth.getMonth(), 1);
+            expenseDateInput.value = firstDay.toISOString().split('T')[0];
+        }
+        renderExpenseTracking();
+    });
+}
+
+// Toggle edit mode
+if (toggleExpenseEdit) {
+    toggleExpenseEdit.addEventListener('click', () => {
+        isExpenseEditMode = !isExpenseEditMode;
+        renderExpenseTracking();
+    });
+}
+
+// Global functions for edit/delete (called from table)
+window.editExpense = function(id) {
+    const monthKey = getExpenseMonthKey();
+    const monthData = getExpenseMonthData(monthKey);
+    const expense = monthData.expenses.find(e => e.id === id);
+    
+    if (!expense) return;
+    
+    document.getElementById('expenseCategory').value = expense.category;
+    document.getElementById('expenseAmount').value = expense.amount;
+    
+    // Validate and set date - ensure it's within current month range
+    const expenseDateInput = document.getElementById('expenseDate');
+    const firstDay = new Date(currentExpenseMonth.getFullYear(), currentExpenseMonth.getMonth(), 1);
+    const lastDay = new Date(currentExpenseMonth.getFullYear(), currentExpenseMonth.getMonth() + 1, 0);
+    const firstDayStr = firstDay.toISOString().split('T')[0];
+    const lastDayStr = lastDay.toISOString().split('T')[0];
+    
+    // Use expense date if it's within current month, otherwise use first day
+    if (expense.date >= firstDayStr && expense.date <= lastDayStr) {
+        expenseDateInput.value = expense.date;
+    } else {
+        expenseDateInput.value = firstDayStr;
+        showToast('Date reset to first day of current month (original date was in different month)', { variant: 'info' });
+    }
+    
+    // Remove the old expense (will be re-added on submit)
+    monthData.expenses = monthData.expenses.filter(e => e.id !== id);
+    scheduleSave();
+    
+    showToast('Edit the expense and click "Add Expense" to save', { variant: 'info' });
+};
+
+window.deleteExpense = async function(id) {
+    const confirmed = await showConfirm('Delete this expense?', 'This action cannot be undone.');
+    if (!confirmed) return;
+    
+    const monthKey = getExpenseMonthKey();
+    const monthData = getExpenseMonthData(monthKey);
+    monthData.expenses = monthData.expenses.filter(e => e.id !== id);
+    
+    scheduleSave();
+    renderExpenseTracking();
+    showToast('Expense deleted', { variant: 'success' });
+};
+
+// Initialize expense date field with current month's first day
+if (document.getElementById('expenseDate')) {
+    const firstDay = new Date(currentExpenseMonth.getFullYear(), currentExpenseMonth.getMonth(), 1);
+    document.getElementById('expenseDate').value = firstDay.toISOString().split('T')[0];
+}
+
 function renderFinancialGoal() {
     const entries = activeEntries();
     
@@ -3109,6 +3604,10 @@ function renderFinancialGoal() {
         goalPreview.hidden = true;
         goalEdit.hidden = false;
         
+        // Hide summary in edit mode
+        const goalSummary = document.querySelector('.goal-summary');
+        if (goalSummary) goalSummary.hidden = true;
+        
         // Render form fields
         renderGoalDynamicFields();
         updateSectionSubmitButton("financialGoal");
@@ -3118,6 +3617,10 @@ function renderFinancialGoal() {
     } else {
         goalPreview.hidden = false;
         goalEdit.hidden = true;
+        
+        // Show summary in preview mode
+        const goalSummary = document.querySelector('.goal-summary');
+        if (goalSummary) goalSummary.hidden = false;
         
         // Render preview cards
         renderGoalPreviewCards(entries);
@@ -3275,6 +3778,10 @@ function renderInflow() {
     // Show/hide sub-section tabs only in preview
     const subTabs = document.getElementById("investmentSubTabs");
     if (subTabs) subTabs.hidden = isInflowEditMode;
+    
+    // Hide investment summary in edit mode
+    const investmentSummary = document.querySelector('.investment-summary');
+    if (investmentSummary) investmentSummary.hidden = isInflowEditMode;
 
     if (isInflowEditMode) {
         if (inflowTabPreview) inflowTabPreview.hidden = true;
@@ -3285,6 +3792,7 @@ function renderInflow() {
     } else {
         if (inflowTabPreview) inflowTabPreview.hidden = false;
         if (inflowTabEdit) inflowTabEdit.hidden = true;
+        if (investmentSummary) investmentSummary.hidden = false;
 
         // Filter based on active investment view
         let displayEntries = entries;
@@ -3297,11 +3805,19 @@ function renderInflow() {
             if (portfolioEl) portfolioEl.hidden = true;
             if (chartSection) chartSection.hidden = false;
             if (inflowList) inflowList.hidden = false;
+            // Hide frequency filter since view is already filtered by frequency
+            if (sortFilterEl) {
+                sortFilterEl.innerHTML = buildSortFilterToolbar("inflow", ["frequency"]);
+            }
         } else if (activeInvestmentView === "monthly") {
             displayEntries = entries.filter(e => e.frequency !== "One-Time");
             if (portfolioEl) portfolioEl.hidden = true;
             if (chartSection) chartSection.hidden = false;
             if (inflowList) inflowList.hidden = false;
+            // Hide frequency filter since view is already filtered by frequency
+            if (sortFilterEl) {
+                sortFilterEl.innerHTML = buildSortFilterToolbar("inflow", ["frequency"]);
+            }
         } else if (activeInvestmentView === "portfolio") {
             if (portfolioEl) portfolioEl.hidden = false;
             if (chartSection) chartSection.hidden = true;
@@ -3490,8 +4006,7 @@ function renderInflowPreviewCards(entries) {
                 <div class="investment-card-details">
                     <span class="investment-card-frequency" style="${semanticBadgeStyle("Investment", false)}">${esc(item.type || "Others")}</span>
                     <span class="semantic-badge semantic-investment ${frequency === "One-Time" ? "is-paid" : ""}">${esc(frequency)}</span><br>
-                    Amount: ${formatMoney(Number(item.amount || 0))}<br>
-                    Current Value: ${formatMoney(curVal)}<br>
+                    Amount: ${formatMoney(Number(item.amount || 0))} | <span class="investment-detail-value">${formatMoney(curVal)}</span><br>
                     Interest: ${Number(item.interestRate || 0).toFixed(2)}% p.a.<br>
                     Start: ${esc(item.startDate || "—")} | End: ${esc(item.endDate || "—")}<br>
                     ${item.details ? esc(item.details) : ""}
@@ -3560,6 +4075,10 @@ function renderOutflow() {
     const entries = (appData.tabData || {}).outflow || [];
 
     if (toggleOutflowEdit) toggleOutflowEdit.textContent = isOutflowEditMode ? "✓ Done" : "✎ Edit";
+    
+    // Hide outflow summary in edit mode
+    const outflowSummary = document.querySelector('.expense-summary.expense-summary-grid');
+    if (outflowSummary) outflowSummary.hidden = isOutflowEditMode;
 
     if (isOutflowEditMode) {
         if (outflowTabPreview) outflowTabPreview.hidden = true;
@@ -3570,6 +4089,7 @@ function renderOutflow() {
     } else {
         if (outflowTabPreview) outflowTabPreview.hidden = false;
         if (outflowTabEdit) outflowTabEdit.hidden = true;
+        if (outflowSummary) outflowSummary.hidden = false;
         renderOutflowPreviewCards(entries);
         calculateOutflowSummary(entries);
         renderOutflowCharts(entries);
@@ -3770,6 +4290,10 @@ function renderCards() {
     // Update toggle button text
     toggleCardEdit.textContent = isCardEditMode ? "✓ Done" : "✎ Edit";
     
+    // Hide card summary in edit mode
+    const cardSummary = document.querySelector('.card-summary');
+    if (cardSummary) cardSummary.hidden = isCardEditMode;
+    
     // Show/hide preview/edit modes
     if (isCardEditMode) {
         cardPreview.hidden = true;
@@ -3784,6 +4308,9 @@ function renderCards() {
     } else {
         cardPreview.hidden = false;
         cardEdit.hidden = true;
+        
+        // Show summary in preview mode
+        if (cardSummary) cardSummary.hidden = false;
         
         // Render preview cards
         renderCardPreviewCards(entries);
@@ -3997,179 +4524,6 @@ function calculateCardSummary(entries) {
     document.getElementById("totalCreditCards").textContent = totalCreditCards;
 }
 
-// ── Expense Tracking Tab ──────────────────────────────────────────────────────
-function renderExpenseTracking() {
-    const entries = activeEntries();
-    const monthKey = getMonthKey();
-    const monthData = (appData.monthlyBudgetData || {})[monthKey] || {};
-    const autoVariableExp = Number(monthData.outflow?.variableExpenditure || 0);
-    
-    // Calculate total from tracked expenses
-    const trackedTotal = entries.reduce((sum, e) => sum + Number(e.amount || 0), 0);
-    const difference = trackedTotal - autoVariableExp;
-    const matchPercentage = autoVariableExp > 0 ? Math.round((trackedTotal / autoVariableExp) * 100) : 0;
-    
-    // Update toggle button text
-    if (toggleExpenseEdit) toggleExpenseEdit.textContent = isExpenseEditMode ? "✓ Done" : "✎ Edit";
-    
-    // Show/hide preview/edit modes
-    if (isExpenseEditMode) {
-        if (expensePreview) expensePreview.hidden = true;
-        if (expenseEdit) expenseEdit.hidden = false;
-        
-        // Render form fields
-        renderExpenseDynamicFields();
-        updateSectionSubmitButton("expenseTracking");
-        
-        // Render table
-        renderExpenseTable(entries);
-    } else {
-        if (expensePreview) expensePreview.hidden = false;
-        if (expenseEdit) expenseEdit.hidden = true;
-        
-        // Render summary
-        renderExpenseSummary(entries, autoVariableExp, trackedTotal, difference, matchPercentage);
-    }
-}
-
-function renderExpenseDynamicFields() {
-    if (!expenseDynamicFields) return;
-    expenseDynamicFields.innerHTML = "";
-    const fields = TAB_FIELDS.expenseTracking;
-    
-    fields.forEach(field => {
-        const div = document.createElement("div");
-        div.className = "field";
-        
-        const label = document.createElement("label");
-        label.textContent = field.label;
-        div.appendChild(label);
-        
-        let input;
-        if (field.type === "select") {
-            input = document.createElement("select");
-            field.options.forEach(opt => {
-                const option = document.createElement("option");
-                option.value = opt;
-                option.textContent = opt;
-                input.appendChild(option);
-            });
-        } else {
-            input = document.createElement("input");
-            input.type = field.type;
-            input.placeholder = field.placeholder || "";
-            if (field.type === "number") {
-                input.min = "0";
-                input.step = field.step || "1";
-            }
-            if (field.type === "date" && !field.placeholder) {
-                input.value = getDefaultDateValue();
-            }
-        }
-        input.id = `expense_${field.id}`;
-        if (field.required) input.required = true;
-        div.appendChild(input);
-        
-        expenseDynamicFields.appendChild(div);
-    });
-}
-
-function renderExpenseTable(entries) {
-    if (!expenseTableHead || !expenseTableBody) return;
-    
-    const fields = TAB_FIELDS.expenseTracking;
-    
-    // Render table head
-    expenseTableHead.innerHTML = fields.map(f => `<th>${f.label}</th>`).join('') + '<th>Actions</th>';
-    
-    // Render table body
-    expenseTableBody.innerHTML = "";
-    if (entries.length === 0) {
-        if (expenseEmptyState) expenseEmptyState.hidden = false;
-        return;
-    }
-    if (expenseEmptyState) expenseEmptyState.hidden = true;
-    
-    // Sort by date descending
-    const sorted = [...entries].sort((a, b) => {
-        const dateA = new Date(a.date || 0);
-        const dateB = new Date(b.date || 0);
-        return dateB - dateA;
-    });
-    
-    sorted.forEach(entry => {
-        const row = document.createElement("tr");
-        fields.forEach(f => {
-            const td = document.createElement("td");
-            let val = entry[f.id] || "";
-            if (f.type === "number") val = formatMoney(Number(val));
-            if (f.type === "date" && val) val = formatDate(val);
-            td.textContent = val;
-            row.appendChild(td);
-        });
-        
-        const actionTd = document.createElement("td");
-        actionTd.innerHTML = `
-            <button class="btn-edit" onclick="editEntry('expenseTracking', '${entry.id}')">Edit</button>
-            <button class="btn-delete" onclick="deleteEntry('expenseTracking', '${entry.id}')">Delete</button>
-        `;
-        row.appendChild(actionTd);
-        expenseTableBody.appendChild(row);
-    });
-}
-
-function renderExpenseSummary(entries, autoVariableExp, trackedTotal, difference, matchPercentage) {
-    if (!expenseSummary) return;
-    
-    // Group by category
-    const byCategory = {};
-    entries.forEach(e => {
-        const cat = e.category || "Others";
-        if (!byCategory[cat]) byCategory[cat] = 0;
-        byCategory[cat] += Number(e.amount || 0);
-    });
-    
-    const categories = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
-    
-    const statusColor = Math.abs(difference) < 100 ? '#10b981' : difference > 0 ? '#ef4444' : '#3b82f6';
-    const statusText = Math.abs(difference) < 100 ? 'Matched!' : difference > 0 ? 'Over' : 'Under';
-    
-    expenseSummary.innerHTML = `
-        <div class="budget-status" style="background: ${statusColor}22; color: ${statusColor}; margin-bottom: 20px;">
-            <strong>Expense Tracking vs Budget:</strong> ${statusText} by ${formatMoney(Math.abs(difference))} (${matchPercentage}% match)
-        </div>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
-            <div class="summary-card">
-                <div class="summary-label">Auto-calculated Variable Exp</div>
-                <div class="summary-value" style="color: #3b82f6;">${formatMoney(autoVariableExp)}</div>
-                <div class="summary-note">From Budget tab</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">Tracked Expenses</div>
-                <div class="summary-value" style="color: ${trackedTotal > autoVariableExp ? '#ef4444' : '#10b981'};">${formatMoney(trackedTotal)}</div>
-                <div class="summary-note">${entries.length} transaction${entries.length !== 1 ? 's' : ''}</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">Difference</div>
-                <div class="summary-value" style="color: ${statusColor};">${difference >= 0 ? '+' : ''}${formatMoney(difference)}</div>
-                <div class="summary-note">${statusText}</div>
-            </div>
-        </div>
-        
-        <h3 style="margin: 24px 0 12px; font-size: 1.1rem;">Category Breakdown</h3>
-        <div class="category-list">
-            ${categories.map(([cat, amount]) => `
-                <div class="category-item">
-                    <span class="category-name">${cat}</span>
-                    <span class="category-amount">${formatMoney(amount)}</span>
-                    <span class="category-percent">${autoVariableExp > 0 ? Math.round((amount / autoVariableExp) * 100) : 0}%</span>
-                </div>
-            `).join('')}
-        </div>
-    `;
-}
-
 function getAutoNetWorthEntries() {
     const auto = [];
     // Inflow items → Assets
@@ -4233,6 +4587,10 @@ function renderNetWorth() {
     // Update toggle button text
     toggleNetWorthEdit.textContent = isNetWorthEditMode ? "✓ Done" : "✎ Edit";
 
+    // Hide net worth summary cards in edit mode
+    const netWorthSummaryCards = document.getElementById('netWorthSummaryCards');
+    if (netWorthSummaryCards) netWorthSummaryCards.hidden = isNetWorthEditMode;
+
     // Show/hide preview/edit modes
     if (isNetWorthEditMode) {
         netWorthPreview.hidden = true;
@@ -4247,6 +4605,10 @@ function renderNetWorth() {
     } else {
         netWorthPreview.hidden = false;
         netWorthEdit.hidden = true;
+        
+        // Show net worth summary cards in preview mode
+        if (netWorthSummaryCards) netWorthSummaryCards.hidden = false;
+        
         currentAgeDisplay.textContent = calculatedAge ? calculatedAge + " yrs" : "—";
 
         // Calculate and display summary using combined entries
@@ -4726,6 +5088,10 @@ function renderTaxPlan() {
             toggleTaxPlanEdit.textContent = isTaxPlanEditMode ? "✓ Done" : "✎ Edit";
         }
         
+        // Hide tax summary in edit mode
+        const taxSummary = document.getElementById('taxSummary');
+        if (taxSummary) taxSummary.hidden = isTaxPlanEditMode;
+        
         // Show/hide preview/edit modes
         if (isTaxPlanEditMode) {
             if (taxPlanPreview) taxPlanPreview.hidden = true;
@@ -4746,6 +5112,9 @@ function renderTaxPlan() {
         } else {
             if (taxPlanPreview) taxPlanPreview.hidden = false;
             if (taxPlanEdit) taxPlanEdit.hidden = true;
+            
+            // Show tax summary in preview mode
+            if (taxSummary) taxSummary.hidden = false;
 
             // Render salary details
             renderSalaryDetails();
@@ -5327,6 +5696,14 @@ function renderGifts() {
     // Update toggle button text
     toggleGiftsEdit.textContent = isGiftsEditMode ? "✓ Done" : "✎ Edit";
     
+    // Hide gifts summary in edit mode
+    const giftsSummary = document.querySelector('.gifts-summary');
+    if (giftsSummary) giftsSummary.hidden = isGiftsEditMode;
+    
+    // Hide monthly chart in edit mode
+    const giftsMonthlyChartContainer = document.getElementById('giftsMonthlyChartContainer');
+    if (giftsMonthlyChartContainer) giftsMonthlyChartContainer.hidden = isGiftsEditMode;
+    
     // Show/hide preview/edit modes
     if (isGiftsEditMode) {
         giftsPreview.hidden = true;
@@ -5341,6 +5718,12 @@ function renderGifts() {
     } else {
         giftsPreview.hidden = false;
         giftsEdit.hidden = true;
+        
+        // Show summary in preview mode
+        if (giftsSummary) giftsSummary.hidden = false;
+        
+        // Show chart in preview mode
+        if (giftsMonthlyChartContainer) giftsMonthlyChartContainer.hidden = false;
         
         // Calculate and display summary
         calculateGiftsSummary(entries);
@@ -5657,6 +6040,10 @@ function renderInsurance() {
     const entries = (appData.tabData || {}).insurance || [];
 
     if (toggleInsuranceEdit) toggleInsuranceEdit.textContent = isInsuranceEditMode ? "✓ Done" : "✎ Edit";
+    
+    // Hide insurance summary in edit mode
+    const insuranceSummary = document.querySelector('.insurance-summary');
+    if (insuranceSummary) insuranceSummary.hidden = isInsuranceEditMode;
 
     if (isInsuranceEditMode) {
         if (insuranceTabPreview) insuranceTabPreview.hidden = true;
@@ -5667,6 +6054,7 @@ function renderInsurance() {
     } else {
         if (insuranceTabPreview) insuranceTabPreview.hidden = false;
         if (insuranceTabEdit) insuranceTabEdit.hidden = true;
+        if (insuranceSummary) insuranceSummary.hidden = false;
         renderInsurancePreviewCards(entries);
         calculateInsuranceSummary(entries);
     }
@@ -7541,6 +7929,10 @@ if (btnCarryForward) btnCarryForward.addEventListener("click", async () => {
 
     // Navigate to next month
     currentMonth.setMonth(currentMonth.getMonth() + 1);
+    
+    // Sync expense tracking month with budget month
+    currentExpenseMonth = new Date(currentMonth);
+    
     scheduleSave();
     renderMonthlyBudget();
 });
@@ -7691,6 +8083,7 @@ if (btnUpdateCCOutstanding) btnUpdateCCOutstanding.addEventListener("click", () 
         outflowTabPreview:  { tabId: "outflow",       render: () => renderOutflow() },
         giftsPreview:       { tabId: "gifts",         render: () => renderGifts() },
         insuranceTabPreview:{ tabId: "insurance",     render: () => renderInsurance() },
+        expensePreview:     { tabId: "expenseTracking", render: () => renderExpenseTracking() },
     };
 
     Object.entries(previewMap).forEach(([containerId, { tabId, render }]) => {
@@ -7765,28 +8158,6 @@ cardForm.addEventListener("submit", addCardEntry);
 cardTableBody.addEventListener("click", e => {
     handleTableAction("cards", e);
 });
-
-// Expense Tracking event bindings
-if (toggleExpenseEdit) {
-    toggleExpenseEdit.addEventListener("click", () => {
-        isExpenseEditMode = !isExpenseEditMode;
-        renderExpenseTracking();
-    });
-}
-
-if (expenseForm) {
-    expenseForm.addEventListener("submit", e => {
-        e.preventDefault();
-        const entry = readSectionFormEntry("expenseTracking");
-        addEntry("expenseTracking", entry);
-    });
-}
-
-if (expenseTableBody) {
-    expenseTableBody.addEventListener("click", e => {
-        handleTableAction("expenseTracking", e);
-    });
-}
 
 // Net Worth event bindings
 toggleNetWorthEdit.addEventListener("click", () => {

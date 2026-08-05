@@ -569,7 +569,7 @@ function semanticBadgeStyle(value, paid = false) {
 }
 
 // ── Version Info ──────────────────────────────────────────────────────────────
-const APP_VERSION = { major: 2, minor: 4, build: 3 };
+const APP_VERSION = { major: 2, minor: 4, build: 0 };
 function getAppVersion() {
     return `v${APP_VERSION.major}.${APP_VERSION.minor}.${APP_VERSION.build}`;
 }

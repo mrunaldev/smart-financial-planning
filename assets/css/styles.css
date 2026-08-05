@@ -388,10 +388,10 @@ body {
 }
 
 .user-email {
-    font-size: 0.8rem;
+    font-size: 1.3rem;
     color: var(--muted);
     font-weight: 500;
-    max-width: 240px;
+    max-width: 480px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

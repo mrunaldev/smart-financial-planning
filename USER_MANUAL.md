@@ -34,21 +34,22 @@ A comprehensive guide to using SmartFin for personal financial planning.
 4. [Dashboard & Navigation](#dashboard--navigation)
 5. [Accounts (Setup)](#accounts-setup)
 6. [Monthly Budget](#monthly-budget)
-7. [Investments](#investments)
-8. [Outflow (Fixed Deductions)](#outflow-fixed-deductions)
-9. [Insurance](#insurance)
-10. [Financial Goals](#financial-goals)
-11. [Net Worth](#net-worth)
-12. [Tax Plan](#tax-plan)
-13. [Gifts](#gifts)
-14. [Emergency Fund](#emergency-fund)
-15. [Settings & Danger Zone](#settings--danger-zone)
-16. [Export to Excel](#export-to-excel)
-17. [Download Dashboard Report](#download-dashboard-report)
-18. [Backup & Restore](#backup--restore)
-19. [Cross-Device Sync](#cross-device-sync)
-20. [Precautions & Common Pitfalls](#precautions--common-pitfalls)
-21. [FAQ](#faq)
+7. [Expense Tracking](#expense-tracking)
+8. [Investments](#investments)
+9. [Outflow (Fixed Deductions)](#outflow-fixed-deductions)
+10. [Insurance](#insurance)
+11. [Financial Goals](#financial-goals)
+12. [Net Worth](#net-worth)
+13. [Tax Plan](#tax-plan)
+14. [Gifts](#gifts)
+15. [Emergency Fund](#emergency-fund)
+16. [Settings & Danger Zone](#settings--danger-zone)
+17. [Export to Excel](#export-to-excel)
+18. [Download Dashboard Report](#download-dashboard-report)
+19. [Backup & Restore](#backup--restore)
+20. [Cross-Device Sync](#cross-device-sync)
+21. [Precautions & Common Pitfalls](#precautions--common-pitfalls)
+22. [FAQ](#faq)
 
 ---
 
@@ -57,6 +58,7 @@ A comprehensive guide to using SmartFin for personal financial planning.
 SmartFin is a personal finance web application (dark/light theme) that helps you manage:
 
 - **Monthly Budget** — Track inflows, outflows, on-demand spending with account-balance-aware calculations
+- **Expense Tracking** — Category-wise daily expense tracking with budget comparison and visual breakdowns
 - **Investments** — Existing (lump sum), Monthly (SIPs/RDs), Portfolio Summary, with sub-section views
 - **Outflow** — Fixed monthly deductions (EMIs, insurance premiums, savings, investments) auto-debited from Salary
 - **Insurance** — Dedicated policy tracker with premium frequency, sum assured, nominees
@@ -131,6 +133,13 @@ All tabs use the **Edit/Done toggle** pattern:
 - **Preview mode** (default): Shows summary cards, charts, and read-only data
 - **Edit mode** (click ✎ Edit): Shows the entry form and editable data table
 - Click **✓ Done** to return to preview mode
+
+### Header Navigation
+
+- **App Logo & Name**: Click to navigate to Dashboard tab (works from any tab)
+- **User Email**: Displays your registered email
+- **Settings Icon**: Access settings panel
+- **Sign Out Icon**: Log out of the app (icon button)
 
 ---
 
@@ -301,6 +310,81 @@ Clicking **Close Month** will:
 
 ---
 
+## Expense Tracking
+
+### Overview
+
+Track your day-to-day expenses by category to understand spending patterns and compare against your budget's variable expenditure.
+
+### Views
+
+- **Preview Mode**: Shows expense summary cards, category-wise pie chart, and expense list
+- **Edit Mode**: Add, edit, or delete expenses with full CRUD operations
+
+### Summary Cards (Preview Mode)
+
+| Card | Description |
+|------|-------------|
+| **Total Expenses** | Sum of all tracked expenses for the month |
+| **Budget Variable Expenditure** | Auto-calculated from Budget tab (totalFunded − current balance) |
+| **Under Budget** | Difference between budget variable expenditure and actual expenses (green if under, red if over) |
+
+### Expense Categories
+
+11 predefined categories for tracking:
+
+- 🍽️ Food & Dining
+- 🚗 Transportation
+- 🛍️ Shopping
+- 🎬 Entertainment
+- 🏥 Healthcare
+- 📚 Education
+- 💇 Personal Care
+- 🏠 Home & Utilities
+- ✈️ Travel
+- 🎁 Gifts & Donations
+- 📦 Others
+
+### Pie Chart
+
+- Shows category-wise expense breakdown
+- **Unidentified** category appears if actual expenses don't match budget variable expenditure
+- Legend displays category name and percentage
+- Responsive: legend appears below chart on mobile, to the right on desktop
+
+### Month Navigation
+
+- Navigate between months with ◀ ▶ buttons
+- Cannot navigate to months before your onboarding date
+- Syncs with Budget tab lifecycle (auto-advances when month is closed)
+- Optional tracking: Leave blank for months you don't want to track expenses
+
+### Adding/Editing Expenses (Edit Mode)
+
+| Field | Description |
+|-------|-------------|
+| **Category** | Select from 11 predefined categories |
+| **Amount (₹)** | Expense amount |
+| **Date** | Date of expense |
+| **Details** | Optional notes (e.g., restaurant name, item description) |
+
+### Budget Comparison
+
+The system automatically compares your tracked expenses against the Budget tab's Variable Expenditure:
+
+- **Match**: If total tracked expenses ≈ budget variable expenditure → all categories shown
+- **Under Budget**: If tracked expenses < budget variable expenditure → green "Under Budget" card
+- **Over Budget**: If tracked expenses > budget variable expenditure → red "Under Budget" card
+- **Unidentified**: Any difference appears as "Unidentified" category in the pie chart
+
+### Lifecycle
+
+- Expense tracking is optional per month
+- When you close a month in Budget tab, the corresponding expense tracking month also becomes read-only
+- Navigate to future months to plan ahead (view only until month starts)
+
+---
+
 ## Investments
 
 ### Overview
@@ -309,12 +393,27 @@ Track all your investments in one place with sub-section views.
 
 ### Sub-sections (Preview Mode)
 
+Located in the same section as sort/filter controls, aligned to the right:
+
 | Tab | Shows |
 |-----|-------|
 | **All** | Every investment entry |
 | **Existing** | Lump sum: FDs, PPF, Stocks, Bonds, Real Estate (category=Existing, frequency≠Monthly) |
 | **Monthly** | Recurring: SIPs, RDs (category=Monthly or frequency=Monthly) |
 | **Portfolio Summary** | Consolidated view with Existing + Monthly + One-Time (from Budget) |
+
+> **Note**: Frequency filter is automatically hidden when viewing "Existing" or "Monthly" tabs to avoid redundancy.
+
+### Chart Position
+
+The "Investment Values" bar chart is positioned **above** the sort/filter controls and sub-section tabs for better visibility.
+
+### Sort/Filter Controls
+
+- Located in a bordered section (consistent with other tabs)
+- Sort by: None, Name, Type, Amount, Current Value, Interest Rate, Start Date
+- Sort direction: Ascending (↑) or Descending (↓)
+- Filter by: Type, Frequency (when applicable)
 
 ### Fields
 

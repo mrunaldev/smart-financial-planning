@@ -8,9 +8,35 @@
 
 A comprehensive dark-themed personal finance app with login/register, cross-device sync via Firebase, and tabbed sections for complete financial management.
 
-## What's New in v2.4.0 - Major Feature Release 🚀
+## 📋 Table of Contents
 
-### **New Features**
+- [Features](#features)
+- [What's New](#whats-new)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Tabs Overview](#tabs-overview)
+- [Tech Stack](#tech-stack)
+- [License](#license)
+
+## ✨ Features
+
+- 🔐 **Authentication**: Secure login/register with email/password
+- 🔄 **Cross-Device Sync**: Real-time data synchronization via Firebase
+- 📱 **Responsive Design**: Optimized for desktop, tablet, and mobile
+- 🌙 **Dark Theme**: Easy on the eyes dark interface
+- 📊 **Financial Dashboard**: Complete overview of your financial health
+- 💰 **Budget Planning**: Monthly budget with variable expenditure tracking
+- 📈 **Investment Tracking**: Track all investments with portfolio summary
+- 🏠 **Accounts Management**: Track bank accounts, credit cards, and net worth
+- 🎯 **Financial Goals**: Set and track financial goals
+- 💡 **Tax Planning**: Comprehensive tax planning for ITR-2 with regime comparison
+- 🛡️ **Insurance Management**: Track insurance policies and coverage
+- 🎁 **Gifts & Donations**: Track charitable giving
+- 💸 **Expense Tracking**: Category-wise expense tracking with visual breakdowns
+
+## 🚀 What's New in v2.4.0
+
+### New Features
 - **✨ Expense Tracking Tab**: Complete expense tracking system with category-wise breakdown
   - Month-by-month expense tracking with calendar navigation
   - 11 predefined expense categories (Food & Dining, Transportation, Shopping, etc.)
@@ -23,347 +49,152 @@ A comprehensive dark-themed personal finance app with login/register, cross-devi
   - List view showing expenses grouped by category
   - Full CRUD operations (Create, Read, Update, Delete) for expenses
 
-### **Dashboard Improvements**
+### Dashboard Improvements
 - **🏠 Clickable Logo**: App logo and name now navigate to Dashboard tab
 - **📱 Mobile-Friendly Tooltips**: Financial Health Score tooltips now work on mobile (tap to show/hide)
 - **📐 Responsive Design**: All dashboard elements optimized for mobile, tablet, and desktop views
 - **🎯 Better Layout**: Moved Alerts & Notifications and Financial Health Score below Insights & Recommendations for improved information hierarchy
 - **💚 Optimized Health Score Card**: Better width handling across all screen sizes
 
-### **Technical Improvements**
+### Technical Improvements
 - Enhanced responsive CSS with proper breakpoints for all devices
 - Touch-friendly tooltip system with both hover (desktop) and tap (mobile) support
 - Keyboard navigation support for logo click (Enter/Space keys)
 - Data structure updates to support expense tracking across months
 - Improved mobile experience with larger touch targets and better spacing
 
-## Previous Updates
+## 📦 Installation
 
-## What's New in v2.3.21 - Tax Data Load Bug Fix 🔧
-
-- **Fixed**: Tax data now loads correctly from Firestore after page refresh
-- **Fixed**: Firestore data loading now includes taxData in appData object
-- **Fixed**: Added console logging to verify taxData load/save operations
-- **Fixed**: Footer version display background (now transparent)
-- **Added**: Search functionality to App Logs panel
-
-### **What Was Broken:**
-- Salary and house property details were saved to Firestore successfully
-- But when loading data back from Firestore, taxData was missing from appData
-- This caused all tax data to be lost on page refresh
-- The save was working, but the load was incomplete
-
-### **What's Fixed:**
-- Added `taxData: d.taxData || {}` to the Firestore data loading in startListening()
-- Tax data now persists correctly across page refreshes
-- Console logs now show taxData being loaded: `📥 Loading data from Firestore...`
-- Console logs now show taxData being saved: `💼 Saving salary details...`
-
-## Previous Update - v2.3.14 - Tax Data Import/Export Fix 💾
-
-- **Fixed**: Tax data (salary details, house property) now included in import/export
-- **Fixed**: Import function now restores taxData from backup files
-- **Fixed**: normalizeAppDataModel now ensures taxData is always initialized
-- **Verified**: Tax data saves correctly to Firestore (confirmed via scheduleSave)
-
-### **What Was Broken:**
-- Export worked (taxData was in appData), but import didn't restore it
-- Import function's safeImport object was missing taxData field
-- Salary and house property details lost when importing backup
-- normalizeAppDataModel didn't check for taxData
-
-### **What's Fixed:**
-- Added `taxData: imported.taxData || {}` to safeImport object
-- Added taxData initialization in normalizeAppDataModel
-- Tax data now persists across imports/exports
-- Salary details and house property details now save and restore correctly
-
-### **How It Works:**
-- **Export**: Downloads entire appData (includes taxData, tabData, etc.)
-- **Import**: Restores all fields including taxData (salary, house property)
-- **Firestore**: Saves entire appData with merge: true (includes taxData)
-
-## Previous Update - v2.3.13 - Tax Saving Banner Style Update 🎨
-
-- **Changed**: Tax-saving banner now uses border color instead of background gradient
-- **Improved**: Lighter, cleaner look with blue border on light background
-- **Better readability**: Dark text on light background instead of white on blue gradient
-
-### **Visual Change:**
-
-**Before (v2.3.12):**
-- Blue gradient background (#3b82f6 to #2563eb)
-- White text
-- Darker, more prominent banner
-
-**After (v2.3.13):**
-- Light gray background (var(--surf2))
-- Blue border (#3b82f6, 2px)
-- Dark text (var(--text))
-- Lighter, cleaner appearance
-
-## Previous Update - v2.3.12 - Tax Plan Auto-Save Fix 🔧
-
-- **Fixed**: "saveData is not defined" error when clicking "✓ Done" in Tax Plan
-- **Fixed**: Salary and house property details now save correctly using scheduleSave()
-- **Fixed**: Auto-save functionality now works as expected
-
-### **What Was Broken:**
-- Salary details and house property details were not saving when clicking "✓ Done"
-- Error: "saveData is not defined"
-- saveData() function didn't exist in the codebase
-
-### **What's Fixed:**
-- Changed from `saveData()` to `scheduleSave()` (the correct function used by other tabs)
-- Salary details now save automatically when clicking "✓ Done"
-- House property details now save automatically when clicking "✓ Done"
-
-## Previous Update - v2.3.10 - Financial Year Date Filtering 📅
-
-- **Fixed**: Auto-calculated tax deductions now respect financial year dates
-- **Fixed**: Investments only counted for the selected financial year (April to March)
-- **Fixed**: One-time investments filtered by start date
-- **Fixed**: Monthly investments pro-rated based on months in financial year
-- **Improved**: More accurate tax calculation based on actual investment dates
-
-### **How It Works:**
-
-**Before (v2.3.9):**
-- All investments counted regardless of when they were made
-- Historical investments from previous years included in current tax year
-- Overestimated deductions
-
-**After (v2.3.10):**
-- **One-time investments**: Only included if start date falls in selected FY (April 1 to March 31)
-- **Monthly investments**: Pro-rated based on months within the selected FY
-  - If no start date: Assumes full 12 months
-  - If start date in FY: Counts months from start to March 31
-- **Quarterly/Semi-Annual/Annual**: Full amount (assumes regular payments)
-- **Insurance payments**: Full annual amount (can be refined with date tracking)
-
-### **Example:**
-
-**Scenario:**
-- Selected FY: 2024-25 (April 1, 2024 to March 31, 2025)
-- PPF investment: ₹50,000 on January 15, 2025 → **Included** ✓
-- PPF investment: ₹50,000 on March 2024 → **Excluded** ✗
-- Monthly SIP: ₹10,000 started November 2024 → ₹50,000 (5 months) ✓
-
-## Previous Update - v2.3.9 - Tax Plan Complete appData.taxData Fix 🔧
-
-- **Fixed**: "Cannot read properties of undefined (reading 'houseProperty')" error in renderTaxBreakdown
-- **Fixed**: All remaining `appData.taxData` accesses now have proper null checks
-- **Fixed**: `renderTaxBreakdown()` now safely checks if `appData.taxData` exists
-- **Fixed**: `renderTaxSavingBanner()` now safely checks if `appData.taxData` exists
-- **Fixed**: `populateSalaryDetailsForm()` now safely checks if `appData.taxData` exists
-- **Fixed**: `populateHousePropertyForm()` now safely checks if `appData.taxData` exists
-
-### **Additional Locations Fixed (v2.3.9):**
-- ✅ `renderTaxBreakdown()` - Line 4866
-- ✅ `renderTaxSavingBanner()` - Line 4953
-- ✅ `populateSalaryDetailsForm()` - Line 4994
-- ✅ `populateHousePropertyForm()` - Line 5098
-
-### **Total Locations Fixed (v2.3.8 + v2.3.9):**
-- ✅ `renderSalaryDetails()`
-- ✅ `renderHousePropertyDetails()`
-- ✅ `getEffectiveDeductions()` (2 locations)
-- ✅ `calculateTaxSummary()`
-- ✅ `renderTaxBreakdown()`
-- ✅ `renderTaxSavingBanner()`
-- ✅ `populateSalaryDetailsForm()`
-- ✅ `populateHousePropertyForm()`
-
-**All 8 locations now safely handle undefined `appData.taxData`**
-
-## Previous Update - v2.3.8 - Tax Plan appData.taxData Fix 🔧
-
-- **Fixed**: "Cannot read properties of undefined (reading 'salary')" error
-- **Fixed**: All `appData.taxData` accesses now have proper null checks
-- **Fixed**: `renderSalaryDetails()` now safely checks if `appData.taxData` exists
-- **Fixed**: `renderHousePropertyDetails()` now safely checks if `appData.taxData` exists
-- **Fixed**: `getEffectiveDeductions()` now safely checks if `appData.taxData` exists
-- **Fixed**: `calculateTaxSummary()` now safely checks if `appData.taxData` exists
-
-### **What Was Broken:**
-```
-TypeError: Cannot read properties of undefined (reading 'salary')
-at renderSalaryDetails (line 5066:36)
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/smart-financial-planning.git
+cd smart-financial-planning
 ```
 
-When `appData.taxData` was undefined (for users who haven't added salary/house property details yet), the app crashed trying to access `.salary` or `.houseProperty` on undefined.
+2. Open `index.html` in your browser or serve with a local server:
+```bash
+# Using Python
+python -m http.server 8000
 
-### **What's Fixed:**
-```javascript
-// Before (v2.3.6):
-const salary = appData.taxData.salary || {}; // CRASH if appData.taxData is undefined!
-
-// After (v2.3.8):
-const salary = (appData.taxData || {}).salary || {}; // SAFE!
+# Using Node.js (http-server)
+npx http-server
 ```
 
-All 4 locations fixed:
-- ✅ `renderSalaryDetails()`
-- ✅ `renderHousePropertyDetails()`
-- ✅ `getEffectiveDeductions()` (2 locations)
-- ✅ `calculateTaxSummary()`
+3. Configure Firebase (optional, for cross-device sync):
+   - Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
+   - Enable Authentication (Email/Password)
+   - Enable Firestore Database
+   - Add your Firebase config to the app
 
-## Previous Update - v2.3.6 - Tax Plan Rendering Fix 🔧
+## 🎯 Usage
 
-- **Fixed**: Tax plan rendering error - "An error rendering taxplan"
-- **Fixed**: `getAllTaxDeductions()` now correctly gets manual tax plan entries
-- **Fixed**: `renderTaxPlan()` now correctly gets tax plan entries instead of active tab entries
-- **Fixed**: Function signatures updated - removed unused `entries` parameter
-- **Fixed**: `calculateTaxSummary()` now has safety checks for all DOM elements
-- **Improved**: Better error handling and null checks throughout tax plan rendering
+1. **Register**: Create an account with email and password
+2. **Dashboard**: View your financial overview and health score
+3. **Budget**: Set up monthly budget and track variable expenditure
+4. **Investments**: Track your investments (one-time and recurring)
+5. **Outflow**: Manage fixed expenses and commitments
+6. **Accounts**: Track bank accounts and credit cards
+7. **Goals**: Set and track financial goals
+8. **Insurance**: Manage insurance policies
+9. **Tax Plan**: Plan your taxes with regime comparison
+10. **Gifts**: Track charitable donations
+11. **Expense Tracking**: Track daily expenses by category
 
-### **What Was Broken:**
-- Tax plan page showed "An error rendering taxplan"
-- `getAllTaxDeductions()` was calling `activeEntries()` which returned wrong tab data
-- `renderTaxPlan()` was using `activeEntries()` instead of tax plan specific entries
-- Functions expected `entries` parameter but didn't use it correctly
-- `calculateTaxSummary()` tried to access DOM elements without null checks
+## 📑 Tabs Overview
 
-### **What's Fixed:**
-- ✅ Tax plan page renders without errors
-- ✅ Auto-deductions display correctly (all 20+ items from Inflow/Outflow)
-- ✅ Manual tax-saving items display correctly
-- ✅ Tax breakdown shows complete calculation
-- ✅ Regime recommendation banner shows
-- ✅ Tax-saving banner shows ₹5.85L+ scope
-- ✅ Edit mode works (form fields and table)
-- ✅ Done button works (saves and switches to preview)
+| Tab | Description |
+|-----|-------------|
+| **Dashboard** | Financial overview with health score, alerts, and insights |
+| **Budget** | Monthly budget planning with variable expenditure tracking |
+| **Financial Goals** | Set and track financial goals with progress tracking |
+| **Investments** | Track investments (one-time, recurring, portfolio summary) |
+| **Fixed Outflow** | Manage fixed expenses and monthly commitments |
+| **Insurance** | Track insurance policies and coverage details |
+| **Accounts** | Manage bank accounts, credit cards, and net worth |
+| **Tax Plan** | Comprehensive tax planning with old/new regime comparison |
+| **Gifts** | Track charitable donations and gifts |
+| **Expense Tracking** | Category-wise expense tracking with visual breakdowns |
 
-## Previous Update - v2.3.5 - Tax Plan Done Button Fix 🔧
+## 🛠 Tech Stack
 
-- **Fixed**: "An unexpected error occurred" when clicking "✓ Done" button in Tax Plan edit mode
-- **Fixed**: toggleTaxPlanEdit element now properly initialized
-- **Fixed**: taxPlanUI element now properly initialized
-- **Added**: Comprehensive error handling in toggle event listener
-- **Added**: Error handling in saveSalaryDetailsAuto() and saveHousePropertyDetailsAuto()
-- **Improved**: Better error messages with console logging
+- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
+- **Backend**: Firebase (Authentication, Firestore)
+- **Charts**: Chart.js
+- **PDF Export**: html2pdf.js
+- **Icons**: SVG (inline)
+- **Font**: Inter (Google Fonts)
 
-### **What Was Broken:**
-- Clicking "✓ Done" button crashed with "An unexpected error occurred"
-- toggleTaxPlanEdit was declared as `const` before DOM loaded
-- No error handling in toggle event listener
-- No error handling in auto-save functions
+## 📄 License
 
-### **What's Fixed:**
-- ✅ "✓ Done" button works without errors
-- ✅ Switches from Edit to Preview mode smoothly
-- ✅ Auto-saves salary and house property details
-- ✅ All elements properly initialized
-- ✅ Comprehensive error handling with helpful messages
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Previous Update - v2.3.4 - Tax Plan Critical Fix 🚨
+---
 
-- **Fixed**: "An unexpected error occurred" when clicking Tax Plan tab
-- **Fixed**: Auto-calculated tax deductions now display correctly
-- **Fixed**: Tax breakdown now shows properly
-- **Fixed**: Regime recommendation banner restored
-- **Fixed**: All tax plan elements now initialize correctly after authentication
+## 📜 Version History
 
-### **What Was Broken:**
-- Tax plan page crashed with error when switching to the tab
-- Auto-pulled deductions (from Inflow/Outflow) were not displaying
-- Tax breakdown section was missing
-- Regime comparison banner was gone
-- Element initialization timing issues
+### v2.4.0 - Major Feature Release (Current)
+- Expense Tracking Tab with category-wise breakdown
+- Dashboard responsive improvements
+- Mobile-friendly tooltips
 
-### **What's Fixed:**
-- ✅ Tax plan page loads without errors
-- ✅ All 20+ auto-pulled deductions display correctly
-- ✅ Tax breakdown shows complete calculation
-- ✅ Regime recommendation banner shows savings
-- ✅ Form fields render properly
-- ✅ Table shows manual entries
-- ✅ Everything saves on "✓ Done"
+### v2.3.21 - Tax Data Load Bug Fix
+- Fixed tax data loading from Firestore
+- Fixed Firestore data loading to include taxData
 
-## Previous Update - v2.3.3 - Tax Plan Form Fix 🔧
+### v2.3.14 - Tax Data Import/Export Fix
+- Fixed tax data inclusion in import/export
+- Added taxData to normalizeAppDataModel
 
-- **Fixed**: Tax-saving items form fields now display correctly in Edit mode
-- **Fixed**: Tax-saving items table now shows all manual entries
-- **Fixed**: Element initialization timing issue resolved
-- **Improved**: Added safety checks for tax plan elements
+### v2.3.13 - Tax Saving Banner Style Update
+- Changed to border color instead of background gradient
+- Improved readability with lighter design
 
-### **What Was Fixed:**
-- Form fields (Tax Saving Item, Amount, Section, Details) now render properly
-- Table with existing tax-saving items now displays correctly
-- "Actions" column header now shows in table
-- Element references initialized after authentication
+### v2.3.12 - Tax Plan Auto-Save Fix
+- Fixed "saveData is not defined" error
+- Changed to use scheduleSave() function
 
-## Previous Update - v2.3.2 - Tax Plan UX Improvement 🎯
+### v2.3.10 - Financial Year Date Filtering
+- Investments now respect financial year dates
+- One-time investments filtered by start date
+- Monthly investments pro-rated based on months in FY
 
-- **Auto-Save on Done**: Salary and house property details now save automatically when clicking "✓ Done"
-- **Removed Extra Buttons**: No more "Save Salary Details" or "Save House Property" buttons
-- **Consistent UX**: Tax Plan now works like all other tabs - edit, then click Done to save
-- **Cleaner Interface**: Less clutter, same functionality
+### v2.3.0 - Comprehensive Tax Planning for ITR-2
+- Salary Details Section with HRA exemption
+- House Property Income tracking
+- Section 24(b), 80TTA deductions
+- Enhanced tax-saving banner with regime comparison
 
-## Previous Update - v2.3.1 - Dashboard Card Merge & Icons 🎨
+### v2.2.0 - Expense Tracking Tab
+- New expense tracking with 50+ categories
+- Auto-validation with budget comparison
+- Visual insights and category breakdown
 
-- **Merged Cards**: Combined "Preparedness" and "Budget vs Actual" into single "Preparedness & Budget" card
-- **Compact Layout**: Insurance progress bars and budget stats now in one unified card
-- **All Cards with Icons**: Every dashboard card now has a descriptive emoji icon
-- **Cleaner Dashboard**: Reduced card count while maintaining all information
+### v2.1.7 - Dashboard Layout Adjustment
+- Improved dashboard layout and spacing
 
-### **Card Icons Added:**
-- 📅 This Month
-- 🏦 Accounts & Net Worth
-- 🎯 Goals & Investment Planning
-- 🛡️ Preparedness & Budget
-- 💚 Financial Health Score
-- 💡 Insights & Recommendations
-- 📊 6-Month Trend
-- ⚡ Quick Actions
+### v2.1.6 - Financial Health Score Accuracy
+- Fixed scoring calculations
+- Improved accuracy across all components
 
-## Previous Update - v2.3.0 - Comprehensive Tax Planning for ITR-2 🎯
+### v2.1.5 - Emergency Fund Calculator
+- Added ideal emergency fund calculation
+- Based on monthly commitments and expenses
 
-### **Major Tax Calculation Overhaul:**
+### v2.1.0 - Net Worth Tab
+- Complete net worth tracking
+- Assets and liabilities breakdown
+- Net worth over time chart
 
-- **Salary Details Section**: Add basic salary, HRA received, rent paid, and metro/non-metro city
-- **HRA Exemption Calculation**: Automatic calculation per Section 10(13A) rules
-- **House Property Income**: Track rental income, municipal taxes, and home loan interest
-- **Section 24(b) Deduction**: Home loan interest deduction (₹2L limit for self-occupied)
-- **Section 80TTA**: Savings account interest deduction (₹10K limit)
-- **Enhanced Tax Sections**: Added 24(b), 80TTA, and HRA to tax planning
-- **Comprehensive Tax-Saving Banner**: 
-  - **Old Regime**: Shows ₹5,85,000+ investment scope with detailed breakdown
-  - **New Regime**: Shows ₹90,000+ deduction scope
-  - Real-time utilization tracking
-  - Potential tax savings calculation
+### v2.0.0 - Firebase Integration
+- Cross-device sync via Firebase
+- User authentication
+- Cloud data persistence
 
-### **Improved Tax Calculation:**
-- Gross total income now includes house property income
-- HRA exemption automatically calculated and applied
-- House property loss set-off (max ₹2L)
-- Standard deduction updated (₹75K for new regime, ₹50K for old)
-- Detailed tax breakdown with all deductions listed
-
-### **Dashboard Cleanup:**
-- Removed redundant "Cash Flow Summary" card
-- All information available in "This Month" card and Financial Health Score
-
-## Previous Updates
-
-### v2.2.1 - Financial Health Score Tooltips ℹ️
-
-- **Detailed Tooltips**: Hover over each Financial Health Score component to see calculation details
-- **Transparent Scoring**: Understand exactly how each score is calculated
-- **Current vs Ideal**: See your current values compared to ideal benchmarks
-- **Scoring Thresholds**: Know what it takes to improve each component
-
-### v2.2.0 - Expense Tracking Tab 💰
-
-- **New Expense Tracking Tab**: Track all variable expenses in detail with 50+ categories
-- **Category-wise Tracking**: Groceries, Medical, Travel, Dining, Shopping, Home, Entertainment, and more
-- **Auto-Validation**: Compare tracked expenses with Auto-calculated Variable Expenditure from Budget tab
-- **Visual Insights**: See category breakdown and spending patterns
-- **Match Percentage**: Know if your tracked expenses match the budget calculations
-
-## Previous Update - v2.1.7 - Dashboard Layout Adjustment 📐
-
-## Previous Update - v2.1.6 - Financial Health Score Accuracy Fixes 🎯
+### v1.0.0 - Initial Release
+- Basic financial planning features
+- Budget tracking
+- Investment tracking
+- Fixed outflow management 🎯
 
 - **Fixed Savings Rate**: Now calculates actual savings made (not just available)
 - **Variable Expenditure Display**: Shows auto-calculated variable expenditure from budget
